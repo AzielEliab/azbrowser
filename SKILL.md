@@ -1,7 +1,7 @@
 ---
 name: AZBrowser
 description: >-
-  Use when researching through AZBrowser / AZNet — navigate preview,
+  Use when researching through AZBrowser — navigate preview,
   Lamb Lens ethical search, receipted airlock, tabs. Phase 1 research
   shell, not a Chromium replacement. Author Aziel Eliab.
 ---
@@ -9,17 +9,19 @@ description: >-
 # AZBrowser
 
 Secure research browser / hardened investigation platform (Phase 1).
-AZNet is the ethical-search / network mode label.
+AZNet is a **sibling functional pair** (https://github.com/AzielEliab/aznet)
+— separate app. Lamb Lens is this product's ethical-search mode.
 
 Author: **Aziel Eliab** only.
 
 **THIS IS:** browser-chrome UX + controlled fetch/proxy preview +
 receipted airlock (`download → scan → scrub → verify → vault`) +
-AZNet / Lamb Lens ethical search + append-only integrity receipts.
+Lamb Lens ethical search + append-only integrity receipts.
 
 **THIS IS NOT:** Chromium, Firefox, Safari, or Edge. Not AZ-OS, Lumen,
-or AZInterface. AZMail is a **sibling** product
-(https://github.com/AzielEliab/azmail) — optional deep-link only.
+or AZInterface. Not an AZNet protocol implementation. AZMail is a
+**sibling** (https://github.com/AzielEliab/azmail). AZNet is a
+**sibling** (https://github.com/AzielEliab/aznet).
 
 Always send `User-Agent: Mozilla/5.0`. Cloudflare Workers may 403 an empty agent.
 
@@ -34,7 +36,8 @@ POST https://aziel-runtime.vibelock.workers.dev/v1/fraggate/call
 Same door as the `fraggate_call` MCP tool (`slug=azbrowser`). Kernel:
 https://github.com/AzielEliab/fraggate. Catalog listing lands in a
 sibling aziel-runtime PR. Human chrome uses this Worker's `/v1/{op}`
-(same op names). `GET|POST /mcp` on this host is a **pointer**, not a
+(single-segment local ops). `/v1/fraggate/*` and `/v1/runtime/*` PROXY
+to aziel-runtime. `GET|POST /mcp` on this host is a **pointer**, not a
 second MCP. AI / MCP path is FragGate only.
 
 **Human UI stays on this Worker.** Agents display `display.title`,
@@ -46,7 +49,7 @@ next input. No technical MCP UI is required for the human.
 | UI chrome | op |
 |-----------|-----|
 | Address Go / preview | `navigate` / `preview` |
-| AZNet search | `ethical_search` / `lamb_lens` / `search` |
+| Lamb Lens search | `ethical_search` / `lamb_lens` / `lamb_lens_search` |
 | Back / Forward / Reload | `back` `forward` `reload` |
 | Home (everblooming sigil) | `home` |
 | New / close / switch tab | `tab_new` `tab_close` `tab_switch` `tab_list` |
@@ -69,9 +72,10 @@ Host: `https://azbrowser-download-tracker.vibelock.workers.dev`
 | GET | `/v1/skill` | This markdown. |
 | GET | `/openapi.json` | OpenAPI 3.1 — documents ops; agents use FragGate. |
 | GET/POST | `/mcp` | Pointer to FragGate (`slug=azbrowser`). Not a second MCP. |
-| POST | `/v1/{op}` | Human UI backend. Same ops as the table above. |
-| POST | `/v1/runtime/call` | FragGate-shaped `{slug,op,payload}`. `azbrowser` is local; allowlisted siblings proxy. |
-| GET | `/v1/runtime/list` | Local ops + FragGate list pointer. |
+| POST | `/v1/{op}` | Human UI backend. Single-segment local ops only. |
+| GET | `/v1/fraggate/list` | PROXY to aziel-runtime FragGate list. |
+| POST | `/v1/fraggate/call` | PROXY to aziel-runtime FragGate call. |
+| GET/POST | `/v1/runtime/*` | PROXY aliases (`list`/`call` → FragGate). |
 | GET | `/download` | Counted tarball. |
 | GET | `/count` | `{views, downloads, total}` |
 
@@ -91,6 +95,9 @@ curl -s -A 'Mozilla/5.0' -X POST https://azbrowser-download-tracker.vibelock.wor
   -H 'content-type: application/json' \
   -d '{"url":"https://www.azieleliab.com/"}'
 curl -s -A 'Mozilla/5.0' https://aziel-runtime.vibelock.workers.dev/v1/fraggate/list
+curl -s -A 'Mozilla/5.0' -X POST https://azbrowser-download-tracker.vibelock.workers.dev/v1/fraggate/call \
+  -H 'content-type: application/json' \
+  -d '{"slug":"azbrowser","op":"health","payload":{}}'
 ```
 
 ## Local
@@ -119,5 +126,6 @@ Apache-2.0. Forks are welcome and always allowed.
 - Runtime: https://github.com/AzielEliab/aziel-runtime
 - Library: https://www.azielcorpuslibrary.net/
 - AZMail (sibling): https://github.com/AzielEliab/azmail
+- AZNet (sibling functional pair): https://github.com/AzielEliab/aznet
 - godlock.uk · https://www.azieleliab.com
 - GitHub: https://github.com/AzielEliab/azbrowser

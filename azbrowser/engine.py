@@ -54,7 +54,12 @@ OPS = (
 ALIASES = {
     "preview": "navigate",
     "lamb_lens": "ethical_search",
+    "lamb_lens_search": "ethical_search",
     "search": "ethical_search",
+    "airlock_ingest": "airlock",
+    "tab_open": "tab_new",
+    "receipt_list": "receipts",
+    "verify": "receipt_verify",
 }
 
 

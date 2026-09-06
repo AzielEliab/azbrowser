@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
+from urllib.request import Request, urlopen
 
+from .door import classify_v1_path, door_target_url
 from .engine import OPS, Engine
-from .meta import HOST, LIMITATION, SIGIL, __version__
+from .meta import LIMITATION, SIGIL, __version__
 from .receipts import Ledger
 
 PORT = 8878
@@ -138,10 +141,37 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _proxy_door(self, path: str) -> None:
+        dest = door_target_url(path)
+        if not dest:
+            self._send(404, b'{"error":"not a door path"}', "application/json")
+            return
+        n = int(self.headers.get("Content-Length") or 0)
+        raw = self.rfile.read(n) if n else b""
+        headers = {"User-Agent": self.headers.get("User-Agent") or "Mozilla/5.0 AZBrowser/0.1.0"}
+        ctype = self.headers.get("Content-Type")
+        if ctype:
+            headers["Content-Type"] = ctype
+        try:
+            req = Request(dest, data=raw or None, headers=headers, method=self.command)
+            with urlopen(req, timeout=20) as res:  # noqa: S310 — public aziel-runtime door
+                body = res.read()
+                self._send(res.status, body, res.headers.get_content_type() or "application/json")
+        except HTTPError as exc:
+            body = exc.read() if exc.fp else b'{"error":"fraggate_proxy_failed"}'
+            self._send(exc.code, body, "application/json")
+        except (URLError, TimeoutError, OSError) as exc:
+            payload = json.dumps({"ok": False, "error": "fraggate_proxy_failed", "detail": str(exc)[:240]})
+            self._send(502, payload.encode("utf-8"), "application/json")
+
     def do_GET(self) -> None:  # noqa: N802
         path = urlparse(self.path).path.rstrip("/") or "/"
         if path == "/":
             self._send(200, _chrome().encode("utf-8"), "text/html; charset=utf-8")
+            return
+        classified = classify_v1_path(path)
+        if classified["kind"] == "door":
+            self._proxy_door(path)
             return
         if path == "/v1/health":
             self._send(200, json.dumps(ENGINE.health({}), indent=2).encode(), "application/json")
@@ -150,10 +180,24 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         path = urlparse(self.path).path.rstrip("/")
-        if not path.startswith("/v1/"):
+        classified = classify_v1_path(path)
+        if classified["kind"] == "door":
+            self._proxy_door(path)
+            return
+        if classified["kind"] == "multi":
+            payload = json.dumps({
+                "ok": False,
+                "error": "not a local op",
+                "code": "NOT_LOCAL_OP",
+                "path": classified["path"],
+                "hint": "Local ops are /v1/{op} only. FragGate door is /v1/fraggate/*.",
+            })
+            self._send(404, payload.encode("utf-8"), "application/json")
+            return
+        op = classified.get("op")
+        if classified["kind"] != "local" or not op:
             self._send(404, b'{"error":"not found"}', "application/json")
             return
-        op = path[4:]
         n = int(self.headers.get("Content-Length") or 0)
         raw = self.rfile.read(n) if n else b"{}"
         try:

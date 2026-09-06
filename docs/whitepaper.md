@@ -17,7 +17,10 @@ The kernel rule is simple: **No receipt = no action.**
 AZInterface, AZ-OS, and Lumen are **out of scope** and are not built
 here. AZMail is a **sibling product** already live
 ([github.com/AzielEliab/azmail](https://github.com/AzielEliab/azmail))
-— optional deep-link only; this repo does not rebuild mail.
+— optional deep-link only; this repo does not rebuild mail. AZNet is a
+**sibling functional pair**
+([github.com/AzielEliab/aznet](https://github.com/AzielEliab/aznet)) —
+separate app; this repo does not embed its protocol.
 
 ## Honesty (read this)
 
@@ -77,7 +80,9 @@ blobs.
    with `{ slug: "azbrowser", op, payload }`. Catalog MCP:
    `POST https://aziel-runtime.vibelock.workers.dev/mcp`.
    This Worker `/mcp` is a pointer, not a second agent brand. Human
-   chrome uses same-origin `/v1` (same op names). Agents display
+   chrome uses same-origin `/v1/{op}` (single-segment local ops).
+   `/v1/fraggate/*` and `/v1/runtime/*` PROXY to aziel-runtime.
+   Agents display
    `display.title` / `summary` / `fields` in chat and feed the next
    input. No technical MCP chrome is required for the human.
 

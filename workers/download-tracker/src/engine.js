@@ -15,8 +15,10 @@ export const HOST = "https://azbrowser-download-tracker.vibelock.workers.dev";
 export const SIGIL = "https://www.azielcorpuslibrary.net/sigil.png";
 export const AZMAIL = "https://github.com/AzielEliab/azmail";
 export const AZMAIL_WORKER = "https://azmail-download-tracker.vibelock.workers.dev";
+export const AZNET = "https://github.com/AzielEliab/aznet";
+export const AZNET_WORKER = "https://aznet-download-tracker.vibelock.workers.dev";
 export const LIMITATION =
-  "THIS IS: a Phase 1 research-browser shell (browser-chrome UX) with controlled fetch/proxy preview, receipted airlock, and AZNet ethical search. THIS IS NOT: a Chromium/Firefox/Safari replacement, a full OS browser, a VPN, AZ-OS, Lumen, or AZInterface. v0.1 cannot ship a Chromium binary. AZMail is a separate sibling repo (https://github.com/AzielEliab/azmail) — optional deep-link only. No receipt = no action. Advisory only. Author: Aziel Eliab only.";
+  "THIS IS: a Phase 1 research-browser shell (browser-chrome UX) with controlled fetch/proxy preview, receipted airlock, and Lamb Lens ethical search. THIS IS NOT: a Chromium/Firefox/Safari replacement, a full OS browser, a VPN, AZ-OS, Lumen, or AZInterface. v0.1 cannot ship a Chromium binary. AZMail is a sibling (https://github.com/AzielEliab/azmail). AZNet is a sibling functional pair (https://github.com/AzielEliab/aznet) — separate app, not this protocol. No receipt = no action. Advisory only. Author: Aziel Eliab only.";
 
 export const OPS = [
   "health",
@@ -46,7 +48,12 @@ export const OPS = [
 export const ALIASES = {
   preview: "navigate",
   lamb_lens: "ethical_search",
+  lamb_lens_search: "ethical_search",
   search: "ethical_search",
+  airlock_ingest: "airlock",
+  tab_open: "tab_new",
+  receipt_list: "receipts",
+  verify: "receipt_verify",
 };
 
 export const STAGES = ["download", "scan", "scrub", "verify", "vault"];
@@ -692,17 +699,19 @@ description: >-
 # AZBrowser
 
 Secure research browser / hardened investigation platform (Phase 1).
-AZNet is the ethical-search / network mode label.
+AZNet is a **sibling functional pair** (https://github.com/AzielEliab/aznet)
+— separate app. Lamb Lens is this product's ethical-search mode.
 
 Author: **Aziel Eliab** only.
 
 **THIS IS:** browser-chrome UX + controlled fetch/proxy preview +
 receipted airlock (\`download → scan → scrub → verify → vault\`) +
-AZNet / Lamb Lens ethical search + append-only integrity receipts.
+Lamb Lens ethical search + append-only integrity receipts.
 
 **THIS IS NOT:** Chromium, Firefox, Safari, or Edge. Not AZ-OS, Lumen,
-or AZInterface. AZMail is a **sibling** product
-(https://github.com/AzielEliab/azmail) — optional deep-link only.
+or AZInterface. Not an AZNet protocol implementation. AZMail is a
+**sibling** (https://github.com/AzielEliab/azmail). AZNet is a
+**sibling** (https://github.com/AzielEliab/aznet).
 
 Always send \`User-Agent: Mozilla/5.0\`.
 
@@ -714,8 +723,9 @@ body \`{"slug":"azbrowser","op":"<op>","payload":{}}\`
 
 Same door as MCP \`fraggate_call\` (\`slug=azbrowser\`). Kernel:
 https://github.com/AzielEliab/fraggate. Catalog listing lands in a
-sibling aziel-runtime PR. Human chrome uses this Worker \`/v1/{op}\`.
-\`GET|POST /mcp\` here is a pointer, not a second MCP.
+sibling aziel-runtime PR. Human chrome uses this Worker \`/v1/{op}\`
+(single-segment local ops only). \`/v1/fraggate/*\` and \`/v1/runtime/*\`
+PROXY to aziel-runtime. \`GET|POST /mcp\` here is a pointer, not a second MCP.
 
 **Human UI stays on this Worker.** AI path is FragGate + this OpenAPI.
 
@@ -724,7 +734,7 @@ sibling aziel-runtime PR. Human chrome uses this Worker \`/v1/{op}\`.
 | UI chrome | op |
 |-----------|-----|
 | Address Go / preview | \`navigate\` / \`preview\` |
-| AZNet search | \`ethical_search\` / \`lamb_lens\` / \`search\` |
+| Lamb Lens search | \`ethical_search\` / \`lamb_lens\` / \`lamb_lens_search\` |
 | Back / Forward / Reload | \`back\` \`forward\` \`reload\` |
 | Home (everblooming sigil) | \`home\` |
 | New / close / switch tab | \`tab_new\` \`tab_close\` \`tab_switch\` \`tab_list\` |
@@ -756,6 +766,9 @@ curl -s -A 'Mozilla/5.0' -X POST https://azbrowser-download-tracker.vibelock.wor
   -H 'content-type: application/json' \\
   -d '{"url":"https://www.azieleliab.com/"}'
 curl -s -A 'Mozilla/5.0' https://aziel-runtime.vibelock.workers.dev/v1/fraggate/list
+curl -s -A 'Mozilla/5.0' -X POST https://azbrowser-download-tracker.vibelock.workers.dev/v1/fraggate/call \\
+  -H 'content-type: application/json' \\
+  -d '{"slug":"azbrowser","op":"health","payload":{}}'
 \`\`\`
 
 Apache-2.0. Forks are welcome and always allowed.

@@ -12,7 +12,8 @@ URL pattern after deploy (workers.dev + account subdomain, same as sibling produ
 - `GET /openapi.json` — documents ops; agents use FragGate
 - `GET|POST /mcp` — pointer to FragGate (`slug=azbrowser`)
 - `GET /v1/*` — health/skill (does **not** increment downloads)
-- `POST /v1/{op}` — human UI backend; same ops FragGate will call
+- `POST /v1/{op}` — human UI backend; single-segment local ops only
+- `/v1/fraggate/*` and `/v1/runtime/*` — PROXY to aziel-runtime FragGate door
 
 KV binding `DOWNLOADS` (create `AZBROWSER_DOWNLOADS` on first deploy). Account `ac575a9b822bea2bed97d0ab73aed238`.
 

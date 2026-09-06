@@ -30,15 +30,21 @@ Python 3.10+. Engine is stdlib only. pytest is the dev extra.
 6. **Do not mix the download tracker** with any other product's Worker
    or KV. Namespace `AZBROWSER_DOWNLOADS` only.
 7. **Public identity is Aziel Eliab only.**
-8. **Independence.** Do not import AZ-OS, Lumen, or rebuild AZMail.
-   Optional documentation links are fine.
-9. New behavior needs a test that fails without the change.
+8. **Independence.** Do not import AZ-OS, Lumen, rebuild AZMail, or
+   embed the AZNet protocol. AZNet is a sibling functional pair
+   (https://github.com/AzielEliab/aznet). Optional documentation links
+   are fine.
+9. **Door vs local op.** `/v1/fraggate/*` and `/v1/runtime/*` PROXY to
+   aziel-runtime. Local ops are `/v1/{op}` only. Never treat
+   `fraggate/call` as a local op name.
+10. New behavior needs a test that fails without the change.
 
 ## Where to change things
 
 - Ethics / search / airlock / receipts / tabs / dispatch: `azbrowser/`
+- Door path classifier: `azbrowser/door.py` + `workers/download-tracker/src/door.js`
 - Worker engine (same ops): `workers/download-tracker/src/engine.js`
-- OpenAPI / MCP: `workers/download-tracker/src/runtime.js`
+- OpenAPI / door proxy: `workers/download-tracker/src/runtime.js`
 - Browser chrome: `workers/download-tracker/src/ui.js`
 - Spec: `docs/whitepaper.md`
 - Skill: `SKILL.md` (same text at Worker `GET /v1/skill`)

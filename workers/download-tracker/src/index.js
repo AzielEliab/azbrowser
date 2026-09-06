@@ -230,7 +230,7 @@ export default {
     const url = new URL(request.url);
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders() });
 
-    const runtime = await handleRuntimeApi(request, url);
+    const runtime = await handleRuntimeApi(request, url, env);
     if (runtime) return runtime;
 
     if ((url.pathname === "/install.sh" || url.pathname === "/install.sh/") && (request.method === "GET" || request.method === "HEAD")) {
