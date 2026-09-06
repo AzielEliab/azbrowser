@@ -1,7 +1,8 @@
-"""Lamb Lens / AZNet ethics gate.
+"""Lamb Lens ethics gate.
 
 Refuse doxxing, credential harvest, and malware-lure queries.
 Advisory only — not a law-enforcement tool and not a content oracle.
+AZNet is a sibling side-net, not this gate.
 """
 
 from __future__ import annotations
@@ -10,7 +11,7 @@ import re
 from typing import Any
 
 LIMITATION = (
-    "AZNet ethical search is advisory. Cite sources. Refuse doxxing, "
+    "Lamb Lens ethical search is advisory. Cite sources. Refuse doxxing, "
     "credential harvest, and malware lure. Not a guaranteed block."
 )
 
@@ -78,7 +79,7 @@ def classify_query(text: str) -> dict[str, Any]:
         "refuse": refuse,
         "reasons": reasons,
         "advisory": True,
-        "label": "AZNet / Lamb Lens — advisory ethical gate",
+        "label": "Lamb Lens — advisory ethical gate",
         "limitation": LIMITATION,
         "query_len": len(blob),
     }

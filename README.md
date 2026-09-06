@@ -1,7 +1,8 @@
 # AZBrowser
 
-Open-source **secure research browser / AZNet ethical search** — Phase 1.
-Browser-chrome UX, receipted kernel, ingestion airlock. Not Chromium.
+Open-source **secure research browser** — Phase 1.
+Browser-chrome UX, receipted kernel, ingestion airlock, Lamb Lens
+ethical search, **AZNet side-net viewer**. Not Chromium.
 
 **Author:** Aziel Eliab only
 **Date:** September 2026 · v0.1.0
@@ -17,6 +18,12 @@ How to contribute: [CONTRIBUTING.md](CONTRIBUTING.md).
 AZMail is a **sibling** product already live — optional deep-link only.
 Do not rebuild it here: https://github.com/AzielEliab/azmail
 
+**AZNet is a separate sibling product** (side-net):
+https://github.com/AzielEliab/aznet
+AZBrowser **views** the side-net and **requires pairing** to run.
+FragGate unlocks; StaticClock times. Do not embed the AZNet protocol
+here. Pairing contract: [docs/pair.md](docs/pair.md).
+
 AZ-OS / Lumen / AZInterface are **not** this product.
 
 ## Honest scope (read this)
@@ -24,14 +31,16 @@ AZ-OS / Lumen / AZInterface are **not** this product.
 v0.1 is a **research shell**. It cannot ship a Chromium binary. The
 Worker looks like a real browser (tabs, omnibox, Back/Forward/Reload,
 Home = everblooming sigil) and sandboxes navigation via controlled
-fetch/proxy preview + receipted airlock + AZNet ethical search. It does
-**not** replace the operator's OS browser.
+fetch/proxy preview + receipted airlock + Lamb Lens ethical search +
+AZNet side-net viewer. Pairing with AZNet is required to run research
+ops. It does **not** replace the operator's OS browser.
 
 ## Dual surface (mandatory)
 
 1. **Human UI** — Worker homepage is complete software: browser chrome,
-   AZNet / Lamb Lens panel, airlock stages + hashes, append-only
-   receipts, counted download. Black / gold / white. Humans stay here.
+   Lamb Lens panel, AZNet side-net viewer, pair-status badge, airlock
+   stages + hashes, append-only receipts, counted download. Black /
+   gold / white. Humans stay here.
 2. **Agent / MCP — FragGate only.** There is no separate AZBrowser MCP
    outside the door. Catalog door:
 
@@ -124,7 +133,9 @@ Every control calls a real `/v1` handler (same op agents call). No dead buttons.
 | Reload | `POST /v1/reload` | `reload` |
 | Home (sigil) | `POST /v1/home` | `home` |
 | Go / Enter | `POST /v1/navigate` or `/v1/ethical_search` | `navigate` / `ethical_search` |
-| AZNet search panel | `POST /v1/ethical_search` (`lamb_lens` alias) | `ethical_search` |
+| Lamb Lens search | `POST /v1/ethical_search` (`lamb_lens` alias) | `ethical_search` |
+| Side-net (AZNet viewer) | `POST /v1/sidenet_view` | `sidenet_view` |
+| Pair status | `POST /v1/pair_status` | `pair_status` |
 | Airlock | `POST /v1/airlock` | `airlock` |
 | New tab `+` | `POST /v1/tab_new` | `tab_new` |
 | Tab click / × | `POST /v1/tab_switch` / `tab_close` | tabs |
@@ -134,10 +145,11 @@ Prove locally (after `pip install -e ".[dev]"`):
 
 ```bash
 azbrowser doctor
-azbrowser call home
-azbrowser call ethical_search --payload '{"q":"FragGate"}'
-azbrowser call navigate --payload '{"url":"https://www.azieleliab.com/"}'
-azbrowser call airlock --payload '{"content":"<p>hi</p>","filename":"n.html"}'
+azbrowser pair-status
+azbrowser sidenet
+AZBROWSER_PAIR_STUB=1 azbrowser call ethical_search --payload '{"q":"FragGate"}'
+AZBROWSER_PAIR_STUB=1 azbrowser call navigate --payload '{"url":"https://www.azieleliab.com/"}'
+AZBROWSER_PAIR_STUB=1 azbrowser call airlock --payload '{"content":"<p>hi</p>","filename":"n.html"}'
 azbrowser call tab_new
 azbrowser call back
 azbrowser verify
@@ -149,7 +161,9 @@ azbrowser verify
 azbrowser version
 azbrowser ui                 # 127.0.0.1:8878
 azbrowser doctor
-azbrowser search 'library'
+azbrowser pair-status
+azbrowser sidenet
+azbrowser search 'library'          # PAIR_REQUIRED until AZNet pairs
 azbrowser navigate https://www.azieleliab.com/
 azbrowser airlock --content '<script>x</script>'
 azbrowser receipts
@@ -193,6 +207,10 @@ SKILL.md            agent skill (also GET /v1/skill)
 - FragGate: https://github.com/AzielEliab/fraggate
 - Digital Library: https://www.azielcorpuslibrary.net/
 - AZMail (sibling): https://github.com/AzielEliab/azmail
+- AZNet (sibling side-net): https://github.com/AzielEliab/aznet
+- AZNet Worker (expected): https://aznet-download-tracker.vibelock.workers.dev
+- AZNet garden (expected): https://aznet-download-tracker.vibelock.workers.dev/garden
+- StaticClock: https://github.com/AzielEliab/staticclock
 - godlock.uk
 - https://www.azieleliab.com
 

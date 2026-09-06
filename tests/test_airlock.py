@@ -24,7 +24,7 @@ def test_quarantine_exe_name():
 
 
 def test_engine_airlock_has_receipt():
-    eng = Engine(Ledger())
+    eng = Engine(Ledger(), paired=True)
     out = eng.airlock({"content": "hello vault", "filename": "a.txt"})
     assert out.get("receipt")
     assert out["receipt"]["action"] == "airlock"

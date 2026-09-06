@@ -6,7 +6,7 @@ URL pattern after deploy (workers.dev + account subdomain, same as sibling produ
 
 `https://azbrowser-download-tracker.vibelock.workers.dev`
 
-- `GET /` — complete browser-chrome UI (tabs, omnibox, Home sigil, AZNet, airlock, receipts) + counted views
+- `GET /` — complete browser-chrome UI (tabs, omnibox, Home sigil, Lamb Lens, AZNet side-net viewer, pair-status, airlock, receipts) + counted views
 - `GET /download` — counted tarball (HTTP 200 gzip, no 302)
 - `GET /count` — `{views, downloads, total}`
 - `GET /openapi.json` — documents ops; agents use FragGate
@@ -24,5 +24,11 @@ Human UI is this Worker. Agent / MCP path is FragGate:
 Catalog MCP: `POST https://aziel-runtime.vibelock.workers.dev/mcp`.
 This host `/mcp` is a pointer, not a second MCP. Catalog listing of
 `azbrowser` lands in a sibling aziel-runtime PR.
+
+AZNet is a sibling side-net (not embedded here):
+https://github.com/AzielEliab/aznet
+Expected Worker `https://aznet-download-tracker.vibelock.workers.dev`
+and garden `/garden`. Pairing required. FragGate unlocks; StaticClock
+times. Runtime `/v1/runtime/call` may proxy allowlisted `staticclock`.
 
 Author: Aziel Eliab. Apache-2.0.

@@ -1,4 +1,4 @@
-# AZBrowser Phase 1 — Secure Research Browser / AZNet
+# AZBrowser Phase 1 — Secure Research Browser
 
 **Author:** Aziel Eliab only
 **Software:** AZBrowser 0.1.0
@@ -9,8 +9,14 @@
 
 AZBrowser is a **secure research browser** and hardened investigation
 platform. Phase 1 ships a **browser-chrome UX** (not a Chromium binary)
-with a receipted security kernel, an ingestion airlock, and **AZNet** —
-the ethical-search / network mode.
+with a receipted security kernel, an ingestion airlock, **Lamb Lens**
+ethical search, and an **AZNet side-net viewer**.
+
+AZNet is a **separate product**
+([github.com/AzielEliab/aznet](https://github.com/AzielEliab/aznet)).
+AZBrowser views the side-net and **requires pairing** to run. FragGate
+unlocks; StaticClock times. This paper does not fork the AZNet
+whitepaper.
 
 The kernel rule is simple: **No receipt = no action.**
 
@@ -23,8 +29,9 @@ here. AZMail is a **sibling product** already live
 
 v0.1 **cannot** ship a full Chromium / WebKit / Gecko binary. The Worker
 delivers a research shell: address bar, tabs, Home sigil, controlled
-fetch/proxy preview in a sandbox iframe, receipted airlock, and AZNet
-ethical search. It does **not** replace the operator's OS browser.
+fetch/proxy preview in a sandbox iframe, receipted airlock, Lamb Lens
+ethical search, and an AZNet side-net viewer. Pairing is required. It
+does **not** replace the operator's OS browser.
 
 ## Architecture (Phase 1)
 
@@ -32,7 +39,7 @@ ethical search. It does **not** replace the operator's OS browser.
 ┌─────────────────────────────────────────────┐
 │  Browser runtime (chrome UX, tab isolation) │
 ├─────────────────────────────────────────────┤
-│  Network layer — AZNet ethical search mode  │
+│  Network layer — Lamb Lens + AZNet viewer   │
 ├─────────────────────────────────────────────┤
 │  Security kernel — integrity + receipts     │
 │  "No receipt = no action"                   │
@@ -50,11 +57,15 @@ Home = everblooming sigil
 black background / gold trim / white text. Tabs are isolated in UX even
 when rendering is an iframe / proxy sandbox.
 
-### Network layer (AZNet)
+### Network layer (Lamb Lens + AZNet viewer)
 
-AZNet is the product's ethical-search / network **mode label**. Lamb
-Lens style: cite sources; refuse doxxing, credential harvest, and
-malware lure; label every result **advisory**.
+Lamb Lens is AZBrowser ethical search: cite sources; refuse doxxing,
+credential harvest, and malware lure; label every result **advisory**.
+
+AZNet branding in this chrome is the **side-net viewer** (garden /
+Worker deep-link). The silent-verification protocol lives in the AZNet
+repo. Pair-status must be true before navigate / search / airlock /
+scrub. See [pair.md](pair.md).
 
 ### Security kernel
 
@@ -82,13 +93,15 @@ blobs.
    input. No technical MCP chrome is required for the human.
 
 Every major UI action has a matching op: `navigate`, `preview`,
-`ethical_search` / `lamb_lens`, `back`, `forward`, `reload`, `home`,
-`tab_new` / `tab_close` / `tab_switch` / `tab_list`, `airlock`,
-`airlock_status`, `receipts`, `receipt_verify`, `ethics_gate`, `scrub`.
+`ethical_search` / `lamb_lens`, `sidenet_view`, `pair_status`, `back`,
+`forward`, `reload`, `home`, `tab_new` / `tab_close` / `tab_switch` /
+`tab_list`, `airlock`, `airlock_status`, `receipts`, `receipt_verify`,
+`ethics_gate`, `scrub`.
 
 ## What this is not
 
 Not Chromium. Not a VPN. Not AZ-OS / Lumen / AZInterface. Not AZMail.
+Not an AZNet protocol implementation.
 Not a guaranteed ethics oracle. Hosted `/v1` does not persist vault
 bytes. Catalog listing of slug `azbrowser` lands in a sibling
 aziel-runtime PR; ops already run on this Worker.

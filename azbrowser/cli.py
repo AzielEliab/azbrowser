@@ -8,7 +8,7 @@ import os
 import sys
 from pathlib import Path
 
-from .meta import HOST, LIMITATION, __version__
+from .meta import AZNET, HOST, LIMITATION, __version__
 from .doctor import doctor
 from .engine import Engine
 from .receipts import Ledger
@@ -16,7 +16,13 @@ from .receipts import Ledger
 
 def _engine(args: argparse.Namespace) -> Engine:
     path = getattr(args, "ledger", None) or os.environ.get("AZBROWSER_LEDGER") or "./azbrowser_receipts.jsonl"
-    return Engine(Ledger(path))
+    stub = os.environ.get("AZBROWSER_PAIR_STUB")
+    paired = None
+    if stub == "1":
+        paired = True
+    elif stub == "0":
+        paired = False
+    return Engine(Ledger(path), paired=paired)
 
 
 def _print(obj: object) -> int:
@@ -41,6 +47,8 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("ui")
     sub.add_parser("health")
     sub.add_parser("ops")
+    sub.add_parser("pair-status")
+    sub.add_parser("sidenet")
 
     n = sub.add_parser("navigate")
     n.add_argument("url")
@@ -74,6 +82,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"AZBrowser {__version__}")
         print(LIMITATION)
         print("Worker:", HOST)
+        print("AZNet sibling:", AZNET)
         return 0
     if args.cmd == "doctor":
         return doctor()
@@ -87,6 +96,10 @@ def main(argv: list[str] | None = None) -> int:
         return _print({"ok": True, "ops": list(__import__("azbrowser.engine", fromlist=["OPS"]).OPS)})
     if args.cmd == "health":
         return _print(eng.health({}))
+    if args.cmd == "pair-status":
+        return _print(eng.pair_status({}))
+    if args.cmd == "sidenet":
+        return _print(eng.sidenet_view({}))
     if args.cmd == "navigate":
         return _print(eng.navigate({"url": args.url, "fetch": args.fetch}))
     if args.cmd == "back":

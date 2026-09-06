@@ -7,7 +7,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
 from .engine import OPS, Engine
-from .meta import HOST, LIMITATION, SIGIL, __version__
+from .meta import AZNET, AZNET_GARDEN, AZNET_WORKER, HOST, LIMITATION, SIGIL, __version__
 from .receipts import Ledger
 
 PORT = 8878
@@ -53,9 +53,11 @@ a {{ color:var(--gold); }}
     <button id="fwd" title="Forward" type="button">▶</button>
     <button id="reload" title="Reload" type="button">↻</button>
     <button id="home" title="Home" type="button"><img alt="Home" src="{SIGIL}"></button>
-    <input id="omnibox" placeholder="Search AZNet or enter a URL" spellcheck="false">
+    <input id="omnibox" placeholder="Lamb Lens search or enter a URL" spellcheck="false">
     <button id="go" type="button">Go</button>
-    <span class="mode">AZNet</span>
+    <button id="sidenetBtn" type="button" title="AZNet side-net viewer">Side-net</button>
+    <button id="pairBtn" type="button" title="Pair status">Pair</button>
+    <span class="mode" id="pairBadge">Pair: …</span>
     <button id="airlockBtn" type="button">Airlock</button>
   </div>
   <main>
@@ -75,10 +77,27 @@ async function op(name, payload) {{
   const r = await fetch('/v1/' + name, {{ method:'POST', headers:{{'content-type':'application/json','user-agent':'Mozilla/5.0'}}, body: JSON.stringify(payload||{{}}) }});
   return r.json();
 }}
+function setPair(obj) {{
+  const el = document.getElementById('pairBadge');
+  if (!el) return;
+  const paired = !!(obj && (obj.paired === true || (obj.pair && obj.pair.paired)));
+  el.textContent = paired ? 'Pair: ready' : 'Pair: required';
+}}
 function show(obj) {{
   const stage = document.getElementById('stage');
   const rec = document.getElementById('receipts');
-  stage.innerHTML = '<div class="banner">' + (obj.display ? obj.display.summary : (obj.note||'')) + '</div><pre>' + JSON.stringify(obj,null,2) + '</pre>';
+  if (obj.paired === true || obj.paired === false || (obj.pair && typeof obj.pair.paired === 'boolean')) setPair(obj);
+  if (obj.code === 'PAIR_REQUIRED') {{
+    stage.innerHTML = '<div class="banner">AZNet pairing required. FragGate unlocks; StaticClock times.</div>'
+      + '<p><a href="{AZNET}">AZNet</a> · <a href="{AZNET_WORKER}">Worker</a> · <a href="{AZNET_GARDEN}">garden</a></p>'
+      + '<pre>' + JSON.stringify(obj,null,2) + '</pre>';
+  }} else if (obj.action === 'sidenet_view' || obj.viewer) {{
+    stage.innerHTML = '<div class="banner">AZNet side-net viewer — protocol lives in AZNet.</div>'
+      + '<p><a href="'+(obj.github||'{AZNET}')+'">GitHub</a> · <a href="'+(obj.worker||'{AZNET_WORKER}')+'">Worker</a> · <a href="'+(obj.garden||'{AZNET_GARDEN}')+'">garden</a></p>'
+      + '<iframe title="AZNet garden" src="'+(obj.garden||'{AZNET_GARDEN}')+'" style="width:100%;min-height:320px;border:1px solid #8a7219;background:#fff"></iframe>';
+  }} else {{
+    stage.innerHTML = '<div class="banner">' + (obj.display ? obj.display.summary : (obj.note||'')) + '</div><pre>' + JSON.stringify(obj,null,2) + '</pre>';
+  }}
   if (obj.receipt) {{
     const el = document.createElement('div');
     el.className = 'receipt';
@@ -120,8 +139,11 @@ document.getElementById('airlockBtn').onclick = async () => {{
   const q = document.getElementById('omnibox').value.trim();
   show(await op('airlock', {{url:q}}));
 }};
-document.getElementById('stage').innerHTML = '<div class="banner">{LIMITATION}</div><p>Local loopback UI. Counted Worker: <a href="{HOST}">{HOST}</a></p><p>Ops: {ops}</p><img alt="sigil" src="'+SIGIL+'" width="96" height="96">';
+document.getElementById('sidenetBtn').onclick = async () => show(await op('sidenet_view', {{}}));
+document.getElementById('pairBtn').onclick = async () => show(await op('pair_status', {{}}));
+document.getElementById('stage').innerHTML = '<div class="banner">{LIMITATION}</div><p>Local loopback UI. Counted Worker: <a href="{HOST}">{HOST}</a></p><p>AZNet sibling viewer: <a href="{AZNET}">{AZNET}</a> · <a href="{AZNET_WORKER}">Worker</a> · <a href="{AZNET_GARDEN}">garden</a></p><p>Ops: {ops}</p><img alt="sigil" src="'+SIGIL+'" width="96" height="96">';
 paintTabs();
+op('pair_status', {{}}).then(setPair).catch(() => {{}});
 </script>
 </html>
 """

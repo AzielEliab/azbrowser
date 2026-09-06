@@ -1,5 +1,5 @@
 name: azbrowser
-description: On-device AZBrowser research shell + AZNet. Not Chromium. Author Aziel Eliab.
+description: On-device AZBrowser research shell. Views sibling AZNet side-net; pairing required. Not Chromium. Author Aziel Eliab.
 publish_to: "none"
 version: 0.1.0+1
 

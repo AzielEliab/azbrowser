@@ -1,8 +1,12 @@
 # AZBrowser — iPhone & Android
 
-Local research-browser chrome on device: address bar, AZNet search,
-airlock hold, receipts. Not Chromium. Offline. No analytics.
-Dark matte / gold.
+Local research-browser chrome on device: address bar, Lamb Lens search,
+AZNet side-net viewer, pair-status, airlock hold, receipts. Not
+Chromium. Offline. No analytics. Dark matte / gold.
+
+AZNet is a sibling product (https://github.com/AzielEliab/aznet). This
+app views the garden; it does not embed the AZNet protocol. Pairing is
+required to run research.
 
 Application id: `com.azieeliab.azbrowser`
 

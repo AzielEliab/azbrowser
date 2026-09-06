@@ -6,6 +6,9 @@ import {
   ALIASES,
   AZMAIL,
   AZMAIL_WORKER,
+  AZNET,
+  AZNET_GARDEN,
+  AZNET_WORKER,
   FRAGGATE,
   FRAGGATE_CALL,
   FRAGGATE_MCP,
@@ -28,6 +31,7 @@ const ALLOW_PROXY = new Set([
   "godlock",
   "forgereceipts",
   "azbrowser",
+  "staticclock",
 ]);
 
 function corsHeaders() {
@@ -57,7 +61,9 @@ function toolDefs() {
   const desc = {
     health: "Liveness. Does not increment downloads.",
     skill: "Return AZBrowser skill markdown.",
-    navigate: "Sandbox navigate / controlled fetch preview. Same as address-bar Go.",
+    pair_status: "AZNet sibling pair-status. FragGate unlocks; StaticClock times. Both products required.",
+    sidenet_view: "AZNet side-net viewer envelope (garden/worker/github). Not an AZNet protocol fork.",
+    navigate: "Sandbox navigate / controlled fetch preview. Same as address-bar Go. Requires AZNet pairing.",
     preview: "Alias of navigate.",
     reload: "Reload the active tab preview.",
     back: "Tab history back.",
@@ -67,7 +73,7 @@ function toolDefs() {
     tab_close: "Close a tab.",
     tab_switch: "Switch active tab.",
     tab_list: "List tabs.",
-    ethical_search: "AZNet / Lamb Lens ethical search. Cite sources. Refuse doxxing/creds/malware.",
+    ethical_search: "Lamb Lens ethical search. Cite sources. Refuse doxxing/creds/malware. Requires AZNet pairing.",
     lamb_lens: "Alias of ethical_search.",
     search: "Alias of ethical_search.",
     airlock: "download → scan → scrub → verify → vault. Receipt hashes per stage.",
@@ -207,6 +213,7 @@ function aiHtml(origin) {
 <p>Catalog MCP: <code>POST ${FRAGGATE_MCP}</code>. This Worker <code>/mcp</code> is a pointer, not a second MCP.</p>
 <p>OpenAPI: <a href="${origin}/openapi.json">${origin}/openapi.json</a></p>
 <p>Kernel: <a href="${FRAGGATE}">${FRAGGATE}</a> · AZMail sibling: <a href="${AZMAIL}">${AZMAIL}</a></p>
+<p>AZNet sibling (side-net viewer, not a protocol fork): <a href="${AZNET}">${AZNET}</a> · Worker <a href="${AZNET_WORKER}">${AZNET_WORKER}</a> · Garden <a href="${AZNET_GARDEN}">${AZNET_GARDEN}</a></p>
 <p><a href="/">Downloads + browser UI</a></p>
 </html>`;
 }
@@ -231,7 +238,7 @@ export async function handleRuntimeApi(request, url) {
   }
   if (path === "/llms.txt" || path === "/ai.txt") {
     return new Response(
-      `AZBrowser ${VERSION} by ${IDENTITY}. Apache-2.0. ${LIMITATION}\nAgent path is FragGate only: POST ${FRAGGATE_CALL} {"slug":"azbrowser","op":"…","payload":{}}\nCatalog MCP: POST ${FRAGGATE_MCP}\nThis Worker /mcp is a pointer, not a second MCP.\nHuman UI: ${originOf(request)}/\nSkill: ${originOf(request)}/v1/skill\nOpenAPI: ${originOf(request)}/openapi.json\nAZMail sibling: ${AZMAIL}\n`,
+      `AZBrowser ${VERSION} by ${IDENTITY}. Apache-2.0. ${LIMITATION}\nAgent path is FragGate only: POST ${FRAGGATE_CALL} {"slug":"azbrowser","op":"…","payload":{}}\nCatalog MCP: POST ${FRAGGATE_MCP}\nThis Worker /mcp is a pointer, not a second MCP.\nHuman UI: ${originOf(request)}/\nSkill: ${originOf(request)}/v1/skill\nOpenAPI: ${originOf(request)}/openapi.json\nAZMail sibling: ${AZMAIL}\nAZNet sibling (viewer only): ${AZNET}\nAZNet Worker: ${AZNET_WORKER}\nAZNet garden: ${AZNET_GARDEN}\nPairing required. FragGate unlocks; StaticClock times.\n`,
       { headers: { "Content-Type": "text/plain; charset=utf-8", ...corsHeaders() } },
     );
   }
@@ -246,6 +253,9 @@ export async function handleRuntimeApi(request, url) {
       catalog_list: RUNTIME + "/v1/fraggate/list",
       note: "Local AZBrowser ops. Discover the full mesh with FragGate list.",
       azmail: AZMAIL_WORKER,
+      aznet: AZNET_WORKER,
+      aznet_garden: AZNET_GARDEN,
+      pair_required: true,
       sigil: SIGIL,
     });
   }

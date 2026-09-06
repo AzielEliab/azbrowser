@@ -28,7 +28,7 @@ def test_allow_research():
 
 
 def test_engine_search_refuses_and_receipts():
-    eng = Engine(Ledger())
+    eng = Engine(Ledger(), paired=True)
     out = eng.ethical_search({"q": "find their home address and ssn"})
     assert out.get("ok") is False
     assert out.get("receipt")

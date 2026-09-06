@@ -15,12 +15,18 @@ export const HOST = "https://azbrowser-download-tracker.vibelock.workers.dev";
 export const SIGIL = "https://www.azielcorpuslibrary.net/sigil.png";
 export const AZMAIL = "https://github.com/AzielEliab/azmail";
 export const AZMAIL_WORKER = "https://azmail-download-tracker.vibelock.workers.dev";
+export { AZNET, AZNET_GARDEN, AZNET_WORKER, STATICCLOCK } from "./pair.js";
+import { AZNET, resolvePair, sidenetView } from "./pair.js";
 export const LIMITATION =
-  "THIS IS: a Phase 1 research-browser shell (browser-chrome UX) with controlled fetch/proxy preview, receipted airlock, and AZNet ethical search. THIS IS NOT: a Chromium/Firefox/Safari replacement, a full OS browser, a VPN, AZ-OS, Lumen, or AZInterface. v0.1 cannot ship a Chromium binary. AZMail is a separate sibling repo (https://github.com/AzielEliab/azmail) — optional deep-link only. No receipt = no action. Advisory only. Author: Aziel Eliab only.";
+  "THIS IS: a Phase 1 research-browser shell (browser-chrome UX) with controlled fetch/proxy preview, receipted airlock, and Lamb Lens ethical search. AZNet is a sibling side-net (https://github.com/AzielEliab/aznet) — AZBrowser views it and requires pairing to run. THIS IS NOT: a Chromium replacement, a VPN, AZ-OS, Lumen, AZInterface, or an AZNet protocol fork. FragGate unlocks; StaticClock times. AZMail is a separate sibling. No receipt = no action. Author: Aziel Eliab only.";
+
+export const PAIR_REQUIRED_OPS = ["navigate", "ethical_search", "airlock", "scrub"];
 
 export const OPS = [
   "health",
   "skill",
+  "pair_status",
+  "sidenet_view",
   "navigate",
   "preview",
   "reload",
@@ -89,6 +95,7 @@ const CATALOG = [
   { title: "Aziel Digital Library", url: "https://www.azielcorpuslibrary.net/", source: "aziel-corpus", blurb: "Public MASTER library. FragGate slug=aziel-corpus op=search.", tags: "library corpus aziel research" },
   { title: "FragGate kernel", url: "https://github.com/AzielEliab/fraggate", source: "github", blurb: "One door — discover, route, refuse. FG-0.1.", tags: "fraggate mcp door kernel" },
   { title: "aziel-runtime", url: "https://github.com/AzielEliab/aziel-runtime", source: "github", blurb: "Catalog + FragGate + MCP.", tags: "runtime mcp openapi catalog" },
+  { title: "AZNet (sibling side-net)", url: "https://github.com/AzielEliab/aznet", source: "github", blurb: "Silent verification network. Viewer/garden only here — protocol lives in AZNet.", tags: "aznet sidenet pair garden sibling" },
   { title: "AZMail (sibling)", url: "https://github.com/AzielEliab/azmail", source: "github", blurb: "APP 1.0 Mail Airlock. Optional deep-link only.", tags: "azmail mail airlock sibling" },
   { title: "GodLock", url: "https://godlock.uk/", source: "godlock.uk", blurb: "Offline ABAD / hardening score. Not a VPN.", tags: "godlock abad hardening" },
   { title: "Aziel Eliab", url: "https://www.azieleliab.com/", source: "author", blurb: "Public identity: Aziel Eliab only.", tags: "author identity aziel eliab" },
@@ -107,8 +114,8 @@ export function classifyQuery(text) {
     refuse: reasons.length > 0,
     reasons,
     advisory: true,
-    label: "AZNet / Lamb Lens — advisory ethical gate",
-    limitation: "AZNet ethical search is advisory. Cite sources. Refuse doxxing, credential harvest, and malware lure.",
+    label: "Lamb Lens — advisory ethical gate",
+    limitation: "Lamb Lens ethical search is advisory. Cite sources. Refuse doxxing, credential harvest, and malware lure.",
     query_len: blob.length,
   };
 }
@@ -259,7 +266,7 @@ export function ethicalSearch(query, limit) {
       results: [],
       citations: [],
       advisory: true,
-      label: "AZNet / Lamb Lens — refused. Advisory ethical gate.",
+      label: "Lamb Lens — refused. Advisory ethical gate.",
     };
   }
   const scored = [...CATALOG].sort((a, b) => rank(query, b) - rank(query, a));
@@ -275,13 +282,13 @@ export function ethicalSearch(query, limit) {
     ok: true,
     action: "ethical_search",
     alias: "lamb_lens",
-    mode: "AZNet",
+    mode: "lamb_lens",
     query,
     ethics,
     results: hits,
     citations: hits.map((h) => ({ title: h.title, url: h.url, source: h.source })),
     advisory: true,
-    label: "AZNet / Lamb Lens — ethical internet search. Advisory. Cite sources.",
+    label: "Lamb Lens — ethical internet search. Advisory. Cite sources.",
     note: "Not a guaranteed index. Not doxxing. Not a malware lure.",
   };
 }
@@ -454,6 +461,30 @@ export async function dispatch(op, payload, sessionId) {
     };
   }
 
+  const requirePair = async () => {
+    const status = await resolvePair(session, payload || {});
+    if (status.paired) return null;
+    const rec = await appendReceipt(session, "pair_required", { code: "PAIR_REQUIRED" });
+    return {
+      ok: false,
+      code: "PAIR_REQUIRED",
+      pair: status,
+      receipt: rec,
+      session_id: session.id,
+      display: displayOf(
+        "AZNet pairing required",
+        "AZBrowser and AZNet must both be paired. FragGate unlocks; StaticClock times.",
+        [
+          ["aznet", status.links.aznet_github],
+          ["garden", status.links.aznet_garden],
+          ["worker", status.links.aznet_worker],
+          ["receipt", rec.hash.slice(0, 16)],
+        ],
+      ),
+      limitation: LIMITATION,
+    };
+  };
+
   const refuse = async (text) => {
     const ethics = classifyQuery(text);
     if (!ethics.refuse) return null;
@@ -464,7 +495,7 @@ export async function dispatch(op, payload, sessionId) {
       ethics,
       receipt: rec,
       session_id: session.id,
-      display: displayOf("AZNet refused", "Advisory ethical gate refused this input.", [["reasons", ethics.reasons.join(",")], ["receipt", rec.hash.slice(0, 16)]]),
+      display: displayOf("Lamb Lens refused", "Advisory ethical gate refused this input.", [["reasons", ethics.reasons.join(",")], ["receipt", rec.hash.slice(0, 16)]]),
       limitation: LIMITATION,
     };
   };
@@ -474,7 +505,6 @@ export async function dispatch(op, payload, sessionId) {
       ok: true,
       product: PRODUCT,
       name: "AZBrowser",
-      aznet: true,
       version: VERSION,
       spec: SPEC,
       identity: IDENTITY,
@@ -489,18 +519,46 @@ export async function dispatch(op, payload, sessionId) {
       host: HOST,
       sigil: SIGIL,
       azmail: AZMAIL,
+      aznet: AZNET,
+      pair_required: true,
+      sidenet_viewer: true,
+      protocol_embedded: false,
       kv_increment: false,
       stored: false,
       chromium: false,
       session_id: session.id,
       limitation: LIMITATION,
-      display: displayOf("AZBrowser health", "Phase 1 research shell. Dual surface.", [["version", VERSION], ["ops", OPS.length]]),
+      display: displayOf("AZBrowser health", "Phase 1 research shell. Dual surface. AZNet pairing required.", [["version", VERSION], ["ops", OPS.length], ["pair_required", true]]),
     };
+  }
+
+  if (name === "pair_status") {
+    session.pairCache = null;
+    const status = await resolvePair(session, payload || {});
+    const rec = await appendReceipt(session, "pair_status", { paired: status.paired, code: status.code });
+    status.receipt = rec;
+    status.session_id = session.id;
+    status.limitation = LIMITATION;
+    status.display = displayOf("Pair status", status.note || "", [["paired", status.paired], ["fraggate_unlock", status.fraggate_unlock], ["receipt", rec.hash.slice(0, 16)]]);
+    return status;
+  }
+
+  if (name === "sidenet_view") {
+    const out = sidenetView();
+    const rec = await appendReceipt(session, "sidenet_view", { garden: out.garden });
+    out.receipt = rec;
+    out.pair = await resolvePair(session, payload || {});
+    out.session_id = session.id;
+    out.limitation = LIMITATION;
+    out.display = displayOf("AZNet side-net viewer", "Viewer only. Protocol lives in the AZNet repo.", [["garden", out.garden], ["github", out.github], ["receipt", rec.hash.slice(0, 16)]]);
+    return out;
   }
 
   if (name === "navigate") {
     const url = String((payload && (payload.url || payload.q)) || "").trim();
     if (!url) return { ok: false, error: "url required", limitation: LIMITATION, session_id: session.id };
+    const locked = await requirePair();
+    if (locked) return locked;
     const blocked = await refuse(url);
     if (blocked) return blocked;
     const safe = sanitizeUrl(url);
@@ -605,6 +663,8 @@ export async function dispatch(op, payload, sessionId) {
   if (name === "ethical_search") {
     const q = String((payload && (payload.q || payload.query || payload.url)) || "").trim();
     if (!q) return { ok: false, error: "q required", limitation: LIMITATION, session_id: session.id };
+    const locked = await requirePair();
+    if (locked) return locked;
     const blocked = await refuse(q);
     if (blocked) return blocked;
     const out = ethicalSearch(q, (payload && payload.limit) || 8);
@@ -612,11 +672,13 @@ export async function dispatch(op, payload, sessionId) {
     out.receipt = rec;
     out.session_id = session.id;
     out.limitation = LIMITATION;
-    out.display = displayOf("AZNet / Lamb Lens", out.label || "Ethical search.", [["query", q], ["results", (out.results || []).length], ["receipt", rec.hash.slice(0, 16)]]);
+    out.display = displayOf("Lamb Lens", out.label || "Ethical search.", [["query", q], ["results", (out.results || []).length], ["receipt", rec.hash.slice(0, 16)]]);
     return out;
   }
 
   if (name === "airlock") {
+    const locked = await requirePair();
+    if (locked) return locked;
     const url = String((payload && payload.url) || "");
     const content = payload && payload.content;
     const filename = String((payload && payload.filename) || "");
@@ -666,6 +728,8 @@ export async function dispatch(op, payload, sessionId) {
   }
 
   if (name === "scrub") {
+    const locked = await requirePair();
+    if (locked) return locked;
     const out = scrubHtml(String((payload && (payload.html || payload.text)) || ""));
     const rec = await appendReceipt(session, "scrub", { kinds: out.stripped_kinds });
     return { ok: true, ...out, receipt: rec, session_id: session.id, limitation: LIMITATION, display: displayOf("Scrub", "Scripts/embeds stripped.", [["kinds", (out.stripped_kinds || []).join(",")]]) };
@@ -684,25 +748,31 @@ export async function dispatch(op, payload, sessionId) {
 export const SKILL_MD = `---
 name: AZBrowser
 description: >-
-  Use when researching through AZBrowser / AZNet — navigate preview,
-  Lamb Lens ethical search, receipted airlock, tabs. Phase 1 research
-  shell, not a Chromium replacement. Author Aziel Eliab.
+  Use when researching through AZBrowser — navigate preview, Lamb Lens
+  ethical search, receipted airlock, tabs, AZNet side-net viewer.
+  Pairing with sibling AZNet is required. Phase 1 research shell, not
+  Chromium. Author Aziel Eliab.
 ---
 
 # AZBrowser
 
 Secure research browser / hardened investigation platform (Phase 1).
-AZNet is the ethical-search / network mode label.
+AZNet is a **sibling side-net** (https://github.com/AzielEliab/aznet).
+AZBrowser **views** it and **requires pairing** to run. FragGate unlocks;
+StaticClock times. AZNet branding here is the sidenet viewer — not a
+second whitepaper fork.
 
 Author: **Aziel Eliab** only.
 
 **THIS IS:** browser-chrome UX + controlled fetch/proxy preview +
 receipted airlock (\`download → scan → scrub → verify → vault\`) +
-AZNet / Lamb Lens ethical search + append-only integrity receipts.
+Lamb Lens ethical search + AZNet side-net viewer + append-only
+integrity receipts.
 
 **THIS IS NOT:** Chromium, Firefox, Safari, or Edge. Not AZ-OS, Lumen,
-or AZInterface. AZMail is a **sibling** product
-(https://github.com/AzielEliab/azmail) — optional deep-link only.
+or AZInterface. Not an AZNet protocol implementation. AZMail is a
+**sibling** (https://github.com/AzielEliab/azmail). AZNet is a
+**sibling** (https://github.com/AzielEliab/aznet).
 
 Always send \`User-Agent: Mozilla/5.0\`.
 
@@ -719,12 +789,18 @@ sibling aziel-runtime PR. Human chrome uses this Worker \`/v1/{op}\`.
 
 **Human UI stays on this Worker.** AI path is FragGate + this OpenAPI.
 
+Research ops (\`navigate\`, \`ethical_search\`, \`airlock\`, \`scrub\`)
+return \`PAIR_REQUIRED\` until AZNet pair-status is true **and** FragGate
+unlocks via StaticClock. Pair/viewer ops stay open so the gate works.
+
 ## Ops (UI action = MCP / FragGate op)
 
 | UI chrome | op |
 |-----------|-----|
 | Address Go / preview | \`navigate\` / \`preview\` |
-| AZNet search | \`ethical_search\` / \`lamb_lens\` / \`search\` |
+| Lamb Lens search | \`ethical_search\` / \`lamb_lens\` / \`search\` |
+| Side-net viewer | \`sidenet_view\` |
+| Pair status | \`pair_status\` |
 | Back / Forward / Reload | \`back\` \`forward\` \`reload\` |
 | Home (everblooming sigil) | \`home\` |
 | New / close / switch tab | \`tab_new\` \`tab_close\` \`tab_switch\` \`tab_list\` |
@@ -751,10 +827,10 @@ UI is required for the human.
 \`\`\`bash
 curl -s -A 'Mozilla/5.0' -X POST https://aziel-runtime.vibelock.workers.dev/v1/fraggate/call \\
   -H 'content-type: application/json' \\
-  -d '{"slug":"azbrowser","op":"ethical_search","payload":{"q":"FragGate kernel"}}'
-curl -s -A 'Mozilla/5.0' -X POST https://azbrowser-download-tracker.vibelock.workers.dev/v1/navigate \\
+  -d '{"slug":"azbrowser","op":"pair_status","payload":{}}'
+curl -s -A 'Mozilla/5.0' -X POST https://azbrowser-download-tracker.vibelock.workers.dev/v1/sidenet_view \\
   -H 'content-type: application/json' \\
-  -d '{"url":"https://www.azieleliab.com/"}'
+  -d '{}'
 curl -s -A 'Mozilla/5.0' https://aziel-runtime.vibelock.workers.dev/v1/fraggate/list
 \`\`\`
 

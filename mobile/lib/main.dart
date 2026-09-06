@@ -30,7 +30,9 @@ class ResearchShellPage extends StatefulWidget {
 class _ResearchShellPageState extends State<ResearchShellPage> {
   final _omnibox = TextEditingController();
   final _receipts = <String>[];
-  String _panel = 'AZNet new tab. Phase 1 research shell — not Chromium.';
+  String _panel =
+      'Lamb Lens new tab. AZNet pairing required to run. Phase 1 research shell — not Chromium.';
+  String _pair = 'Pair: required';
   String _airlock = 'download → scan → scrub → verify → vault';
 
   @override
@@ -59,22 +61,22 @@ class _ResearchShellPageState extends State<ResearchShellPage> {
         low.contains('steal password') ||
         low.contains('how to hack')) {
       setState(() {
-        _panel = 'AZNet / Lamb Lens refused (advisory).';
+        _panel = 'Lamb Lens refused (advisory).';
       });
       _receipt('ethics_refuse');
       return;
     }
     setState(() {
-      _panel = q.contains('.') && !q.contains(' ')
-          ? 'Sandbox preview receipted for $q (not Chromium).'
-          : 'AZNet ethical search for "$q". Cite sources. Advisory.';
+      _pair = 'Pair: required';
+      _panel =
+          'PAIR_REQUIRED. Pair with sibling AZNet to run. FragGate unlocks; StaticClock times. Query: $q';
     });
-    _receipt(q.contains('.') ? 'navigate' : 'ethical_search');
+    _receipt('pair_required');
   }
 
   void _home() {
     _omnibox.clear();
-    setState(() => _panel = 'Home — everblooming sigil. AZNet new tab.');
+    setState(() => _panel = 'Home — everblooming sigil. Lamb Lens new tab. Pair with AZNet to run.');
     _receipt('home');
   }
 
@@ -100,8 +102,9 @@ class _ResearchShellPageState extends State<ResearchShellPage> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'On-device Phase 1 research shell. AZNet / Lamb Lens. '
-            'Not Chromium. AZMail is a sibling product, not this app.',
+            'On-device Phase 1 research shell. Lamb Lens search. '
+            'AZNet is a sibling side-net viewer (not a protocol fork). '
+            'Pairing required. Not Chromium. AZMail is a sibling product.',
           ),
           const SizedBox(height: 16),
           Row(
@@ -114,13 +117,38 @@ class _ResearchShellPageState extends State<ResearchShellPage> {
           ),
           TextField(
             controller: _omnibox,
-            decoration: const InputDecoration(labelText: 'AZNet search or URL'),
+            decoration: const InputDecoration(labelText: 'Lamb Lens search or URL'),
             onSubmitted: (_) => _go(),
           ),
           const SizedBox(height: 12),
           FilledButton(onPressed: _go, child: const Text('Go')),
           const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: () {
+              setState(() {
+                _panel =
+                    'AZNet side-net viewer. https://github.com/AzielEliab/aznet · garden https://aznet-download-tracker.vibelock.workers.dev/garden';
+              });
+              _receipt('sidenet_view');
+            },
+            child: const Text('Side-net'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: () {
+              setState(() {
+                _pair = 'Pair: required';
+                _panel =
+                    'PAIR_REQUIRED. FragGate unlocks; StaticClock times. Both products required.';
+              });
+              _receipt('pair_status');
+            },
+            child: const Text('Pair status'),
+          ),
+          const SizedBox(height: 8),
           OutlinedButton(onPressed: _airlockGo, child: const Text('Airlock')),
+          const SizedBox(height: 8),
+          Text(_pair, style: const TextStyle(color: kGold)),
           const SizedBox(height: 12),
           Text(_panel, style: const TextStyle(color: kGold)),
           const SizedBox(height: 8),

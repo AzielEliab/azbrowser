@@ -1,4 +1,8 @@
-"""AZNet / Lamb Lens ethical internet search. Advisory. Cite sources."""
+"""Lamb Lens ethical internet search. Advisory. Cite sources.
+
+AZNet is a sibling side-net (https://github.com/AzielEliab/aznet), not
+this search mode. Pairing is required to run research ops.
+"""
 
 from __future__ import annotations
 
@@ -28,6 +32,13 @@ CATALOG: list[dict[str, str]] = [
         "source": "github",
         "blurb": "Catalog + FragGate + MCP. Host: https://aziel-runtime.vibelock.workers.dev/",
         "tags": "runtime mcp openapi catalog",
+    },
+    {
+        "title": "AZNet (sibling side-net, not this product)",
+        "url": "https://github.com/AzielEliab/aznet",
+        "source": "github",
+        "blurb": "Silent verification network. Hash continuity without hosting. Pairs with AZBrowser. Viewer/garden only here — protocol lives in AZNet.",
+        "tags": "aznet sidenet pair garden sibling",
     },
     {
         "title": "AZMail (sibling, not this product)",
@@ -89,7 +100,7 @@ def ethical_search(query: str, *, limit: int = 8) -> dict[str, Any]:
             "results": [],
             "citations": [],
             "advisory": True,
-            "label": "AZNet / Lamb Lens — refused. Advisory ethical gate.",
+            "label": "Lamb Lens — refused. Advisory ethical gate.",
             "note": "Cite sources. Refuse doxxing, credential harvest, malware lure.",
         }
 
@@ -117,13 +128,13 @@ def ethical_search(query: str, *, limit: int = 8) -> dict[str, Any]:
         "ok": True,
         "action": "ethical_search",
         "alias": "lamb_lens",
-        "mode": "AZNet",
+        "mode": "lamb_lens",
         "query": query,
         "ethics": ethics,
         "results": hits,
         "citations": citations,
         "advisory": True,
-        "label": "AZNet / Lamb Lens — ethical internet search. Advisory. Cite sources.",
-        "note": "Not a guaranteed index. Not doxxing. Not a malware lure.",
+        "label": "Lamb Lens — ethical internet search. Advisory. Cite sources.",
+        "note": "Not a guaranteed index. Not doxxing. Not a malware lure. AZNet is the sibling side-net viewer, not this search mode.",
         "placeholder": cited,
     }

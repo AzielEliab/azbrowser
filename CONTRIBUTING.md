@@ -24,7 +24,9 @@ Python 3.10+. Engine is stdlib only. pytest is the dev extra.
 2. **Dual surface.** Every chrome action needs a matching FragGate / MCP
    / `/v1` op. Do not gut the human UI. Do not ship UI-only.
 3. **No receipt = no action.** Mutating ops append a hash-chained receipt.
-4. **AZNet refuses** doxxing, credential harvest, and malware lure.
+4. **Lamb Lens refuses** doxxing, credential harvest, and malware lure.
+   AZNet is a sibling side-net viewer — do not fork its protocol or
+   whitepaper into this repo. Pair-status is required for research ops.
 5. **UI binds loopback only** for `azbrowser ui` (`127.0.0.1:8878`).
    No telemetry. No CDN.
 6. **Do not mix the download tracker** with any other product's Worker
@@ -37,7 +39,8 @@ Python 3.10+. Engine is stdlib only. pytest is the dev extra.
 ## Where to change things
 
 - Ethics / search / airlock / receipts / tabs / dispatch: `azbrowser/`
-- Worker engine (same ops): `workers/download-tracker/src/engine.js`
+- AZNet sibling pair-status / sidenet viewer: `azbrowser/pair.py` (do not embed AZNet protocol)
+- Worker engine (same ops): `workers/download-tracker/src/engine.js` + `pair.js`
 - OpenAPI / MCP: `workers/download-tracker/src/runtime.js`
 - Browser chrome: `workers/download-tracker/src/ui.js`
 - Spec: `docs/whitepaper.md`

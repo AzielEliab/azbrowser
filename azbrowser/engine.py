@@ -23,12 +23,19 @@ from .meta import (
     SPEC,
     __version__,
 )
+from .pair import pair_status, sidenet_view
 from .search import ethical_search
 from .tabs import TabSession
+
+PAIR_REQUIRED_OPS = frozenset(
+    {"navigate", "ethical_search", "airlock", "scrub"}
+)
 
 OPS = (
     "health",
     "skill",
+    "pair_status",
+    "sidenet_view",
     "navigate",
     "preview",
     "reload",
@@ -71,9 +78,11 @@ def display_of(title: str, summary: str, fields: list[tuple[str, Any]] | None = 
 class Engine:
     """In-process AZBrowser engine. Ephemeral tabs; optional JSONL receipts."""
 
-    def __init__(self, ledger: Ledger | None = None) -> None:
+    def __init__(self, ledger: Ledger | None = None, *, paired: bool | None = None) -> None:
         self.tabs = TabSession()
         self.ledger = ledger or Ledger()
+        self._pair_stub = paired
+        self._pair_cache: dict[str, Any] | None = None
 
     def _receipt(self, action: str, payload: dict[str, Any]) -> dict[str, Any]:
         return self.ledger.append(action, payload, tab_id=self.tabs.active)
@@ -88,7 +97,7 @@ class Engine:
                 "ethics": ethics,
                 "receipt": rec,
                 "display": display_of(
-                    "AZNet refused",
+                    "Lamb Lens refused",
                     "Advisory ethical gate refused this input.",
                     [("reasons", ",".join(ethics["reasons"])), ("receipt", rec["hash"][:16])],
                 ),
@@ -96,12 +105,62 @@ class Engine:
             }
         return None
 
+    def _pair(self) -> dict[str, Any]:
+        if self._pair_cache is None:
+            self._pair_cache = pair_status(fetch=self._pair_stub is None, stub_paired=self._pair_stub)
+        return self._pair_cache
+
+    def _require_pair(self) -> dict[str, Any] | None:
+        status = self._pair()
+        if status.get("paired"):
+            return None
+        rec = self._receipt("pair_required", {"code": "PAIR_REQUIRED"})
+        return {
+            "ok": False,
+            "code": "PAIR_REQUIRED",
+            "pair": status,
+            "receipt": rec,
+            "display": display_of(
+                "AZNet pairing required",
+                "AZBrowser and AZNet must both be paired. FragGate unlocks; StaticClock times.",
+                [
+                    ("aznet", status["links"]["aznet_github"]),
+                    ("garden", status["links"]["aznet_garden"]),
+                    ("worker", status["links"]["aznet_worker"]),
+                    ("receipt", rec["hash"][:16]),
+                ],
+            ),
+            "limitation": LIMITATION,
+        }
+
+    def pair_status(self, _payload: dict[str, Any]) -> dict[str, Any]:
+        self._pair_cache = None
+        status = self._pair()
+        rec = self._receipt("pair_status", {"paired": status.get("paired"), "code": status.get("code")})
+        status = {**status, "receipt": rec, "limitation": LIMITATION}
+        status["display"] = display_of(
+            "Pair status",
+            status.get("note") or "",
+            [("paired", status.get("paired")), ("fraggate_unlock", status.get("fraggate_unlock")), ("receipt", rec["hash"][:16])],
+        )
+        return status
+
+    def sidenet_view(self, _payload: dict[str, Any]) -> dict[str, Any]:
+        out = sidenet_view()
+        rec = self._receipt("sidenet_view", {"garden": out.get("garden")})
+        out.update({"receipt": rec, "pair": self._pair(), "limitation": LIMITATION})
+        out["display"] = display_of(
+            "AZNet side-net viewer",
+            "Viewer only. Protocol lives in the AZNet repo.",
+            [("garden", out["garden"]), ("github", out["github"]), ("receipt", rec["hash"][:16])],
+        )
+        return out
+
     def health(self, _payload: dict[str, Any]) -> dict[str, Any]:
         return {
             "ok": True,
             "product": "azbrowser",
             "name": "AZBrowser",
-            "aznet": True,
             "version": __version__,
             "spec": SPEC,
             "identity": IDENTITY,
@@ -115,11 +174,19 @@ class Engine:
             "host": HOST,
             "sigil": SIGIL,
             "azmail": AZMAIL,
+            "aznet": "https://github.com/AzielEliab/aznet",
+            "pair_required": True,
+            "sidenet_viewer": True,
+            "protocol_embedded": False,
             "kv_increment": False,
             "stored": False,
             "chromium": False,
             "limitation": LIMITATION,
-            "display": display_of("AZBrowser health", "Phase 1 research shell. Dual surface.", [("version", __version__), ("ops", len(OPS))]),
+            "display": display_of(
+                "AZBrowser health",
+                "Phase 1 research shell. Dual surface. AZNet pairing required.",
+                [("version", __version__), ("ops", len(OPS)), ("pair_required", True)],
+            ),
         }
 
     def skill(self, _payload: dict[str, Any]) -> dict[str, Any]:
@@ -133,6 +200,9 @@ class Engine:
         url = str(payload.get("url") or payload.get("q") or "").strip()
         if not url:
             return {"ok": False, "error": "url required", "limitation": LIMITATION}
+        locked = self._require_pair()
+        if locked:
+            return locked
         refused = self._gate(url)
         if refused:
             return refused
@@ -222,6 +292,9 @@ class Engine:
         q = str(payload.get("q") or payload.get("query") or payload.get("url") or "").strip()
         if not q:
             return {"ok": False, "error": "q required", "limitation": LIMITATION}
+        locked = self._require_pair()
+        if locked:
+            return locked
         refused = self._gate(q)
         if refused:
             return refused
@@ -230,13 +303,16 @@ class Engine:
         out["receipt"] = rec
         out["limitation"] = LIMITATION
         out["display"] = display_of(
-            "AZNet / Lamb Lens",
+            "Lamb Lens",
             out.get("label") or "Ethical search.",
             [("query", q), ("results", len(out.get("results") or [])), ("receipt", rec["hash"][:16])],
         )
         return out
 
     def airlock(self, payload: dict[str, Any]) -> dict[str, Any]:
+        locked = self._require_pair()
+        if locked:
+            return locked
         url = str(payload.get("url") or "")
         content = payload.get("content")
         filename = str(payload.get("filename") or "")
@@ -291,6 +367,9 @@ class Engine:
         return out
 
     def scrub(self, payload: dict[str, Any]) -> dict[str, Any]:
+        locked = self._require_pair()
+        if locked:
+            return locked
         out = scrub_html(str(payload.get("html") or payload.get("text") or ""))
         rec = self._receipt("scrub", {"kinds": out.get("stripped_kinds")})
         out.update({"ok": True, "receipt": rec, "limitation": LIMITATION})
