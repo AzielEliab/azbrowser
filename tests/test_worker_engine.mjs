@@ -21,6 +21,7 @@ assert.doesNotMatch(search.label, /AZNet/);
 assert.match(search.label, /Lamb Lens/);
 
 const html = homeHtml({ views: 0, downloads: 0 });
+assert.match(html, /<title>[^<]*Aziel Eliab[^<]*<\/title>/);
 assert.match(html, /Lamb Lens ethical search/);
 assert.match(html, /id="btnGo"/);
 assert.match(html, /title="Go \/ ethical search"/);
