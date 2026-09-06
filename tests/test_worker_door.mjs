@@ -38,6 +38,17 @@ assert.deepEqual(classifyV1Path("/v1/runtime"), {
   path: "/v1/runtime",
   originPath: "/v1/runtime",
 });
+assert.deepEqual(classifyV1Path("/v1/mesh"), {
+  kind: "door",
+  path: "/v1/mesh",
+  originPath: "/v1/mesh",
+});
+assert.deepEqual(classifyV1Path("/v1/mesh/nodes"), {
+  kind: "door",
+  path: "/v1/mesh/nodes",
+  originPath: "/v1/mesh/nodes",
+});
+assert.equal(localOpFromPath("/v1/mesh"), null);
 assert.deepEqual(classifyV1Path("/v1/navigate"), {
   kind: "local",
   path: "/v1/navigate",

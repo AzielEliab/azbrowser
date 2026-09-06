@@ -81,7 +81,9 @@ blobs.
    `POST https://aziel-runtime.vibelock.workers.dev/mcp`.
    This Worker `/mcp` is a pointer, not a second agent brand. Human
    chrome uses same-origin `/v1/{op}` (single-segment local ops).
-   `/v1/fraggate/*` and `/v1/runtime/*` PROXY to aziel-runtime.
+   `/v1/fraggate/*`, `/v1/runtime/*`, and `/v1/mesh/*` PROXY to
+   aziel-runtime. Suite mesh default OFF. QNM rollup
+   live|locked|isolated. No Node Gate. No auto-heal. Not anonymity.
    Agents display
    `display.title` / `summary` / `fields` in chat and feed the next
    input. No technical MCP chrome is required for the human.

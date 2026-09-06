@@ -6,6 +6,7 @@ AZMail is a sibling: https://github.com/AzielEliab/azmail
 AZNet is a sibling functional pair: https://github.com/AzielEliab/aznet
 """
 
+from .mesh import mesh_pointer, mesh_status_line, parse_mesh_doc
 from .airlock import airlock
 from .engine import OPS, dispatch
 from .ethics import classify_query
@@ -60,6 +61,9 @@ __all__ = [
     "classify_query",
     "dispatch",
     "ethical_search",
+    "mesh_pointer",
+    "mesh_status_line",
+    "parse_mesh_doc",
     "Ledger",
     "preview_url",
     "receipt_hash",

@@ -11,6 +11,7 @@ from .airlock import STAGES, airlock
 from .ethics import classify_query
 from .preview import preview_url, sanitize_url, scrub_html
 from .receipts import Ledger
+from .mesh import mesh_pointer
 from .meta import (
     AZMAIL,
     FRAGGATE,
@@ -120,6 +121,7 @@ class Engine:
             "host": HOST,
             "sigil": SIGIL,
             "azmail": AZMAIL,
+            "mesh": mesh_pointer(),
             "kv_increment": False,
             "stored": False,
             "chromium": False,

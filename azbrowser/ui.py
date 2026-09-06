@@ -10,7 +10,7 @@ from urllib.request import Request, urlopen
 
 from .door import classify_v1_path, door_target_url
 from .engine import OPS, Engine
-from .meta import LIMITATION, SIGIL, __version__
+from .meta import HOST, LIMITATION, SIGIL, __version__
 from .receipts import Ledger
 
 PORT = 8878
@@ -47,6 +47,9 @@ h2 {{ color:var(--gold); font-size:13px; margin:0 0 8px; }}
 pre {{ white-space:pre-wrap; word-break:break-word; font-size:12px; }}
 .receipt {{ font-family:ui-monospace,monospace; font-size:11px; border-bottom:1px solid #333; padding:6px 0; }}
 .status {{ border-top:1px solid var(--gold); padding:6px 10px; font-size:12px; color:var(--muted); }}
+#meshStrip {{ border-top:1px solid var(--gold); padding:8px 10px; background:#0e0e0e; display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; font-size:12px; color:var(--muted); }}
+#meshStrip .live b {{ color:var(--gold); font-size:18px; margin-right:6px; }}
+#meshStrip button {{ background:#161616; color:var(--text); border:1px solid var(--trim); border-radius:6px; height:28px; padding:0 10px; cursor:pointer; }}
 a {{ color:var(--gold); }}
 </style>
 <div id="chrome">
@@ -70,6 +73,19 @@ a {{ color:var(--gold); }}
       <div id="receipts"></div>
     </aside>
   </main>
+  <div id="meshStrip" aria-label="Suite Live Nodes">
+    <div class="live"><b id="meshLiveCount">0</b> Live Nodes</div>
+    <div id="meshLine">Suite mesh: off (default). QNM-BUILD-1.0. Not an anonymity network.</div>
+    <div>live <b id="qnmLive">0</b> · locked <b id="qnmLocked">0</b> · isolated <b id="qnmIsolated">0</b></div>
+    <div>No Node Gate · No auto-heal · Aziel Eliab only</div>
+    <div>
+      <button id="meshEnable" type="button">Enable</button>
+      <button id="meshDisable" type="button">Disable</button>
+      <button id="meshJoin" type="button">Join</button>
+      <button id="meshLeave" type="button">Leave</button>
+    </div>
+    <div id="meshProducts">Catalog MCP mesh_* · FragGate slug=mesh · /v1/mesh/* PROXY</div>
+  </div>
   <div class="status">AZBrowser {__version__} local · Phase 1 research shell · No receipt = no action · not Chromium</div>
 </div>
 <script>
@@ -124,6 +140,60 @@ document.getElementById('airlockBtn').onclick = async () => {{
   show(await op('airlock', {{url:q}}));
 }};
 document.getElementById('stage').innerHTML = '<div class="banner">{LIMITATION}</div><p>Local loopback UI. Counted Worker: <a href="{HOST}">{HOST}</a></p><p>Ops: {ops}</p><img alt="sigil" src="'+SIGIL+'" width="96" height="96">';
+function meshNum() {{
+  for (let i = 0; i < arguments.length; i++) {{
+    const raw = arguments[i];
+    if (raw == null || raw === "") continue;
+    const n = typeof raw === "number" ? raw : Number(String(raw).replace(/,/g, ""));
+    if (Number.isFinite(n) && n >= 0) return Math.floor(n);
+  }}
+  return 0;
+}}
+function unwrapMesh(j) {{
+  if (!j || typeof j !== "object") return {{}};
+  if (j.result && typeof j.result === "object") return Object.assign({{}}, j, j.result);
+  if (j.mesh && typeof j.mesh === "object") return Object.assign({{}}, j, j.mesh);
+  return j;
+}}
+function paintMesh(raw) {{
+  const j = unwrapMesh(raw);
+  const on = j.enabled === true || String(j.status || "").toLowerCase() === "on";
+  const r = (j.rollup && typeof j.rollup === "object") ? j.rollup : {{}};
+  const live = on ? meshNum(r.live, j.live_nodes, j.live) : 0;
+  const locked = on ? meshNum(r.locked, j.locked_nodes, j.locked) : 0;
+  const isolated = on ? meshNum(r.isolated, j.isolated_nodes, j.isolated) : 0;
+  document.getElementById("meshLiveCount").textContent = String(live);
+  document.getElementById("qnmLive").textContent = String(live);
+  document.getElementById("qnmLocked").textContent = String(locked);
+  document.getElementById("qnmIsolated").textContent = String(isolated);
+  document.getElementById("meshLine").textContent = on
+    ? ("Suite mesh: on · live " + live + " · locked " + locked + " · isolated " + isolated + ". Not an anonymity network.")
+    : "Suite mesh: off (default). QNM-BUILD-1.0. Not an anonymity network.";
+}}
+async function refreshMesh() {{
+  try {{
+    paintMesh(await (await fetch("/v1/mesh", {{ headers: {{ "user-agent": "Mozilla/5.0" }} }})).json());
+  }} catch (e) {{
+    paintMesh({{ ok: false, enabled: false, status: "unavailable" }});
+  }}
+}}
+document.getElementById("meshEnable").onclick = async () => {{ await fetch("/v1/mesh/enable", {{ method: "POST", headers: {{ "content-type": "application/json", "user-agent": "Mozilla/5.0" }}, body: "{{}}" }}); refreshMesh(); }};
+document.getElementById("meshDisable").onclick = async () => {{ await fetch("/v1/mesh/disable", {{ method: "POST", headers: {{ "content-type": "application/json", "user-agent": "Mozilla/5.0" }}, body: "{{}}" }}); refreshMesh(); }};
+document.getElementById("meshJoin").onclick = async () => {{
+  const j = await (await fetch("/v1/mesh/join", {{ method: "POST", headers: {{ "content-type": "application/json", "user-agent": "Mozilla/5.0" }}, body: JSON.stringify({{ product: "azbrowser", label: "AZBrowser local" }}) }})).json();
+  const inner = unwrapMesh(j);
+  const id = inner.node_id || inner.id;
+  if (id) sessionStorage.setItem("azbrowser_mesh_node", String(id));
+  refreshMesh();
+}};
+document.getElementById("meshLeave").onclick = async () => {{
+  const id = sessionStorage.getItem("azbrowser_mesh_node");
+  if (id) await fetch("/v1/mesh/leave", {{ method: "POST", headers: {{ "content-type": "application/json", "user-agent": "Mozilla/5.0" }}, body: JSON.stringify({{ node_id: id }}) }});
+  sessionStorage.removeItem("azbrowser_mesh_node");
+  refreshMesh();
+}};
+refreshMesh();
+setInterval(refreshMesh, 30000);
 paintTabs();
 </script>
 </html>

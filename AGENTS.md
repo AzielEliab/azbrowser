@@ -18,8 +18,10 @@ Agent path is FragGate only:
 with `slug=azbrowser`. Catalog MCP:
 `POST https://aziel-runtime.vibelock.workers.dev/mcp`.
 This Worker's `/mcp` is a pointer, not a second MCP. Human chrome uses
-`/v1/{op}` (single-segment local ops). `/v1/fraggate/*` and
-`/v1/runtime/*` PROXY to aziel-runtime — they are not local op names.
+`/v1/{op}` (single-segment local ops). `/v1/fraggate/*`,
+`/v1/runtime/*`, and `/v1/mesh/*` PROXY to aziel-runtime — they are not
+local op names. Suite mesh default OFF. QNM rollup live|locked|isolated.
+No Node Gate. No auto-heal. Not anonymity.
 
 No receipt = no action.
 
