@@ -33,9 +33,9 @@ POST https://aziel-runtime.vibelock.workers.dev/v1/fraggate/call
 
 Same door as the `fraggate_call` MCP tool (`slug=azbrowser`). Kernel:
 https://github.com/AzielEliab/fraggate. Catalog listing lands in a
-sibling aziel-runtime PR. Until then this Worker implements the **same
-ops** on `/v1/{op}` and `POST /mcp` tools/call so the backend is
-first-class (not UI-only).
+sibling aziel-runtime PR. Human chrome uses this Worker's `/v1/{op}`
+(same op names). `GET|POST /mcp` on this host is a **pointer**, not a
+second MCP. AI / MCP path is FragGate only.
 
 **Human UI stays on this Worker.** Agents display `display.title`,
 `display.summary`, and `display.fields` in the AI client, then take the
@@ -67,9 +67,9 @@ Host: `https://azbrowser-download-tracker.vibelock.workers.dev`
 | GET | `/` | Complete browser chrome. Increments views. |
 | GET | `/v1/health` | Liveness. Does not increment downloads. |
 | GET | `/v1/skill` | This markdown. |
-| GET | `/openapi.json` | OpenAPI 3.1 — first-class backend. |
-| GET/POST | `/mcp` | MCP docs + JSON-RPC tools/list, tools/call. |
-| POST | `/v1/{op}` | Same ops as the table above. |
+| GET | `/openapi.json` | OpenAPI 3.1 — documents ops; agents use FragGate. |
+| GET/POST | `/mcp` | Pointer to FragGate (`slug=azbrowser`). Not a second MCP. |
+| POST | `/v1/{op}` | Human UI backend. Same ops as the table above. |
 | POST | `/v1/runtime/call` | FragGate-shaped `{slug,op,payload}`. `azbrowser` is local; allowlisted siblings proxy. |
 | GET | `/v1/runtime/list` | Local ops + FragGate list pointer. |
 | GET | `/download` | Counted tarball. |
@@ -79,8 +79,7 @@ Works with ChatGPT (GPT Actions / OpenAI), Grok (xAI), Venice, Claude
 (Anthropic), Cursor (MCP), Glama (MCP), Perplexity, Microsoft Copilot /
 Bing, Google Gemini / Vertex, Mistral, Meta AI, Apple Intelligence
 surfaces, Amazon Q tooling, DuckAssist, You.com, Cohere, and other
-MCP/OpenAPI-capable assistants — **through FragGate**, plus this
-Worker's OpenAPI / `POST /mcp`.
+MCP/OpenAPI-capable assistants — **through FragGate only**.
 
 ## How to call (Mozilla/5.0)
 
@@ -91,9 +90,7 @@ curl -s -A 'Mozilla/5.0' -X POST https://aziel-runtime.vibelock.workers.dev/v1/f
 curl -s -A 'Mozilla/5.0' -X POST https://azbrowser-download-tracker.vibelock.workers.dev/v1/navigate \
   -H 'content-type: application/json' \
   -d '{"url":"https://www.azieleliab.com/"}'
-curl -s -A 'Mozilla/5.0' -X POST https://azbrowser-download-tracker.vibelock.workers.dev/mcp \
-  -H 'content-type: application/json' \
-  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+curl -s -A 'Mozilla/5.0' https://aziel-runtime.vibelock.workers.dev/v1/fraggate/list
 ```
 
 ## Local

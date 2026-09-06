@@ -80,8 +80,8 @@ iframe.preview{width:100%;min-height:420px;border:1px solid var(--trim);backgrou
       <div id="receipts"></div>
       <h2>FragGate</h2>
       <div class="card cite">
-        Agents: <code>POST /v1/fraggate/call</code> slug=<b>azbrowser</b><br>
-        <a href="/openapi.json">OpenAPI</a> · <a href="/mcp">/mcp</a> · <a href="/ai">AI</a> · <a href="/v1/skill">skill</a><br>
+        AI path is FragGate only: <code>POST /v1/fraggate/call</code> slug=<b>azbrowser</b><br>
+        <a href="/openapi.json">OpenAPI</a> · <a href="/mcp">/mcp pointer</a> · <a href="/ai">AI</a> · <a href="/v1/skill">skill</a><br>
         Sibling: <a href="https://github.com/AzielEliab/azmail">AZMail</a>
       </div>
     </aside>

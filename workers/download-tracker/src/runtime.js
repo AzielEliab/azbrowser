@@ -142,8 +142,8 @@ function openapiSpec(origin) {
     info: {
       title: "AZBrowser runtime",
       version: VERSION,
-      summary: "Dual surface. Human UI is this Worker. Agents use FragGate slug=azbrowser or this OpenAPI / POST /mcp.",
-      description: LIMITATION + " Agent door: POST " + FRAGGATE_CALL + " {slug:azbrowser,op,payload}. Catalog MCP: POST " + FRAGGATE_MCP + ". This host implements the same ops so the backend is first-class.",
+    summary: "Dual surface. Human UI is this Worker /v1. AI / MCP path is FragGate only (slug=azbrowser).",
+    description: LIMITATION + " Agent door is FragGate only: POST " + FRAGGATE_CALL + " {slug:azbrowser,op,payload}. Catalog MCP: POST " + FRAGGATE_MCP + ". This host /mcp is a pointer, not a second agent brand. Human chrome uses same-origin /v1.",
       license: { name: "Apache-2.0", identifier: "Apache-2.0" },
       contact: { name: IDENTITY, url: "https://github.com/AzielEliab/azbrowser" },
     },
@@ -154,16 +154,17 @@ function openapiSpec(origin) {
 
 function mcpDocs(origin) {
   return {
-    ok: true,
+    ok: false,
+    error: "not a product MCP",
     product: PRODUCT,
     door: "fraggate",
     slug: "azbrowser",
     identity: IDENTITY,
     agent_path: FRAGGATE_CALL,
     catalog_mcp: FRAGGATE_MCP,
-    this_mcp: origin + "/mcp",
+    body: { slug: "azbrowser", op: "ethical_search", payload: { q: "FragGate" } },
     openapi: origin + "/openapi.json",
-    note: "Preferred AI path is FragGate (aziel-runtime /mcp + POST /v1/fraggate/call slug=azbrowser). This Worker also implements JSON-RPC tools/list and tools/call for the same ops — not UI-only. Catalog listing of azbrowser lands in a sibling runtime PR.",
+    note: "AI / MCP path is FragGate only. POST " + FRAGGATE_CALL + " with slug=azbrowser. Catalog MCP: POST " + FRAGGATE_MCP + ". Human UI stays on this Worker /v1. There is no separate AZBrowser MCP outside the door. Catalog listing lands in a sibling aziel-runtime PR.",
     ops: OPS,
     tools: toolDefs().map((t) => t.name),
     limitation: LIMITATION,
@@ -171,55 +172,8 @@ function mcpDocs(origin) {
   };
 }
 
-async function handleMcpPost(request) {
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return json({ jsonrpc: "2.0", error: { code: -32700, message: "Parse error" }, id: null }, 400);
-  }
-  const id = body.id ?? null;
-  const method = body.method;
-  if (method === "initialize") {
-    return json({
-      jsonrpc: "2.0",
-      id,
-      result: {
-        protocolVersion: "2024-11-05",
-        capabilities: { tools: {} },
-        serverInfo: { name: "azbrowser", version: VERSION },
-        instructions: "AZBrowser dual surface. Prefer FragGate slug=azbrowser. Display display.title/summary/fields. " + LIMITATION,
-      },
-    });
-  }
-  if (method === "tools/list" || method === "notifications/initialized") {
-    if (method === "notifications/initialized") return new Response(null, { status: 204, headers: corsHeaders() });
-    return json({ jsonrpc: "2.0", id, result: { tools: toolDefs() } });
-  }
-  if (method === "tools/call") {
-    const tname = String((body.params && body.params.name) || "");
-    const op = tname.replace(/^azbrowser_/, "");
-    const args = (body.params && body.params.arguments) || {};
-    const result = await dispatch(op, args, args.session_id);
-    return json({
-      jsonrpc: "2.0",
-      id,
-      result: {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-        structuredContent: result,
-        isError: result.ok === false,
-      },
-    });
-  }
-  if (method === "ping") return json({ jsonrpc: "2.0", id, result: {} });
-  return json({
-    jsonrpc: "2.0",
-    id,
-    error: {
-      code: -32601,
-      message: "Method not found. Prefer FragGate POST " + FRAGGATE_CALL + " slug=azbrowser. This host supports initialize, tools/list, tools/call.",
-    },
-  });
+function handleMcpPost() {
+  return json(mcpDocs(HOST));
 }
 
 async function proxyFragGate(body) {
@@ -250,7 +204,7 @@ function aiHtml(origin) {
 <p>Human UI is the Worker homepage (browser chrome). AI / MCP path is FragGate:</p>
 <pre>POST ${FRAGGATE_CALL}
 {"slug":"azbrowser","op":"ethical_search","payload":{"q":"FragGate"}}</pre>
-<p>Catalog MCP: <code>POST ${FRAGGATE_MCP}</code> · this Worker MCP: <code>POST ${origin}/mcp</code> (tools/list, tools/call).</p>
+<p>Catalog MCP: <code>POST ${FRAGGATE_MCP}</code>. This Worker <code>/mcp</code> is a pointer, not a second MCP.</p>
 <p>OpenAPI: <a href="${origin}/openapi.json">${origin}/openapi.json</a></p>
 <p>Kernel: <a href="${FRAGGATE}">${FRAGGATE}</a> · AZMail sibling: <a href="${AZMAIL}">${AZMAIL}</a></p>
 <p><a href="/">Downloads + browser UI</a></p>
@@ -262,7 +216,7 @@ export { SKILL_MD };
 export async function handleRuntimeApi(request, url) {
   const path = url.pathname.replace(/\/+$/, "") || "/";
   if (path === "/mcp" && request.method === "GET") return json(mcpDocs(originOf(request)));
-  if (path === "/mcp" && request.method === "POST") return handleMcpPost(request);
+  if (path === "/mcp" && request.method === "POST") return handleMcpPost();
 
   if (path === "/v1/health" && request.method === "GET") return json(await dispatch("health", {}));
   if (path === "/v1/skill" && request.method === "GET") {
@@ -277,7 +231,7 @@ export async function handleRuntimeApi(request, url) {
   }
   if (path === "/llms.txt" || path === "/ai.txt") {
     return new Response(
-      `AZBrowser ${VERSION} by ${IDENTITY}. Apache-2.0. ${LIMITATION}\nAgent path (FragGate): POST ${FRAGGATE_CALL} {"slug":"azbrowser","op":"…","payload":{}}\nCatalog MCP: POST ${FRAGGATE_MCP}\nThis Worker MCP: POST ${originOf(request)}/mcp\nHuman UI: ${originOf(request)}/\nSkill: ${originOf(request)}/v1/skill\nOpenAPI: ${originOf(request)}/openapi.json\nAZMail sibling: ${AZMAIL}\n`,
+      `AZBrowser ${VERSION} by ${IDENTITY}. Apache-2.0. ${LIMITATION}\nAgent path is FragGate only: POST ${FRAGGATE_CALL} {"slug":"azbrowser","op":"…","payload":{}}\nCatalog MCP: POST ${FRAGGATE_MCP}\nThis Worker /mcp is a pointer, not a second MCP.\nHuman UI: ${originOf(request)}/\nSkill: ${originOf(request)}/v1/skill\nOpenAPI: ${originOf(request)}/openapi.json\nAZMail sibling: ${AZMAIL}\n`,
       { headers: { "Content-Type": "text/plain; charset=utf-8", ...corsHeaders() } },
     );
   }

@@ -707,16 +707,15 @@ or AZInterface. AZMail is a **sibling** product
 Always send \`User-Agent: Mozilla/5.0\`.
 
 **Agent path is FragGate only.** MCP / agents call aziel-runtime — not a
-separate browser MCP brand. Prefer:
+separate browser MCP brand.
 
 \`POST https://aziel-runtime.vibelock.workers.dev/v1/fraggate/call\`
 body \`{"slug":"azbrowser","op":"<op>","payload":{}}\`
 
 Same door as MCP \`fraggate_call\` (\`slug=azbrowser\`). Kernel:
 https://github.com/AzielEliab/fraggate. Catalog listing lands in a
-sibling aziel-runtime PR. Until then this Worker implements the **same
-ops** on \`/v1/{op}\` and \`POST /mcp\` tools/call so the backend is
-first-class (not UI-only).
+sibling aziel-runtime PR. Human chrome uses this Worker \`/v1/{op}\`.
+\`GET|POST /mcp\` here is a pointer, not a second MCP.
 
 **Human UI stays on this Worker.** AI path is FragGate + this OpenAPI.
 
@@ -741,8 +740,7 @@ Works with ChatGPT (GPT Actions / OpenAI), Grok (xAI), Venice, Claude
 (Anthropic), Cursor (MCP), Glama (MCP), Perplexity, Microsoft Copilot /
 Bing, Google Gemini / Vertex, Mistral, Meta AI, Apple Intelligence
 surfaces, Amazon Q tooling, DuckAssist, You.com, Cohere, and other
-MCP/OpenAPI-capable assistants — **through FragGate**, plus this
-Worker's OpenAPI / \`POST /mcp\`.
+MCP/OpenAPI-capable assistants — **through FragGate only**.
 
 Agents display \`display.title\`, \`display.summary\`, and
 \`display.fields\` in chat, then take the next input. No technical MCP
@@ -757,9 +755,7 @@ curl -s -A 'Mozilla/5.0' -X POST https://aziel-runtime.vibelock.workers.dev/v1/f
 curl -s -A 'Mozilla/5.0' -X POST https://azbrowser-download-tracker.vibelock.workers.dev/v1/navigate \\
   -H 'content-type: application/json' \\
   -d '{"url":"https://www.azieleliab.com/"}'
-curl -s -A 'Mozilla/5.0' -X POST https://azbrowser-download-tracker.vibelock.workers.dev/mcp \\
-  -H 'content-type: application/json' \\
-  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+curl -s -A 'Mozilla/5.0' https://aziel-runtime.vibelock.workers.dev/v1/fraggate/list
 \`\`\`
 
 Apache-2.0. Forks are welcome and always allowed.

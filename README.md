@@ -32,7 +32,8 @@ fetch/proxy preview + receipted airlock + AZNet ethical search. It does
 1. **Human UI** — Worker homepage is complete software: browser chrome,
    AZNet / Lamb Lens panel, airlock stages + hashes, append-only
    receipts, counted download. Black / gold / white. Humans stay here.
-2. **Agent / MCP — FragGate first.** Catalog door:
+2. **Agent / MCP — FragGate only.** There is no separate AZBrowser MCP
+   outside the door. Catalog door:
 
 ```bash
 curl -s -A 'Mozilla/5.0' -X POST https://aziel-runtime.vibelock.workers.dev/v1/fraggate/call \
@@ -41,15 +42,12 @@ curl -s -A 'Mozilla/5.0' -X POST https://aziel-runtime.vibelock.workers.dev/v1/f
 ```
 
 MCP clients already on aziel-runtime call `fraggate_call` with
-`slug=azbrowser`. Catalog listing lands in a sibling runtime PR.
+`slug=azbrowser`. Catalog MCP: `POST https://aziel-runtime.vibelock.workers.dev/mcp`.
+Catalog listing lands in a sibling runtime PR.
 
-This Worker also ships **first-class backend** docs and handlers so the
-product is not UI-only:
-
-- OpenAPI: `https://azbrowser-download-tracker.vibelock.workers.dev/openapi.json`
-- MCP: `GET|POST https://azbrowser-download-tracker.vibelock.workers.dev/mcp`
-  (`tools/list`, `tools/call` — same ops as the chrome)
-- Catalog MCP: `POST https://aziel-runtime.vibelock.workers.dev/mcp`
+Worker `/v1/{op}` is the **human UI backend** (same ops as chrome).
+`GET|POST /mcp` and `/openapi.json` document those ops and **point at
+FragGate** — they are not a second agent brand.
 
 Agents display `display.title`, `display.summary`, and `display.fields`
 in chat, then take the next input. No technical MCP UI is required for
@@ -93,9 +91,9 @@ URL pattern (same as sibling Aziel Eliab products):
 | `/` | Complete browser chrome + views |
 | `/download` | Counted tarball |
 | `/count` | `{views, downloads, total}` |
-| `/openapi.json` | OpenAPI 3.1 |
-| `/mcp` | MCP docs + JSON-RPC |
-| `/v1/{op}` | Same ops as UI / FragGate |
+| `/openapi.json` | OpenAPI 3.1 (docs; agents use FragGate) |
+| `/mcp` | Pointer to FragGate (`slug=azbrowser`) |
+| `/v1/{op}` | Human UI backend — same ops FragGate will call |
 
 - Homepage: [https://azbrowser-download-tracker.vibelock.workers.dev/](https://azbrowser-download-tracker.vibelock.workers.dev/)
 - Direct tarball: [azbrowser-0.1.0.tar.gz](https://azbrowser-download-tracker.vibelock.workers.dev/download?asset=azbrowser-0.1.0.tar.gz)

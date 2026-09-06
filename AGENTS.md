@@ -10,11 +10,11 @@ AZMail is a sibling: https://github.com/AzielEliab/azmail
 **Dual surface is mandatory.** Human Worker chrome stays complete.
 Backend MCP / OpenAPI / FragGate ops stay first-class. Do not ship UI-only.
 
-Agent path is FragGate:
+Agent path is FragGate only:
 `POST https://aziel-runtime.vibelock.workers.dev/v1/fraggate/call`
 with `slug=azbrowser`. Catalog MCP:
 `POST https://aziel-runtime.vibelock.workers.dev/mcp`.
-This Worker also implements `/openapi.json` and `POST /mcp`.
+This Worker's `/mcp` is a pointer, not a second MCP. Human chrome uses `/v1`.
 
 No receipt = no action.
 

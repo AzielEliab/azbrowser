@@ -76,11 +76,10 @@ blobs.
    `POST https://aziel-runtime.vibelock.workers.dev/v1/fraggate/call`
    with `{ slug: "azbrowser", op, payload }`. Catalog MCP:
    `POST https://aziel-runtime.vibelock.workers.dev/mcp`.
-   This Worker also ships `/openapi.json` and `POST /mcp`
-   (`tools/list`, `tools/call`) so the **backend is first-class** —
-   not UI-only. Agents display `display.title` / `summary` / `fields`
-   in chat and feed the next input. No technical MCP chrome is required
-   for the human.
+   This Worker `/mcp` is a pointer, not a second agent brand. Human
+   chrome uses same-origin `/v1` (same op names). Agents display
+   `display.title` / `summary` / `fields` in chat and feed the next
+   input. No technical MCP chrome is required for the human.
 
 Every major UI action has a matching op: `navigate`, `preview`,
 `ethical_search` / `lamb_lens`, `back`, `forward`, `reload`, `home`,
