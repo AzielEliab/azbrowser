@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "azbrowser"
+version = "0.1.0"
+description = "AZBrowser: Phase 1 research-browser shell + AZNet ethical search. Not Chromium. Author Aziel Eliab."
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [{name = "Aziel Eliab"}]
+requires-python = ">=3.10"
+keywords = [
+  "azbrowser",
+  "aznet",
+  "research-browser",
+  "airlock",
+  "receipts",
+  "fraggate",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Intended Audience :: Developers",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4"]
+
+[project.scripts]
+azbrowser = "azbrowser.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/AzielEliab/azbrowser"
+Download = "https://azbrowser-download-tracker.vibelock.workers.dev/download?asset=azbrowser-0.1.0.tar.gz"
+Issues = "https://github.com/AzielEliab/azbrowser/issues"
+Counted-downloads = "https://azbrowser-download-tracker.vibelock.workers.dev/"
+Runtime = "https://aziel-runtime.vibelock.workers.dev/"
+FragGate = "https://github.com/AzielEliab/fraggate"
+Library = "https://www.azielcorpuslibrary.net/"
+AZMail = "https://github.com/AzielEliab/azmail"
+GodLock = "https://godlock.uk"
+Author = "https://www.azieleliab.com"
+
+[tool.setuptools.packages.find]
+include = ["azbrowser*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"

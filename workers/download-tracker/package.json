@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "type": "module",
+  "description": "AZBrowser isolated download tracker + hosted research-browser /v1 + MCP",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "wrangler": "^4.127.1"
+  }
+}

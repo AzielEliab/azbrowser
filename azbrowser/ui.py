@@ -1,0 +1,176 @@
+"""Loopback research-browser chrome. 127.0.0.1 only. No telemetry."""
+
+from __future__ import annotations
+
+import json
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlparse
+
+from .engine import OPS, Engine
+from .meta import HOST, LIMITATION, SIGIL, __version__
+from .receipts import Ledger
+
+PORT = 8878
+ENGINE = Engine(Ledger("./azbrowser_receipts.jsonl"))
+
+
+def _chrome() -> str:
+    ops = ", ".join(OPS)
+    return f"""<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AZBrowser — local research shell</title>
+<style>
+:root {{ color-scheme: dark; --bg:#0b0b0b; --gold:#c9a227; --trim:#8a7219; --text:#f5f5f5; --muted:#c8c0b0; }}
+* {{ box-sizing: border-box; }}
+html,body {{ margin:0; height:100%; background:var(--bg); color:var(--text); font:14px/1.4 system-ui,sans-serif; }}
+#chrome {{ display:flex; flex-direction:column; height:100%; border:2px solid var(--gold); }}
+.tabs {{ display:flex; gap:4px; padding:6px 8px 0; background:#111; border-bottom:1px solid var(--gold); }}
+.tab {{ padding:6px 12px; border:1px solid var(--trim); border-bottom:none; border-radius:8px 8px 0 0; background:#1a1a1a; color:var(--text); cursor:pointer; }}
+.tab.active {{ background:#0b0b0b; color:var(--gold); }}
+.plus {{ color:var(--gold); cursor:pointer; padding:6px 10px; }}
+.bar {{ display:flex; align-items:center; gap:6px; padding:8px; background:#111; border-bottom:1px solid var(--gold); }}
+.bar button {{ background:#161616; color:var(--text); border:1px solid var(--gold); border-radius:6px; min-width:36px; height:32px; cursor:pointer; }}
+.bar button:hover {{ background:#241c0d; color:var(--gold); }}
+#home img {{ width:22px; height:22px; vertical-align:middle; }}
+#omnibox {{ flex:1; background:#0b0b0b; color:var(--text); border:1px solid var(--gold); border-radius:16px; padding:8px 14px; }}
+.mode {{ color:var(--gold); font-size:12px; letter-spacing:.06em; }}
+main {{ flex:1; display:grid; grid-template-columns: 1fr 320px; min-height:0; }}
+#stage {{ overflow:auto; padding:16px; }}
+aside {{ border-left:1px solid var(--gold); overflow:auto; padding:12px; background:#101010; }}
+h2 {{ color:var(--gold); font-size:13px; margin:0 0 8px; }}
+.banner {{ border:1px solid var(--trim); background:#241c0d; color:#f0d78c; padding:10px; border-radius:8px; margin-bottom:12px; }}
+pre {{ white-space:pre-wrap; word-break:break-word; font-size:12px; }}
+.receipt {{ font-family:ui-monospace,monospace; font-size:11px; border-bottom:1px solid #333; padding:6px 0; }}
+.status {{ border-top:1px solid var(--gold); padding:6px 10px; font-size:12px; color:var(--muted); }}
+a {{ color:var(--gold); }}
+</style>
+<div id="chrome">
+  <div class="tabs" id="tabs"></div>
+  <div class="bar">
+    <button id="back" title="Back" type="button">◀</button>
+    <button id="fwd" title="Forward" type="button">▶</button>
+    <button id="reload" title="Reload" type="button">↻</button>
+    <button id="home" title="Home" type="button"><img alt="Home" src="{SIGIL}"></button>
+    <input id="omnibox" placeholder="Search AZNet or enter a URL" spellcheck="false">
+    <button id="go" type="button">Go</button>
+    <span class="mode">AZNet</span>
+    <button id="airlockBtn" type="button">Airlock</button>
+  </div>
+  <main>
+    <section id="stage"></section>
+    <aside>
+      <h2>Airlock</h2>
+      <div id="airlockPanel"></div>
+      <h2>Receipts</h2>
+      <div id="receipts"></div>
+    </aside>
+  </main>
+  <div class="status">AZBrowser {__version__} local · Phase 1 research shell · No receipt = no action · not Chromium</div>
+</div>
+<script>
+const SIGIL = {json.dumps(SIGIL)};
+async function op(name, payload) {{
+  const r = await fetch('/v1/' + name, {{ method:'POST', headers:{{'content-type':'application/json','user-agent':'Mozilla/5.0'}}, body: JSON.stringify(payload||{{}}) }});
+  return r.json();
+}}
+function show(obj) {{
+  const stage = document.getElementById('stage');
+  const rec = document.getElementById('receipts');
+  stage.innerHTML = '<div class="banner">' + (obj.display ? obj.display.summary : (obj.note||'')) + '</div><pre>' + JSON.stringify(obj,null,2) + '</pre>';
+  if (obj.receipt) {{
+    const el = document.createElement('div');
+    el.className = 'receipt';
+    el.textContent = obj.receipt.seq + ' ' + obj.receipt.action + ' ' + obj.receipt.hash;
+    rec.prepend(el);
+  }}
+  if (obj.stages) {{
+    document.getElementById('airlockPanel').innerHTML = obj.stages.map(s => s.stage + ' · ' + (s.hash||'').slice(0,16)).join('<br>');
+  }}
+}}
+async function paintTabs() {{
+  const t = await op('tab_list', {{}});
+  const box = document.getElementById('tabs');
+  box.innerHTML = '';
+  (t.tabs||[]).forEach(tab => {{
+    const b = document.createElement('button');
+    b.className = 'tab' + (tab.id === t.active ? ' active' : '');
+    b.textContent = tab.title || 'Tab';
+    b.onclick = async () => show(await op('tab_switch', {{tab_id: tab.id}}));
+    box.appendChild(b);
+  }});
+  const plus = document.createElement('button');
+  plus.className = 'plus';
+  plus.textContent = '+';
+  plus.onclick = async () => {{ show(await op('tab_new', {{}})); paintTabs(); }};
+  box.appendChild(plus);
+}}
+document.getElementById('back').onclick = async () => show(await op('back', {{}}));
+document.getElementById('fwd').onclick = async () => show(await op('forward', {{}}));
+document.getElementById('reload').onclick = async () => show(await op('reload', {{}}));
+document.getElementById('home').onclick = async () => {{ show(await op('home', {{}})); document.getElementById('omnibox').value=''; }};
+document.getElementById('go').onclick = async () => {{
+  const q = document.getElementById('omnibox').value.trim();
+  const looksUrl = /\\.|:/.test(q) && !/\\s/.test(q);
+  show(await op(looksUrl ? 'navigate' : 'ethical_search', looksUrl ? {{url:q}} : {{q}}));
+}};
+document.getElementById('omnibox').addEventListener('keydown', (e) => {{ if (e.key==='Enter') document.getElementById('go').click(); }});
+document.getElementById('airlockBtn').onclick = async () => {{
+  const q = document.getElementById('omnibox').value.trim();
+  show(await op('airlock', {{url:q}}));
+}};
+document.getElementById('stage').innerHTML = '<div class="banner">{LIMITATION}</div><p>Local loopback UI. Counted Worker: <a href="{HOST}">{HOST}</a></p><p>Ops: {ops}</p><img alt="sigil" src="'+SIGIL+'" width="96" height="96">';
+paintTabs();
+</script>
+</html>
+"""
+
+
+class Handler(BaseHTTPRequestHandler):
+    def log_message(self, fmt: str, *args: object) -> None:
+        return
+
+    def _send(self, status: int, body: bytes, ctype: str) -> None:
+        self.send_response(status)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Cache-Control", "private, no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_GET(self) -> None:  # noqa: N802
+        path = urlparse(self.path).path.rstrip("/") or "/"
+        if path == "/":
+            self._send(200, _chrome().encode("utf-8"), "text/html; charset=utf-8")
+            return
+        if path == "/v1/health":
+            self._send(200, json.dumps(ENGINE.health({}), indent=2).encode(), "application/json")
+            return
+        self._send(404, b'{"error":"not found"}', "application/json")
+
+    def do_POST(self) -> None:  # noqa: N802
+        path = urlparse(self.path).path.rstrip("/")
+        if not path.startswith("/v1/"):
+            self._send(404, b'{"error":"not found"}', "application/json")
+            return
+        op = path[4:]
+        n = int(self.headers.get("Content-Length") or 0)
+        raw = self.rfile.read(n) if n else b"{}"
+        try:
+            payload = json.loads(raw.decode("utf-8") or "{}")
+        except json.JSONDecodeError:
+            self._send(400, b'{"error":"JSON body required"}', "application/json")
+            return
+        out = ENGINE.call(op, payload if isinstance(payload, dict) else {})
+        self._send(200 if out.get("ok", True) else 400, json.dumps(out, indent=2).encode(), "application/json")
+
+
+def serve(host: str = "127.0.0.1", port: int = PORT) -> int:
+    httpd = ThreadingHTTPServer((host, port), Handler)
+    print(f"AZBrowser local UI http://{host}:{port} (loopback only)")
+    print(LIMITATION)
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        return 0
+    return 0

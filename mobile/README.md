@@ -1,0 +1,36 @@
+# AZBrowser — iPhone & Android
+
+Local research-browser chrome on device: address bar, AZNet search,
+airlock hold, receipts. Not Chromium. Offline. No analytics.
+Dark matte / gold.
+
+Application id: `com.azieeliab.azbrowser`
+
+## Open in Android Studio / Xcode
+
+The `android/` and `ios/` folders here are skeleton READMEs because
+this tree was written without the Flutter SDK on PATH.
+
+```bash
+cd mobile
+flutter create --org com.azieeliab --project-name azbrowser .
+flutter pub get
+flutter run
+```
+
+Then open `android/` in Android Studio, or `ios/Runner.xcworkspace` in
+Xcode.
+
+## Honest scope
+
+Phase 1 research shell. Does not replace Safari or Chrome.
+
+## Desktop package (counted download)
+
+This phone app does not replace the desktop package.
+
+# → https://azbrowser-download-tracker.vibelock.workers.dev/ ←
+
+GitHub: https://github.com/AzielEliab/azbrowser
+
+**Forks are welcome and always allowed.**
