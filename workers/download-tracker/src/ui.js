@@ -1,4 +1,4 @@
-import { AZNET, LIMITATION, SIGIL, VERSION } from "./engine.js";
+import { AZNET, IDENTITY, LIMITATION, SIGIL, VERSION } from "./engine.js";
 
 function esc(s) {
   return String(s)
@@ -17,7 +17,7 @@ export function homeHtml({ views = 0, downloads = 0, github = {} } = {}) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AZBrowser — research shell</title>
+<title>AZBrowser — research shell — ${IDENTITY}</title>
 <link rel="icon" href="${SIGIL}">
 <style>
 :root{color-scheme:dark;--bg:#0b0b0b;--gold:#c9a227;--trim:#8a7219;--text:#ffffff;--muted:#d8d0c0;--panel:#101010;--bar:#121212}

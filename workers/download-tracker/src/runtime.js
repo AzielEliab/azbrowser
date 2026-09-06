@@ -228,7 +228,7 @@ async function proxyDoor(request, url, env) {
 }
 
 function aiHtml(origin) {
-  return `<!doctype html><html lang="en"><meta charset="utf-8"><title>AZBrowser — AI / MCP</title>
+  return `<!doctype html><html lang="en"><meta charset="utf-8"><title>AZBrowser — AI / MCP — ${IDENTITY}</title>
 <style>body{font:16px/1.45 system-ui;max-width:46rem;margin:3rem auto;padding:0 1.25rem;background:#0b0b0b;color:#e8e0d0}a{color:#c9a227}.banner{border:1px solid #5c4a1a;background:#241c0d;color:#f0d78c;padding:.85rem 1rem;border-radius:8px}pre{background:#141414;padding:.85rem 1rem;overflow:auto;border-radius:8px}</style>
 <h1>AZBrowser dual surface</h1>
 <p class="banner">${LIMITATION}</p>
