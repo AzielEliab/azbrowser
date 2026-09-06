@@ -11,7 +11,7 @@ account_id = "ac575a9b822bea2bed97d0ab73aed238"
 # npx wrangler deploy
 [[kv_namespaces]]
 binding = "DOWNLOADS"
-id = "00000000000000000000000000000000"
+id = "d6b7b64cb03a43768bb094da62634e7e"  # AZBROWSER_DOWNLOADS
 
 [assets]
 directory = "./public"
@@ -21,10 +21,10 @@ run_worker_first = ["/", "/download", "/download/*", "/stats", "/event", "/go", 
 [vars]
 AZIEL_RUNTIME_ORIGIN = "https://aziel-runtime.vibelock.workers.dev"
 
-# Optional in-account service binding (preferred when present):
-# [[services]]
-# binding = "AZIEL_RUNTIME"
-# service = "aziel-runtime"
+
+[[services]]
+binding = "AZIEL_RUNTIME"
+service = "aziel-runtime"
 
 [observability]
 enabled = true
