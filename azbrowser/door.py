@@ -1,6 +1,6 @@
 """FragGate / runtime door — classify /v1 paths.
 
-``/v1/fraggate/*`` and ``/v1/runtime/*`` PROXY to aziel-runtime.
+``/v1/fraggate/*``, ``/v1/runtime/*``, and ``/v1/mesh/*`` PROXY to aziel-runtime.
 Local engine ops are single-segment ``/v1/{op}`` only.
 Multi-segment leftovers are never swallowed as op names.
 
@@ -13,7 +13,7 @@ from urllib.parse import urljoin
 
 from .meta import RUNTIME
 
-DOOR_PREFIXES = ("fraggate", "runtime")
+DOOR_PREFIXES = ("fraggate", "runtime", "mesh")
 
 DOOR_ALIASES = {
     "/v1/runtime/list": "/v1/fraggate/list",
@@ -36,6 +36,8 @@ def map_door_path(pathname: str) -> str | None:
     if path == "/v1/fraggate" or path.startswith("/v1/fraggate/"):
         return path
     if path == "/v1/runtime" or path.startswith("/v1/runtime/"):
+        return path
+    if path == "/v1/mesh" or path.startswith("/v1/mesh/"):
         return path
     return None
 

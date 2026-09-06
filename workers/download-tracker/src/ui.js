@@ -52,6 +52,14 @@ iframe.preview{width:100%;min-height:420px;border:1px solid var(--trim);backgrou
 .sigil-home{text-align:center;padding:24px 8px}
 .sigil-home img{width:112px;height:112px}
 .count a{color:var(--gold);margin-left:8px}
+#meshStrip{border-top:1px solid var(--gold);padding:8px 10px;background:#0e0e0e;display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;font-size:12px;color:var(--muted)}
+#meshStrip .live{color:var(--text)}
+#meshStrip .live b{color:var(--gold);font-size:18px;margin-right:6px}
+#meshStrip .rollup span{margin-right:10px}
+#meshStrip .rollup b{color:var(--gold)}
+#meshStrip button{background:#161616;color:var(--text);border:1px solid var(--trim);border-radius:6px;height:28px;padding:0 10px;cursor:pointer}
+#meshStrip button:hover{background:#241c0d;color:var(--gold);border-color:var(--gold)}
+#meshProducts{flex-basis:100%;margin:0}
 </style>
 </head>
 <body>
@@ -81,12 +89,26 @@ iframe.preview{width:100%;min-height:420px;border:1px solid var(--trim);backgrou
       <h2>FragGate</h2>
       <div class="card cite">
         AI path is FragGate only: <code>POST /v1/fraggate/call</code> slug=<b>azbrowser</b><br>
-        Door paths proxy to aziel-runtime. Local ops are <code>/v1/{op}</code> only.<br>
+        Door paths (<code>/v1/fraggate/*</code>, <code>/v1/runtime/*</code>, <code>/v1/mesh/*</code>) proxy to aziel-runtime. Local ops are <code>/v1/{op}</code> only.<br>
+        Suite mesh default OFF. QNM-BUILD-1.0 live|locked|isolated. No Node Gate. No auto-heal. Not anonymity.<br>
         <a href="/openapi.json">OpenAPI</a> · <a href="/mcp">/mcp pointer</a> · <a href="/ai">AI</a> · <a href="/v1/skill">skill</a><br>
         Siblings: <a href="https://github.com/AzielEliab/azmail">AZMail</a> · <a href="${AZNET}">AZNet (separate product)</a><br>
         AZNet is a separate product/engine; pairing order/token only — not shared Phase-1 UI.
       </div>
     </aside>
+  </div>
+  <div id="meshStrip" aria-label="Suite Live Nodes">
+    <div class="live"><b id="meshLiveCount">0</b> Live Nodes</div>
+    <div id="meshLine">Suite mesh: off (default). QNM-BUILD-1.0. Not an anonymity network.</div>
+    <div class="rollup">live <b id="qnmLive">0</b> · locked <b id="qnmLocked">0</b> · isolated <b id="qnmIsolated">0</b></div>
+    <div>No Node Gate · No auto-heal · Aziel Eliab only</div>
+    <div>
+      <button id="meshEnable" type="button" title="Enable suite mesh (global kill switch; default off)">Enable</button>
+      <button id="meshDisable" type="button" title="Disable suite mesh (always allowed)">Disable</button>
+      <button id="meshJoin" type="button" title="Join as azbrowser. Refused while mesh is OFF. No auto-join.">Join</button>
+      <button id="meshLeave" type="button" title="Leave this node. No auto-heal.">Leave</button>
+    </div>
+    <div id="meshProducts" class="cite">Catalog MCP mesh_* · FragGate slug=mesh · /v1/mesh/* PROXY · not AnonBroadcast · not AZMail ring</div>
   </div>
   <div id="status">
     <span>AZBrowser ${VERSION} · Phase 1 research shell · not Chromium · No receipt = no action</span>
@@ -207,6 +229,94 @@ document.getElementById("btnAirlock").onclick = async () => {
   renderResult(await callOp("airlock", { url: q }));
 };
 window.fraggate = fraggate;
+function meshNum() {
+  for (let i = 0; i < arguments.length; i++) {
+    const raw = arguments[i];
+    if (raw == null || raw === "") continue;
+    const n = typeof raw === "number" ? raw : Number(String(raw).replace(/,/g, ""));
+    if (Number.isFinite(n) && n >= 0) return Math.floor(n);
+  }
+  return 0;
+}
+function unwrapMesh(j) {
+  if (!j || typeof j !== "object") return {};
+  if (j.result && typeof j.result === "object") return Object.assign({}, j, j.result);
+  if (j.mesh && typeof j.mesh === "object") return Object.assign({}, j, j.mesh);
+  return j;
+}
+function paintMesh(raw) {
+  const j = unwrapMesh(raw);
+  const on = j.enabled === true || j.enabled === 1 || String(j.status || "").toLowerCase() === "on";
+  const r = (j.rollup && typeof j.rollup === "object") ? j.rollup : {};
+  const live = on ? meshNum(r.live, j.live_nodes, j.live) : 0;
+  const locked = on ? meshNum(r.locked, j.locked_nodes, j.locked) : 0;
+  const isolated = on ? meshNum(r.isolated, j.isolated_nodes, j.isolated) : 0;
+  document.getElementById("meshLiveCount").textContent = String(live);
+  document.getElementById("qnmLive").textContent = String(live);
+  document.getElementById("qnmLocked").textContent = String(locked);
+  document.getElementById("qnmIsolated").textContent = String(isolated);
+  const line = document.getElementById("meshLine");
+  if (on) line.textContent = "Suite mesh: on · live " + live + " · locked " + locked + " · isolated " + isolated + ". Not an anonymity network.";
+  else if (j.status === "unavailable" || (j.ok === false && j.error)) line.textContent = "Suite mesh: off (unavailable). QNM-BUILD-1.0. Not an anonymity network.";
+  else line.textContent = "Suite mesh: off (default). QNM-BUILD-1.0. Not an anonymity network.";
+  const products = j.products_present || j.products || [];
+  const names = Array.isArray(products) ? products.map(p => (typeof p === "string" ? p : (p && (p.product || p.slug)) || "")).filter(Boolean) : [];
+  const nodes = Array.isArray(j.nodes) ? j.nodes : [];
+  const extra = names.length ? " · products " + names.join(", ") : (nodes.length ? " · " + nodes.length + " node labels" : "");
+  document.getElementById("meshProducts").textContent = "Catalog MCP mesh_* · FragGate slug=mesh · /v1/mesh/* PROXY · not AnonBroadcast · not AZMail ring" + extra;
+}
+async function meshGet(path) {
+  const r = await fetch(path, { headers: { "user-agent": "Mozilla/5.0", accept: "application/json" } });
+  return r.json();
+}
+async function meshPost(path, payload) {
+  const r = await fetch(path, { method: "POST", headers: { "content-type": "application/json", "user-agent": "Mozilla/5.0" }, body: JSON.stringify(payload || {}) });
+  return r.json();
+}
+async function refreshMesh() {
+  try {
+    const status = await meshGet("/v1/mesh");
+    let merged = status;
+    const on = status && (status.enabled === true || (status.result && status.result.enabled === true));
+    if (on) {
+      try {
+        const nodes = await meshGet("/v1/mesh/nodes");
+        merged = Object.assign({}, unwrapMesh(status), unwrapMesh(nodes));
+      } catch (e) { /* status is enough */ }
+    }
+    paintMesh(merged);
+    const nodeId = sessionStorage.getItem("azbrowser_mesh_node");
+    if (on && nodeId) {
+      try { await meshPost("/v1/mesh/heartbeat", { node_id: nodeId }); } catch (e) { /* no auto-heal */ }
+    }
+  } catch (e) {
+    paintMesh({ ok: false, enabled: false, status: "unavailable", error: "mesh_unavailable" });
+  }
+}
+document.getElementById("meshEnable").onclick = async () => { paintMesh(await meshPost("/v1/mesh/enable", {})); refreshMesh(); };
+document.getElementById("meshDisable").onclick = async () => { sessionStorage.removeItem("azbrowser_mesh_node"); paintMesh(await meshPost("/v1/mesh/disable", {})); refreshMesh(); };
+document.getElementById("meshJoin").onclick = async () => {
+  const j = await meshPost("/v1/mesh/join", { product: "azbrowser", label: "AZBrowser Worker" });
+  const inner = unwrapMesh(j);
+  const id = inner.node_id || inner.id || (inner.session && inner.session.node_id);
+  if (id) sessionStorage.setItem("azbrowser_mesh_node", String(id));
+  paintMesh(j);
+  refreshMesh();
+};
+document.getElementById("meshLeave").onclick = async () => {
+  const id = sessionStorage.getItem("azbrowser_mesh_node");
+  if (id) await meshPost("/v1/mesh/leave", { node_id: id });
+  sessionStorage.removeItem("azbrowser_mesh_node");
+  refreshMesh();
+};
+window.addEventListener("pagehide", () => {
+  const id = sessionStorage.getItem("azbrowser_mesh_node");
+  if (!id || typeof navigator.sendBeacon !== "function") return;
+  try { navigator.sendBeacon("/v1/mesh/leave", new Blob([JSON.stringify({ node_id: id })], { type: "application/json" })); } catch (e) { /* leave expires in 5 minutes */ }
+});
+refreshMesh();
+setInterval(refreshMesh, 30000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshMesh(); });
 document.getElementById("stage").innerHTML = homePanel();
 paintTabs();
 fetch("/v1/fraggate/list", { headers: { "user-agent": "Mozilla/5.0" } }).then(r => r.json()).then(j => {

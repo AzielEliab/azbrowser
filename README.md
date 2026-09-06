@@ -49,8 +49,10 @@ MCP clients already on aziel-runtime call `fraggate_call` with
 Catalog listing lands in a sibling runtime PR.
 
 Worker `/v1/{op}` is the **human UI backend** (single-segment local ops).
-`/v1/fraggate/*` and `/v1/runtime/*` **PROXY** to aziel-runtime
-(`/v1/fraggate/list`, `/v1/fraggate/call`, …). They are not local ops.
+`/v1/fraggate/*`, `/v1/runtime/*`, and `/v1/mesh/*` **PROXY** to
+aziel-runtime (`/v1/fraggate/list`, `/v1/fraggate/call`, `/v1/mesh`, …).
+They are not local ops. Suite mesh default **OFF**. QNM rollup
+live|locked|isolated. No Node Gate. No auto-heal. Not anonymity.
 `GET|POST /mcp` and `/openapi.json` document those ops and **point at
 FragGate** — they are not a second agent brand.
 
@@ -101,6 +103,7 @@ URL pattern (same as sibling Aziel Eliab products):
 | `/v1/{op}` | Human UI backend — single-segment local ops only |
 | `/v1/fraggate/*` | PROXY to aziel-runtime FragGate door |
 | `/v1/runtime/*` | PROXY aliases (`list`/`call` → `/v1/fraggate/list`/`call`) |
+| `/v1/mesh/*` | PROXY to aziel-runtime suite mesh (default OFF; QNM live / locked / isolated) |
 
 - Homepage: [https://azbrowser-download-tracker.vibelock.workers.dev/](https://azbrowser-download-tracker.vibelock.workers.dev/)
 - Direct tarball: [azbrowser-0.1.0.tar.gz](https://azbrowser-download-tracker.vibelock.workers.dev/download?asset=azbrowser-0.1.0.tar.gz)
@@ -137,6 +140,8 @@ Every control calls a real `/v1` handler (same op agents call). No dead buttons.
 | Tab click / × | `POST /v1/tab_switch` / `tab_close` | tabs |
 | FragGate list | `GET /v1/fraggate/list` | PROXY to aziel-runtime |
 | FragGate call | `POST /v1/fraggate/call` | PROXY to aziel-runtime |
+| Live Nodes strip | `GET /v1/mesh` · `GET /v1/mesh/nodes` | PROXY to aziel-runtime (default OFF) |
+| Mesh enable / disable / join / leave | `POST /v1/mesh/{op}` | PROXY; no auto-heal; no Node Gate |
 
 Prove locally (after `pip install -e ".[dev]"`):
 
@@ -171,6 +176,7 @@ pip install -e ".[dev]"
 python -m pytest -q
 node tests/test_worker_engine.mjs
 node tests/test_worker_door.mjs
+node tests/test_worker_mesh.mjs
 azbrowser doctor
 ```
 

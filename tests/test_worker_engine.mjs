@@ -32,6 +32,11 @@ assert.doesNotMatch(html, /Search AZNet/);
 assert.doesNotMatch(html, /class="aznet"/);
 assert.doesNotMatch(html, />AZNet<\/span>/);
 assert.match(html, /pairing order\/token only/);
+assert.match(html, /id="meshStrip"/);
+assert.match(html, /QNM-BUILD-1\.0/);
+assert.match(html, /No Node Gate/);
+assert.match(html, /\/v1\/mesh/);
+assert.doesNotMatch(html, /id="node-gate"/);
 
 const scrub = scrubHtml("<script>x</script><p>ok</p>");
 assert.ok(scrub.stripped_kinds.includes("script"));

@@ -34,15 +34,18 @@ Python 3.10+. Engine is stdlib only. pytest is the dev extra.
    embed the AZNet protocol. AZNet is a sibling functional pair
    (https://github.com/AzielEliab/aznet). Optional documentation links
    are fine.
-9. **Door vs local op.** `/v1/fraggate/*` and `/v1/runtime/*` PROXY to
-   aziel-runtime. Local ops are `/v1/{op}` only. Never treat
-   `fraggate/call` as a local op name.
+9. **Door vs local op.** `/v1/fraggate/*`, `/v1/runtime/*`, and
+   `/v1/mesh/*` PROXY to aziel-runtime. Local ops are `/v1/{op}` only.
+   Never treat `fraggate/call` or `mesh/status` as a local op name.
+   Suite mesh default OFF; QNM rollup live|locked|isolated; no Node Gate;
+   no auto-heal; not anonymity.
 10. New behavior needs a test that fails without the change.
 
 ## Where to change things
 
 - Ethics / search / airlock / receipts / tabs / dispatch: `azbrowser/`
 - Door path classifier: `azbrowser/door.py` + `workers/download-tracker/src/door.js`
+- Suite mesh / QNM Live Nodes: `azbrowser/mesh.py` + `workers/download-tracker/src/mesh.js`
 - Worker engine (same ops): `workers/download-tracker/src/engine.js`
 - OpenAPI / door proxy: `workers/download-tracker/src/runtime.js`
 - Browser chrome: `workers/download-tracker/src/ui.js`

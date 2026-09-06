@@ -503,6 +503,19 @@ export async function dispatch(op, payload, sessionId) {
       chromium: false,
       session_id: session.id,
       limitation: LIMITATION,
+      mesh: {
+        path: "/v1/mesh",
+        enabled_default: false,
+        spec: "QNM-BUILD-1.0",
+        rollup: "live|locked|isolated",
+        node_gate: false,
+        auto_heal: false,
+        anonymity_network: false,
+        identity: IDENTITY,
+        catalog_mcp: FRAGGATE_MCP,
+        fraggate_slug: "mesh",
+        note: "PROXY to aziel-runtime /v1/mesh/*. Default OFF. Not a local op.",
+      },
       display: displayOf("AZBrowser health", "Phase 1 research shell. Dual surface.", [["version", VERSION], ["ops", OPS.length]]),
     };
   }
@@ -727,8 +740,11 @@ body \`{"slug":"azbrowser","op":"<op>","payload":{}}\`
 Same door as MCP \`fraggate_call\` (\`slug=azbrowser\`). Kernel:
 https://github.com/AzielEliab/fraggate. Catalog listing lands in a
 sibling aziel-runtime PR. Human chrome uses this Worker \`/v1/{op}\`
-(single-segment local ops only). \`/v1/fraggate/*\` and \`/v1/runtime/*\`
-PROXY to aziel-runtime. \`GET|POST /mcp\` here is a pointer, not a second MCP.
+(single-segment local ops only). \`/v1/fraggate/*\`, \`/v1/runtime/*\`,
+and \`/v1/mesh/*\` PROXY to aziel-runtime. \`GET|POST /mcp\` here is a
+pointer, not a second MCP. Catalog MCP \`mesh_*\` + FragGate \`slug=mesh\`.
+Suite mesh default OFF. QNM-BUILD-1.0 live\\|locked\\|isolated. No Node
+Gate. No auto-heal. Not anonymity.
 
 **Human UI stays on this Worker.** AI path is FragGate + this OpenAPI.
 

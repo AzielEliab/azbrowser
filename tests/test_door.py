@@ -37,6 +37,8 @@ def test_counters_are_not_v1_ops():
 def test_door_target_url():
     assert door_target_url("/v1/fraggate/call") == RUNTIME.rstrip("/") + "/v1/fraggate/call"
     assert door_target_url("/v1/runtime/list") == RUNTIME.rstrip("/") + "/v1/fraggate/list"
+    assert door_target_url("/v1/mesh") == RUNTIME.rstrip("/") + "/v1/mesh"
+    assert door_target_url("/v1/mesh/nodes") == RUNTIME.rstrip("/") + "/v1/mesh/nodes"
 
 
 def test_engine_still_refuses_fraggate_slash_call_as_op():
