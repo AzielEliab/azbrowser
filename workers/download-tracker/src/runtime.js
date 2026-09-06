@@ -203,10 +203,13 @@ async function proxyDoor(request, url, env) {
   }
   if (!headers.has("User-Agent")) headers.set("User-Agent", "Mozilla/5.0 AZBrowser/0.1.0");
   const init = { method: request.method, headers, redirect: "follow" };
-  if (request.method !== "GET" && request.method !== "HEAD") init.body = request.body;
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    init.body = request.body;
+    init.duplex = "half";
+  }
   try {
     const fetcher = runtimeFetcher(env);
-    const res = fetcher ? await fetcher.fetch(new Request(dest, init)) : await fetch(dest, init);
+    const res = fetcher ? await fetcher.fetch(dest, init) : await fetch(dest, init);
     const outHeaders = new Headers(res.headers);
     for (const [k, v] of Object.entries(corsHeaders())) outHeaders.set(k, v);
     outHeaders.set("X-Aziel-Door", "proxy");
