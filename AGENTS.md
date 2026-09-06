@@ -3,7 +3,9 @@
 Public identity: **Aziel Eliab** only.
 
 This is a Phase 1 research-browser shell + Lamb Lens ethical search.
-It is not Chromium, not AZ-OS, not Lumen, not AZInterface, and not AZMail.
+It is not Chromium, not AZ-OS, not Lumen, not AZInterface, not AZMail,
+and not AZNet. AZNet is a separate product/engine; pairing is
+order/token only — not a shared Phase-1 UI.
 
 AZMail is a sibling: https://github.com/AzielEliab/azmail
 AZNet is a sibling functional pair (separate app): https://github.com/AzielEliab/aznet

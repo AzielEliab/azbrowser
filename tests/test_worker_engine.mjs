@@ -1,13 +1,36 @@
 import assert from "node:assert/strict";
-import { classifyQuery, dispatch, ethicalSearch, OPS, scrubHtml } from "../workers/download-tracker/src/engine.js";
+import { classifyQuery, dispatch, ethicalSearch, LIMITATION, OPS, scrubHtml } from "../workers/download-tracker/src/engine.js";
+import { homeHtml } from "../workers/download-tracker/src/ui.js";
 
 assert.equal(classifyQuery("doxx their home address").refuse, true);
 assert.equal(classifyQuery("FragGate kernel").refuse, false);
 assert.ok(OPS.includes("ethical_search") && OPS.includes("navigate") && OPS.includes("airlock"));
 
+assert.match(LIMITATION, /Lamb Lens ethical search/);
+assert.match(LIMITATION, /separate product\/engine/);
+assert.match(LIMITATION, /pairing is order\/token only/);
+assert.doesNotMatch(LIMITATION, /AZNet ethical search/);
+assert.equal(classifyQuery("FragGate").label.includes("AZNet"), false);
+assert.match(classifyQuery("FragGate").label, /Lamb Lens/);
+
 const search = ethicalSearch("FragGate");
 assert.equal(search.ok, true);
 assert.ok(search.results.length >= 1);
+assert.equal(search.mode, "lamb_lens");
+assert.doesNotMatch(search.label, /AZNet/);
+assert.match(search.label, /Lamb Lens/);
+
+const html = homeHtml({ views: 0, downloads: 0 });
+assert.match(html, /Lamb Lens ethical search/);
+assert.match(html, /id="btnGo"/);
+assert.match(html, /title="Go \/ ethical search"/);
+assert.match(html, /callOp\(looksUrl \? "navigate" : "ethical_search"/);
+assert.match(html, /\/v1\/fraggate\/call/);
+assert.doesNotMatch(html, /AZNet ethical search/);
+assert.doesNotMatch(html, /Search AZNet/);
+assert.doesNotMatch(html, /class="aznet"/);
+assert.doesNotMatch(html, />AZNet<\/span>/);
+assert.match(html, /pairing order\/token only/);
 
 const scrub = scrubHtml("<script>x</script><p>ok</p>");
 assert.ok(scrub.stripped_kinds.includes("script"));

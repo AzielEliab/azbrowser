@@ -35,7 +35,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:13px/
 #homeBtn img{width:20px;height:20px;vertical-align:middle}
 #omnibox{flex:1;background:#0b0b0b;color:var(--text);border:1px solid var(--gold);border-radius:18px;padding:8px 16px;font:14px/1.3 inherit}
 #omnibox:focus{outline:2px solid var(--gold)}
-.aznet{color:var(--gold);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.lens{color:var(--gold);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
 #body{flex:1;display:grid;grid-template-columns:1fr 340px;min-height:0}
 @media(max-width:860px){#body{grid-template-columns:1fr}}
 #stage{overflow:auto;padding:18px}
@@ -62,9 +62,9 @@ iframe.preview{width:100%;min-height:420px;border:1px solid var(--trim);backgrou
     <button id="btnFwd" type="button" title="Forward">▶</button>
     <button id="btnReload" type="button" title="Reload">↻</button>
     <button id="btnHome" type="button" title="Home — everblooming sigil"><span id="homeBtn"><img alt="Home" src="${SIGIL}"></span></button>
-    <input id="omnibox" placeholder="Search AZNet ethically or enter a URL" spellcheck="false" autocomplete="off">
+    <input id="omnibox" placeholder="Search Lamb Lens ethically or enter a URL" spellcheck="false" autocomplete="off">
     <button id="btnGo" type="button" title="Go / ethical search">Go</button>
-    <span class="aznet">AZNet</span>
+    <span class="lens">Lamb Lens</span>
     <button id="btnAirlock" type="button" title="Airlock current URL">Airlock</button>
   </div>
   <div id="body">
@@ -83,7 +83,8 @@ iframe.preview{width:100%;min-height:420px;border:1px solid var(--trim);backgrou
         AI path is FragGate only: <code>POST /v1/fraggate/call</code> slug=<b>azbrowser</b><br>
         Door paths proxy to aziel-runtime. Local ops are <code>/v1/{op}</code> only.<br>
         <a href="/openapi.json">OpenAPI</a> · <a href="/mcp">/mcp pointer</a> · <a href="/ai">AI</a> · <a href="/v1/skill">skill</a><br>
-        Siblings: <a href="https://github.com/AzielEliab/azmail">AZMail</a> · <a href="${AZNET}">AZNet</a> (functional pair)
+        Siblings: <a href="https://github.com/AzielEliab/azmail">AZMail</a> · <a href="${AZNET}">AZNet (separate product)</a><br>
+        AZNet is a separate product/engine; pairing order/token only — not shared Phase-1 UI.
       </div>
     </aside>
   </div>
@@ -127,7 +128,7 @@ async function fraggate(slug, op, payload) {
 function homePanel() {
   return '<div class="sigil-home"><img alt="everblooming sigil" src="'+SIGIL+'"><h1 style="color:#c9a227;font-weight:500">AZBrowser</h1><p>Lamb Lens ethical search · Phase 1 research shell</p></div>'
     + '<div class="banner">'+LIMITATION+'</div>'
-    + '<div class="card"><p>New-tab search is Lamb Lens: cite sources, refuse doxxing / credential harvest / malware lure. Advisory.</p>'
+    + '<div class="card"><p>New-tab search is Lamb Lens: cite sources, refuse doxxing / credential harvest / malware lure. Advisory. AZNet is a separate product/engine; pairing order/token only — not shared Phase-1 UI.</p>'
     + '<p>Type a query or HTTPS URL in the address bar. Home button is the everblooming sigil.</p></div>';
 }
 function renderResult(j) {
@@ -137,11 +138,11 @@ function renderResult(j) {
     return;
   }
   if (j.code === "ETHICS_REFUSE" || (j.ethics && j.ethics.refuse && j.ok === false)) {
-    stage.innerHTML = '<div class="banner">AZNet / Lamb Lens refused. '+(j.ethics&&j.ethics.reasons?j.ethics.reasons.join(", "):"")+'</div><p>Advisory ethical gate. Not a guaranteed block.</p>';
+    stage.innerHTML = '<div class="banner">Lamb Lens refused. '+(j.ethics&&j.ethics.reasons?j.ethics.reasons.join(", "):"")+'</div><p>Advisory ethical gate. Not a guaranteed block.</p>';
     return;
   }
   if (j.results) {
-    stage.innerHTML = '<div class="banner">'+(j.label||"AZNet / Lamb Lens")+' — advisory. Cite sources.</div>'
+    stage.innerHTML = '<div class="banner">'+(j.label||"Lamb Lens")+' — advisory. Cite sources.</div>'
       + j.results.map(h => '<div class="card"><a href="#" data-url="'+h.url+'">'+h.title+'</a><div class="cite">'+h.source+' · '+h.url+'</div><p>'+h.blurb+'</p></div>').join("");
     stage.querySelectorAll("a[data-url]").forEach(a => a.onclick = (e) => { e.preventDefault(); document.getElementById("omnibox").value = a.dataset.url; go(); });
     return;

@@ -61,7 +61,7 @@ function toolDefs() {
     tab_close: "Close a tab.",
     tab_switch: "Switch active tab.",
     tab_list: "List tabs.",
-    ethical_search: "AZNet / Lamb Lens ethical search. Cite sources. Refuse doxxing/creds/malware.",
+    ethical_search: "Lamb Lens ethical search. Cite sources. Refuse doxxing/creds/malware. AZNet is a separate product/engine (pairing order/token only).",
     lamb_lens: "Alias of ethical_search.",
     search: "Alias of ethical_search.",
     airlock: "download → scan → scrub → verify → vault. Receipt hashes per stage.",
