@@ -17,6 +17,9 @@ How to contribute: [CONTRIBUTING.md](CONTRIBUTING.md).
 AZMail is a **sibling** product already live — optional deep-link only.
 Do not rebuild it here: https://github.com/AzielEliab/azmail
 
+AZNet is a **sibling functional pair** — a separate app.
+Do not embed its protocol here: https://github.com/AzielEliab/aznet
+
 AZ-OS / Lumen / AZInterface are **not** this product.
 
 ## Honest scope (read this)
@@ -45,7 +48,9 @@ MCP clients already on aziel-runtime call `fraggate_call` with
 `slug=azbrowser`. Catalog MCP: `POST https://aziel-runtime.vibelock.workers.dev/mcp`.
 Catalog listing lands in a sibling runtime PR.
 
-Worker `/v1/{op}` is the **human UI backend** (same ops as chrome).
+Worker `/v1/{op}` is the **human UI backend** (single-segment local ops).
+`/v1/fraggate/*` and `/v1/runtime/*` **PROXY** to aziel-runtime
+(`/v1/fraggate/list`, `/v1/fraggate/call`, …). They are not local ops.
 `GET|POST /mcp` and `/openapi.json` document those ops and **point at
 FragGate** — they are not a second agent brand.
 
@@ -93,7 +98,9 @@ URL pattern (same as sibling Aziel Eliab products):
 | `/count` | `{views, downloads, total}` |
 | `/openapi.json` | OpenAPI 3.1 (docs; agents use FragGate) |
 | `/mcp` | Pointer to FragGate (`slug=azbrowser`) |
-| `/v1/{op}` | Human UI backend — same ops FragGate will call |
+| `/v1/{op}` | Human UI backend — single-segment local ops only |
+| `/v1/fraggate/*` | PROXY to aziel-runtime FragGate door |
+| `/v1/runtime/*` | PROXY aliases (`list`/`call` → `/v1/fraggate/list`/`call`) |
 
 - Homepage: [https://azbrowser-download-tracker.vibelock.workers.dev/](https://azbrowser-download-tracker.vibelock.workers.dev/)
 - Direct tarball: [azbrowser-0.1.0.tar.gz](https://azbrowser-download-tracker.vibelock.workers.dev/download?asset=azbrowser-0.1.0.tar.gz)
@@ -124,11 +131,12 @@ Every control calls a real `/v1` handler (same op agents call). No dead buttons.
 | Reload | `POST /v1/reload` | `reload` |
 | Home (sigil) | `POST /v1/home` | `home` |
 | Go / Enter | `POST /v1/navigate` or `/v1/ethical_search` | `navigate` / `ethical_search` |
-| AZNet search panel | `POST /v1/ethical_search` (`lamb_lens` alias) | `ethical_search` |
+| Lamb Lens search | `POST /v1/ethical_search` (`lamb_lens` alias) | `ethical_search` |
 | Airlock | `POST /v1/airlock` | `airlock` |
 | New tab `+` | `POST /v1/tab_new` | `tab_new` |
 | Tab click / × | `POST /v1/tab_switch` / `tab_close` | tabs |
-| FragGate list | `GET /v1/runtime/list` | list/call pattern |
+| FragGate list | `GET /v1/fraggate/list` | PROXY to aziel-runtime |
+| FragGate call | `POST /v1/fraggate/call` | PROXY to aziel-runtime |
 
 Prove locally (after `pip install -e ".[dev]"`):
 
@@ -161,6 +169,8 @@ azbrowser verify
 ```bash
 pip install -e ".[dev]"
 python -m pytest -q
+node tests/test_worker_engine.mjs
+node tests/test_worker_door.mjs
 azbrowser doctor
 ```
 
@@ -193,6 +203,7 @@ SKILL.md            agent skill (also GET /v1/skill)
 - FragGate: https://github.com/AzielEliab/fraggate
 - Digital Library: https://www.azielcorpuslibrary.net/
 - AZMail (sibling): https://github.com/AzielEliab/azmail
+- AZNet (sibling functional pair): https://github.com/AzielEliab/aznet
 - godlock.uk
 - https://www.azieleliab.com
 

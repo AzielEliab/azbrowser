@@ -1,8 +1,9 @@
-"""AZBrowser 0.1.0 — Phase 1 research-browser shell + AZNet ethical search.
+"""AZBrowser 0.1.0 — Phase 1 research-browser shell + Lamb Lens ethical search.
 
 Author: Aziel Eliab only. Apache-2.0.
 This is not a Chromium replacement and not AZ-OS / Lumen / AZInterface.
-AZMail is a sibling product: https://github.com/AzielEliab/azmail
+AZMail is a sibling: https://github.com/AzielEliab/azmail
+AZNet is a sibling functional pair: https://github.com/AzielEliab/aznet
 """
 
 from .airlock import airlock
@@ -12,6 +13,8 @@ from .meta import (
     AUTHOR_SITE,
     AZMAIL,
     AZMAIL_WORKER,
+    AZNET,
+    AZNET_WORKER,
     FRAGGATE,
     FRAGGATE_CALL,
     FRAGGATE_MCP,
@@ -36,6 +39,8 @@ __all__ = [
     "AUTHOR_SITE",
     "AZMAIL",
     "AZMAIL_WORKER",
+    "AZNET",
+    "AZNET_WORKER",
     "FRAGGATE",
     "FRAGGATE_CALL",
     "FRAGGATE_MCP",

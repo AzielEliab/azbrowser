@@ -1,11 +1,14 @@
 /**
- * AZBrowser hosted runtime: /v1 ops, OpenAPI, MCP JSON-RPC, FragGate pointers.
+ * AZBrowser hosted runtime: /v1 ops, OpenAPI, MCP pointer, FragGate door proxy.
  * /v1 never touches DOWNLOADS KV. Dual surface — not UI-only.
+ *
+ * Door paths (`/v1/fraggate/*`, `/v1/runtime/*`) PROXY to aziel-runtime.
+ * Local ops are single-segment `/v1/{op}` only.
  */
 import {
   ALIASES,
   AZMAIL,
-  AZMAIL_WORKER,
+  AZNET,
   FRAGGATE,
   FRAGGATE_CALL,
   FRAGGATE_MCP,
@@ -15,20 +18,11 @@ import {
   OPS,
   PRODUCT,
   RUNTIME,
-  SIGIL,
   SKILL_MD,
-  SPEC,
   VERSION,
   dispatch,
 } from "./engine.js";
-
-const ALLOW_PROXY = new Set([
-  "aziel-corpus",
-  "decisiongate",
-  "godlock",
-  "forgereceipts",
-  "azbrowser",
-]);
+import { classifyV1Path, doorTargetUrl } from "./door.js";
 
 function corsHeaders() {
   return {
@@ -122,19 +116,34 @@ function openapiSpec(origin) {
       },
     };
   }
+  paths["/v1/fraggate/call"] = {
+    post: {
+      operationId: "azbrowser_fraggate_call_proxy",
+      summary: "PROXY to aziel-runtime POST /v1/fraggate/call. Not a local op.",
+      requestBody: { content: { "application/json": { schema: { type: "object" } } } },
+      responses: { "200": { description: "FragGate ResultEnvelope" } },
+    },
+  };
+  paths["/v1/fraggate/list"] = {
+    get: {
+      operationId: "azbrowser_fraggate_list_proxy",
+      summary: "PROXY to aziel-runtime GET /v1/fraggate/list. Not a local op.",
+      responses: { "200": { description: "hashed registry" } },
+    },
+  };
   paths["/v1/runtime/call"] = {
     post: {
-      operationId: "azbrowser_runtime_call",
-      summary: "FragGate-shaped call. slug=azbrowser runs local engine; allowlisted siblings proxy to aziel-runtime.",
+      operationId: "azbrowser_runtime_call_proxy",
+      summary: "Alias PROXY → origin /v1/fraggate/call. Not a local op.",
       requestBody: { content: { "application/json": { schema: { type: "object" } } } },
-      responses: { "200": { description: "result" } },
+      responses: { "200": { description: "FragGate ResultEnvelope" } },
     },
   };
   paths["/v1/runtime/list"] = {
     get: {
-      operationId: "azbrowser_runtime_list",
-      summary: "Local op list + pointer to FragGate list.",
-      responses: { "200": { description: "list" } },
+      operationId: "azbrowser_runtime_list_proxy",
+      summary: "Alias PROXY → origin /v1/fraggate/list. Not a local op.",
+      responses: { "200": { description: "hashed registry" } },
     },
   };
   return {
@@ -164,7 +173,7 @@ function mcpDocs(origin) {
     catalog_mcp: FRAGGATE_MCP,
     body: { slug: "azbrowser", op: "ethical_search", payload: { q: "FragGate" } },
     openapi: origin + "/openapi.json",
-    note: "AI / MCP path is FragGate only. POST " + FRAGGATE_CALL + " with slug=azbrowser. Catalog MCP: POST " + FRAGGATE_MCP + ". Human UI stays on this Worker /v1. There is no separate AZBrowser MCP outside the door. Catalog listing lands in a sibling aziel-runtime PR.",
+    note: "AI / MCP path is FragGate only. This host /v1/fraggate/* and /v1/runtime/* PROXY to aziel-runtime. Local ops are /v1/{op} only. Catalog MCP: POST " + FRAGGATE_MCP + ". AZNet is a sibling functional pair, not this product.",
     ops: OPS,
     tools: toolDefs().map((t) => t.name),
     limitation: LIMITATION,
@@ -176,23 +185,42 @@ function handleMcpPost() {
   return json(mcpDocs(HOST));
 }
 
-async function proxyFragGate(body) {
-  const slug = String((body && (body.slug || body.name)) || "");
-  const op = String((body && body.op) || "health");
-  const payload = (body && body.payload) || {};
-  if (slug === "azbrowser" || !slug) return dispatch(op, payload, payload.session_id);
-  if (!ALLOW_PROXY.has(slug)) {
-    return { ok: false, code: "FG-HALLUC-TOOL", error: "slug not allowlisted on this Worker", slug, door: "fraggate", agent_path: FRAGGATE_CALL };
+function runtimeFetcher(env) {
+  if (env && env.AZIEL_RUNTIME && typeof env.AZIEL_RUNTIME.fetch === "function") return env.AZIEL_RUNTIME;
+  return null;
+}
+
+async function proxyDoor(request, url, env) {
+  const dest = doorTargetUrl(url.pathname, request.url, env);
+  if (!dest) {
+    return json({ ok: false, error: "not a door path", path: url.pathname, limitation: LIMITATION }, 404);
   }
+  const headers = new Headers();
+  const pass = ["content-type", "accept", "authorization", "user-agent", "mcp-protocol-version", "mcp-session-id", "x-aziel-runtime-token"];
+  for (const name of pass) {
+    const v = request.headers.get(name);
+    if (v) headers.set(name, v);
+  }
+  if (!headers.has("User-Agent")) headers.set("User-Agent", "Mozilla/5.0 AZBrowser/0.1.0");
+  const init = { method: request.method, headers, redirect: "follow" };
+  if (request.method !== "GET" && request.method !== "HEAD") init.body = request.body;
   try {
-    const res = await fetch(FRAGGATE_CALL, {
-      method: "POST",
-      headers: { "content-type": "application/json", "User-Agent": "Mozilla/5.0 AZBrowser/0.1.0" },
-      body: JSON.stringify({ slug, op, payload, claim: body.claim }),
-    });
-    return await res.json();
+    const fetcher = runtimeFetcher(env);
+    const res = fetcher ? await fetcher.fetch(new Request(dest, init)) : await fetch(dest, init);
+    const outHeaders = new Headers(res.headers);
+    for (const [k, v] of Object.entries(corsHeaders())) outHeaders.set(k, v);
+    outHeaders.set("X-Aziel-Door", "proxy");
+    outHeaders.set("X-Aziel-Door-Origin", dest);
+    return new Response(res.body, { status: res.status, statusText: res.statusText, headers: outHeaders });
   } catch (exc) {
-    return { ok: false, error: "fraggate_proxy_failed", detail: String(exc).slice(0, 240), agent_path: FRAGGATE_CALL };
+    return json({
+      ok: false,
+      error: "fraggate_proxy_failed",
+      detail: String(exc).slice(0, 240),
+      origin: dest,
+      agent_path: FRAGGATE_CALL,
+      limitation: LIMITATION,
+    }, 502);
   }
 }
 
@@ -206,14 +234,14 @@ function aiHtml(origin) {
 {"slug":"azbrowser","op":"ethical_search","payload":{"q":"FragGate"}}</pre>
 <p>Catalog MCP: <code>POST ${FRAGGATE_MCP}</code>. This Worker <code>/mcp</code> is a pointer, not a second MCP.</p>
 <p>OpenAPI: <a href="${origin}/openapi.json">${origin}/openapi.json</a></p>
-<p>Kernel: <a href="${FRAGGATE}">${FRAGGATE}</a> · AZMail sibling: <a href="${AZMAIL}">${AZMAIL}</a></p>
+<p>Kernel: <a href="${FRAGGATE}">${FRAGGATE}</a> · AZMail sibling: <a href="${AZMAIL}">${AZMAIL}</a> · AZNet sibling (functional pair): <a href="${AZNET}">${AZNET}</a></p>
 <p><a href="/">Downloads + browser UI</a></p>
 </html>`;
 }
 
 export { SKILL_MD };
 
-export async function handleRuntimeApi(request, url) {
+export async function handleRuntimeApi(request, url, env) {
   const path = url.pathname.replace(/\/+$/, "") || "/";
   if (path === "/mcp" && request.method === "GET") return json(mcpDocs(originOf(request)));
   if (path === "/mcp" && request.method === "POST") return handleMcpPost();
@@ -231,35 +259,28 @@ export async function handleRuntimeApi(request, url) {
   }
   if (path === "/llms.txt" || path === "/ai.txt") {
     return new Response(
-      `AZBrowser ${VERSION} by ${IDENTITY}. Apache-2.0. ${LIMITATION}\nAgent path is FragGate only: POST ${FRAGGATE_CALL} {"slug":"azbrowser","op":"…","payload":{}}\nCatalog MCP: POST ${FRAGGATE_MCP}\nThis Worker /mcp is a pointer, not a second MCP.\nHuman UI: ${originOf(request)}/\nSkill: ${originOf(request)}/v1/skill\nOpenAPI: ${originOf(request)}/openapi.json\nAZMail sibling: ${AZMAIL}\n`,
+      `AZBrowser ${VERSION} by ${IDENTITY}. Apache-2.0. ${LIMITATION}\nAgent path is FragGate only: POST ${FRAGGATE_CALL} {"slug":"azbrowser","op":"…","payload":{}}\nThis Worker /v1/fraggate/* and /v1/runtime/* PROXY to aziel-runtime. Local ops are /v1/{op} only.\nCatalog MCP: POST ${FRAGGATE_MCP}\nThis Worker /mcp is a pointer, not a second MCP.\nHuman UI: ${originOf(request)}/\nSkill: ${originOf(request)}/v1/skill\nOpenAPI: ${originOf(request)}/openapi.json\nAZMail sibling: ${AZMAIL}\nAZNet sibling (functional pair): ${AZNET}\n`,
       { headers: { "Content-Type": "text/plain; charset=utf-8", ...corsHeaders() } },
     );
   }
-  if (path === "/v1/runtime/list" && request.method === "GET") {
+
+  const classified = classifyV1Path(url.pathname);
+  if (classified.kind === "door") {
+    return proxyDoor(request, url, env);
+  }
+  if (classified.kind === "multi") {
     return json({
-      ok: true,
-      door: "fraggate",
-      slug: "azbrowser",
-      ops: OPS,
-      live_ops: OPS.map((o) => "azbrowser/" + o),
+      ok: false,
+      error: "not a local op",
+      code: "NOT_LOCAL_OP",
+      path: classified.path,
+      hint: "Local ops are POST|GET /v1/{op} only (single segment). FragGate door is /v1/fraggate/* (proxied to aziel-runtime). /v1/runtime/list and /v1/runtime/call alias that door.",
       agent_path: FRAGGATE_CALL,
-      catalog_list: RUNTIME + "/v1/fraggate/list",
-      note: "Local AZBrowser ops. Discover the full mesh with FragGate list.",
-      azmail: AZMAIL_WORKER,
-      sigil: SIGIL,
-    });
+      ops: OPS,
+      limitation: LIMITATION,
+    }, 404);
   }
-  if (path === "/v1/runtime/call" && request.method === "POST") {
-    let body;
-    try {
-      body = await request.json();
-    } catch {
-      return json({ error: "JSON body required", limitation: LIMITATION }, 400);
-    }
-    return json(await proxyFragGate(body));
-  }
-  if (path.startsWith("/v1/") && request.method === "POST") {
-    const op = path.slice(4);
+  if (classified.kind === "local" && request.method === "POST") {
     let body = {};
     try {
       const n = request.headers.get("content-length");
@@ -267,11 +288,11 @@ export async function handleRuntimeApi(request, url) {
     } catch {
       body = {};
     }
-    const out = await dispatch(op, body || {}, body && body.session_id);
+    const out = await dispatch(classified.op, body || {}, body && body.session_id);
     return json(out, out.ok === false && out.code === "FG-HALLUC-TOOL" ? 404 : 200);
   }
   if (path.startsWith("/v1/") || path === "/v1") {
-    return json({ error: "not found", hint: "GET /v1/health GET /v1/skill POST /v1/{op} GET /openapi.json POST /mcp", ops: OPS, limitation: LIMITATION }, 404);
+    return json({ error: "not found", hint: "GET /v1/health GET /v1/skill POST /v1/{op} GET /v1/fraggate/list POST /v1/fraggate/call GET /openapi.json POST /mcp", ops: OPS, limitation: LIMITATION }, 404);
   }
   return null;
 }

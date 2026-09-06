@@ -1,4 +1,4 @@
-import { HOST, LIMITATION, SIGIL, VERSION } from "./engine.js";
+import { AZNET, LIMITATION, SIGIL, VERSION } from "./engine.js";
 
 function esc(s) {
   return String(s)
@@ -81,8 +81,9 @@ iframe.preview{width:100%;min-height:420px;border:1px solid var(--trim);backgrou
       <h2>FragGate</h2>
       <div class="card cite">
         AI path is FragGate only: <code>POST /v1/fraggate/call</code> slug=<b>azbrowser</b><br>
+        Door paths proxy to aziel-runtime. Local ops are <code>/v1/{op}</code> only.<br>
         <a href="/openapi.json">OpenAPI</a> · <a href="/mcp">/mcp pointer</a> · <a href="/ai">AI</a> · <a href="/v1/skill">skill</a><br>
-        Sibling: <a href="https://github.com/AzielEliab/azmail">AZMail</a>
+        Siblings: <a href="https://github.com/AzielEliab/azmail">AZMail</a> · <a href="${AZNET}">AZNet</a> (functional pair)
       </div>
     </aside>
   </div>
@@ -120,11 +121,11 @@ async function callOp(op, payload) {
   return j;
 }
 async function fraggate(slug, op, payload) {
-  const r = await fetch("/v1/runtime/call", { method:"POST", headers:{ "content-type":"application/json", "user-agent":"Mozilla/5.0" }, body: JSON.stringify({ slug, op, payload: payload||{} }) });
+  const r = await fetch("/v1/fraggate/call", { method:"POST", headers:{ "content-type":"application/json", "user-agent":"Mozilla/5.0" }, body: JSON.stringify({ slug, op, payload: payload||{} }) });
   return r.json();
 }
 function homePanel() {
-  return '<div class="sigil-home"><img alt="everblooming sigil" src="'+SIGIL+'"><h1 style="color:#c9a227;font-weight:500">AZBrowser</h1><p>AZNet ethical search · Phase 1 research shell</p></div>'
+  return '<div class="sigil-home"><img alt="everblooming sigil" src="'+SIGIL+'"><h1 style="color:#c9a227;font-weight:500">AZBrowser</h1><p>Lamb Lens ethical search · Phase 1 research shell</p></div>'
     + '<div class="banner">'+LIMITATION+'</div>'
     + '<div class="card"><p>New-tab search is Lamb Lens: cite sources, refuse doxxing / credential harvest / malware lure. Advisory.</p>'
     + '<p>Type a query or HTTPS URL in the address bar. Home button is the everblooming sigil.</p></div>';
@@ -207,10 +208,11 @@ document.getElementById("btnAirlock").onclick = async () => {
 window.fraggate = fraggate;
 document.getElementById("stage").innerHTML = homePanel();
 paintTabs();
-fetch("/v1/runtime/list", { headers: { "user-agent": "Mozilla/5.0" } }).then(r => r.json()).then(j => {
+fetch("/v1/fraggate/list", { headers: { "user-agent": "Mozilla/5.0" } }).then(r => r.json()).then(j => {
+  const ops = (j.allowlist && j.allowlist.azbrowser) || (j.result && j.result.allowlist && j.result.allowlist.azbrowser) || j.ops || [];
   const el = document.createElement("div");
   el.className = "cite";
-  el.textContent = "FragGate list/call wired. Local ops: " + (j.ops||[]).length;
+  el.textContent = "FragGate door proxied. azbrowser ops: " + ops.length;
   document.getElementById("side").appendChild(el);
 }).catch(() => {});
 </script>

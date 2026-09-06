@@ -18,6 +18,14 @@ directory = "./public"
 binding = "ASSETS"
 run_worker_first = ["/", "/download", "/download/*", "/stats", "/event", "/go", "/count", "/install.sh", "/v1", "/v1/*", "/openapi.json", "/ai", "/ai/*", "/mcp", "/mcp/", "/robots.txt", "/sitemap.xml", "/cite.json", "/llms.txt", "/ai.txt"]
 
+[vars]
+AZIEL_RUNTIME_ORIGIN = "https://aziel-runtime.vibelock.workers.dev"
+
+# Optional in-account service binding (preferred when present):
+# [[services]]
+# binding = "AZIEL_RUNTIME"
+# service = "aziel-runtime"
+
 [observability]
 enabled = true
 head_sampling_rate = 1
