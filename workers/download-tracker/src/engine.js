@@ -18,7 +18,7 @@ export const AZMAIL_WORKER = "https://azmail-download-tracker.vibelock.workers.d
 export const AZNET = "https://github.com/AzielEliab/aznet";
 export const AZNET_WORKER = "https://aznet-download-tracker.vibelock.workers.dev";
 export const LIMITATION =
-  "THIS IS: a Phase 1 research-browser shell (browser-chrome UX) with controlled fetch/proxy preview, receipted airlock, and Lamb Lens ethical search. THIS IS NOT: a Chromium/Firefox/Safari replacement, a full OS browser, a VPN, AZ-OS, Lumen, or AZInterface. v0.1 cannot ship a Chromium binary. AZMail is a sibling (https://github.com/AzielEliab/azmail). AZNet is a sibling functional pair (https://github.com/AzielEliab/aznet) — separate app, not this protocol. No receipt = no action. Advisory only. Author: Aziel Eliab only.";
+  "THIS IS: a Phase 1 research-browser shell (browser-chrome UX) with controlled fetch/proxy preview, receipted airlock, and Lamb Lens ethical search. THIS IS NOT: a Chromium/Firefox/Safari replacement, a full OS browser, a VPN, AZ-OS, Lumen, AZInterface, or AZNet. v0.1 cannot ship a Chromium binary. AZNet is a separate product/engine; pairing is order/token only — not a shared Phase-1 UI (https://github.com/AzielEliab/aznet). AZMail is a separate sibling repo (https://github.com/AzielEliab/azmail) — optional deep-link only. No receipt = no action. Advisory only. Author: Aziel Eliab only.";
 
 export const OPS = [
   "health",
@@ -114,8 +114,8 @@ export function classifyQuery(text) {
     refuse: reasons.length > 0,
     reasons,
     advisory: true,
-    label: "AZNet / Lamb Lens — advisory ethical gate",
-    limitation: "AZNet ethical search is advisory. Cite sources. Refuse doxxing, credential harvest, and malware lure.",
+    label: "Lamb Lens — advisory ethical gate",
+    limitation: "Lamb Lens ethical search is advisory. Cite sources. Refuse doxxing, credential harvest, and malware lure.",
     query_len: blob.length,
   };
 }
@@ -266,7 +266,7 @@ export function ethicalSearch(query, limit) {
       results: [],
       citations: [],
       advisory: true,
-      label: "AZNet / Lamb Lens — refused. Advisory ethical gate.",
+      label: "Lamb Lens — refused. Advisory ethical gate.",
     };
   }
   const scored = [...CATALOG].sort((a, b) => rank(query, b) - rank(query, a));
@@ -282,13 +282,13 @@ export function ethicalSearch(query, limit) {
     ok: true,
     action: "ethical_search",
     alias: "lamb_lens",
-    mode: "AZNet",
+    mode: "lamb_lens",
     query,
     ethics,
     results: hits,
     citations: hits.map((h) => ({ title: h.title, url: h.url, source: h.source })),
     advisory: true,
-    label: "AZNet / Lamb Lens — ethical internet search. Advisory. Cite sources.",
+    label: "Lamb Lens — ethical internet search. Advisory. Cite sources.",
     note: "Not a guaranteed index. Not doxxing. Not a malware lure.",
   };
 }
@@ -471,7 +471,7 @@ export async function dispatch(op, payload, sessionId) {
       ethics,
       receipt: rec,
       session_id: session.id,
-      display: displayOf("AZNet refused", "Advisory ethical gate refused this input.", [["reasons", ethics.reasons.join(",")], ["receipt", rec.hash.slice(0, 16)]]),
+      display: displayOf("Lamb Lens refused", "Advisory ethical gate refused this input.", [["reasons", ethics.reasons.join(",")], ["receipt", rec.hash.slice(0, 16)]]),
       limitation: LIMITATION,
     };
   };
@@ -481,7 +481,9 @@ export async function dispatch(op, payload, sessionId) {
       ok: true,
       product: PRODUCT,
       name: "AZBrowser",
-      aznet: true,
+      lamb_lens: true,
+      aznet: false,
+      aznet_note: "separate product/engine; pairing order/token only — not shared Phase-1 UI",
       version: VERSION,
       spec: SPEC,
       identity: IDENTITY,
@@ -619,7 +621,7 @@ export async function dispatch(op, payload, sessionId) {
     out.receipt = rec;
     out.session_id = session.id;
     out.limitation = LIMITATION;
-    out.display = displayOf("AZNet / Lamb Lens", out.label || "Ethical search.", [["query", q], ["results", (out.results || []).length], ["receipt", rec.hash.slice(0, 16)]]);
+    out.display = displayOf("Lamb Lens", out.label || "Ethical search.", [["query", q], ["results", (out.results || []).length], ["receipt", rec.hash.slice(0, 16)]]);
     return out;
   }
 
@@ -691,7 +693,7 @@ export async function dispatch(op, payload, sessionId) {
 export const SKILL_MD = `---
 name: AZBrowser
 description: >-
-  Use when researching through AZBrowser / AZNet — navigate preview,
+  Use when researching through AZBrowser — navigate preview,
   Lamb Lens ethical search, receipted airlock, tabs. Phase 1 research
   shell, not a Chromium replacement. Author Aziel Eliab.
 ---
@@ -699,8 +701,9 @@ description: >-
 # AZBrowser
 
 Secure research browser / hardened investigation platform (Phase 1).
-AZNet is a **sibling functional pair** (https://github.com/AzielEliab/aznet)
-— separate app. Lamb Lens is this product's ethical-search mode.
+Lamb Lens is AZBrowser ethical search. AZNet is a separate product/engine;
+pairing is order/token only — not a shared Phase-1 UI
+(https://github.com/AzielEliab/aznet).
 
 Author: **Aziel Eliab** only.
 
@@ -709,9 +712,9 @@ receipted airlock (\`download → scan → scrub → verify → vault\`) +
 Lamb Lens ethical search + append-only integrity receipts.
 
 **THIS IS NOT:** Chromium, Firefox, Safari, or Edge. Not AZ-OS, Lumen,
-or AZInterface. Not an AZNet protocol implementation. AZMail is a
+AZInterface, or AZNet. Not an AZNet protocol implementation. AZMail is a
 **sibling** (https://github.com/AzielEliab/azmail). AZNet is a
-**sibling** (https://github.com/AzielEliab/aznet).
+**sibling** (https://github.com/AzielEliab/aznet) — pairing order/token only.
 
 Always send \`User-Agent: Mozilla/5.0\`.
 
@@ -734,7 +737,7 @@ PROXY to aziel-runtime. \`GET|POST /mcp\` here is a pointer, not a second MCP.
 | UI chrome | op |
 |-----------|-----|
 | Address Go / preview | \`navigate\` / \`preview\` |
-| Lamb Lens search | \`ethical_search\` / \`lamb_lens\` / \`lamb_lens_search\` |
+| Lamb Lens search | \`ethical_search\` / \`lamb_lens\` / \`lamb_lens_search\` / \`search\` |
 | Back / Forward / Reload | \`back\` \`forward\` \`reload\` |
 | Home (everblooming sigil) | \`home\` |
 | New / close / switch tab | \`tab_new\` \`tab_close\` \`tab_switch\` \`tab_list\` |

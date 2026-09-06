@@ -9,8 +9,9 @@ description: >-
 # AZBrowser
 
 Secure research browser / hardened investigation platform (Phase 1).
-AZNet is a **sibling functional pair** (https://github.com/AzielEliab/aznet)
-— separate app. Lamb Lens is this product's ethical-search mode.
+Lamb Lens is AZBrowser ethical search. AZNet is a separate product/engine;
+pairing is order/token only — not a shared Phase-1 UI
+(https://github.com/AzielEliab/aznet).
 
 Author: **Aziel Eliab** only.
 
@@ -19,9 +20,9 @@ receipted airlock (`download → scan → scrub → verify → vault`) +
 Lamb Lens ethical search + append-only integrity receipts.
 
 **THIS IS NOT:** Chromium, Firefox, Safari, or Edge. Not AZ-OS, Lumen,
-or AZInterface. Not an AZNet protocol implementation. AZMail is a
+AZInterface, or AZNet. Not an AZNet protocol implementation. AZMail is a
 **sibling** (https://github.com/AzielEliab/azmail). AZNet is a
-**sibling** (https://github.com/AzielEliab/aznet).
+**sibling** (https://github.com/AzielEliab/aznet) — pairing order/token only.
 
 Always send `User-Agent: Mozilla/5.0`. Cloudflare Workers may 403 an empty agent.
 
@@ -49,7 +50,7 @@ next input. No technical MCP UI is required for the human.
 | UI chrome | op |
 |-----------|-----|
 | Address Go / preview | `navigate` / `preview` |
-| Lamb Lens search | `ethical_search` / `lamb_lens` / `lamb_lens_search` |
+| Lamb Lens search | `ethical_search` / `lamb_lens` / `lamb_lens_search` / `search` |
 | Back / Forward / Reload | `back` `forward` `reload` |
 | Home (everblooming sigil) | `home` |
 | New / close / switch tab | `tab_new` `tab_close` `tab_switch` `tab_list` |
@@ -112,9 +113,11 @@ Then open http://127.0.0.1:8878 (this computer only).
 
 ## Honest banner
 
-THIS IS: a Phase 1 research-browser shell. THIS IS NOT: a Chromium
-replacement, a VPN, AZ-OS, Lumen, or AZInterface. AZMail is a separate
-repo. Author: Aziel Eliab only.
+THIS IS: a Phase 1 research-browser shell with Lamb Lens ethical search.
+THIS IS NOT: a Chromium replacement, a VPN, AZ-OS, Lumen, AZInterface,
+or AZNet. AZNet is a separate product/engine; pairing is order/token
+only — not a shared Phase-1 UI. AZMail is a separate repo. Author:
+Aziel Eliab only.
 
 Apache-2.0. Forks are welcome and always allowed.
 
