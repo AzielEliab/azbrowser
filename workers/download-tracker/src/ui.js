@@ -90,7 +90,7 @@ iframe.preview{width:100%;min-height:420px;border:1px solid var(--trim);backgrou
       <div class="card cite">
         AI path is FragGate only: <code>POST /v1/fraggate/call</code> slug=<b>azbrowser</b><br>
         Door paths (<code>/v1/fraggate/*</code>, <code>/v1/runtime/*</code>, <code>/v1/mesh/*</code>) proxy to aziel-runtime. Local ops are <code>/v1/{op}</code> only.<br>
-        Suite mesh default OFF. QNM-BUILD-1.0 live|locked|isolated. No Node Gate. No auto-heal. Not anonymity.<br>
+        Suite mesh default OFF. QNM-BUILD-1.0 live|locked|isolated. QNS-CD-1.0 photon QNS1 (local qnm-node; no public qnsd proxy). No Node Gate. No auto-heal. Not anonymity.<br>
         <a href="/openapi.json">OpenAPI</a> · <a href="/mcp">/mcp pointer</a> · <a href="/ai">AI</a> · <a href="/v1/skill">skill</a><br>
         Siblings: <a href="https://github.com/AzielEliab/azmail">AZMail</a> · <a href="${AZNET}">AZNet (separate product)</a><br>
         AZNet is a separate product/engine; pairing order/token only — not shared Phase-1 UI.
@@ -99,7 +99,7 @@ iframe.preview{width:100%;min-height:420px;border:1px solid var(--trim);backgrou
   </div>
   <div id="meshStrip" aria-label="Suite Live Nodes">
     <div class="live"><b id="meshLiveCount">0</b> Live Nodes</div>
-    <div id="meshLine">Suite mesh: off (default). QNM-BUILD-1.0. Not an anonymity network.</div>
+    <div id="meshLine">Suite mesh: off (default). QNM-BUILD-1.0 + QNS-CD-1.0. Not an anonymity network.</div>
     <div class="rollup">live <b id="qnmLive">0</b> · locked <b id="qnmLocked">0</b> · isolated <b id="qnmIsolated">0</b></div>
     <div>No Node Gate · No auto-heal · Aziel Eliab only</div>
     <div>
@@ -108,7 +108,7 @@ iframe.preview{width:100%;min-height:420px;border:1px solid var(--trim);backgrou
       <button id="meshJoin" type="button" title="Join as azbrowser. Refused while mesh is OFF. No auto-join.">Join</button>
       <button id="meshLeave" type="button" title="Leave this node. No auto-heal.">Leave</button>
     </div>
-    <div id="meshProducts" class="cite">Catalog MCP mesh_* · FragGate slug=mesh · /v1/mesh/* PROXY · not AnonBroadcast · not AZMail ring</div>
+    <div id="meshProducts" class="cite">Catalog MCP mesh_* · FragGate slug=mesh · /v1/mesh/* PROXY · QNS-CD-1.0 cross-map · not AnonBroadcast · not AZMail ring · not Softwares-tab</div>
   </div>
   <div id="status">
     <span>AZBrowser ${VERSION} · Phase 1 research shell · not Chromium · No receipt = no action</span>
@@ -257,8 +257,8 @@ function paintMesh(raw) {
   document.getElementById("qnmIsolated").textContent = String(isolated);
   const line = document.getElementById("meshLine");
   if (on) line.textContent = "Suite mesh: on · live " + live + " · locked " + locked + " · isolated " + isolated + ". Not an anonymity network.";
-  else if (j.status === "unavailable" || (j.ok === false && j.error)) line.textContent = "Suite mesh: off (unavailable). QNM-BUILD-1.0. Not an anonymity network.";
-  else line.textContent = "Suite mesh: off (default). QNM-BUILD-1.0. Not an anonymity network.";
+  else if (j.status === "unavailable" || (j.ok === false && j.error)) line.textContent = "Suite mesh: off (unavailable). QNM-BUILD-1.0 + QNS-CD-1.0. Not an anonymity network.";
+  else line.textContent = "Suite mesh: off (default). QNM-BUILD-1.0 + QNS-CD-1.0. Not an anonymity network.";
   const products = j.products_present || j.products || [];
   const names = Array.isArray(products) ? products.map(p => (typeof p === "string" ? p : (p && (p.product || p.slug)) || "")).filter(Boolean) : [];
   const nodes = Array.isArray(j.nodes) ? j.nodes : [];

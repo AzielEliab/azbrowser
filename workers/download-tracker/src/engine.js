@@ -507,6 +507,22 @@ export async function dispatch(op, payload, sessionId) {
         path: "/v1/mesh",
         enabled_default: false,
         spec: "QNM-BUILD-1.0",
+        qns_cd_spec: "QNS-CD-1.0",
+        qns_cd: {
+          spec: "QNS-CD-1.0",
+          title: "photon QNS1 packet transfer",
+          kind: "cross-map",
+          local_qnsd: "https://github.com/AzielEliab/qnm-node",
+          qnsd_public_proxy: false,
+          runtime: "https://github.com/AzielEliab/aziel-runtime",
+          designs: "https://github.com/AzielEliab/aziel-runtime/tree/main/docs/designs",
+          pair_custody: "azinterface",
+          softwares_tab: false,
+          node_gate: false,
+          default_off: true,
+          author: IDENTITY,
+          identity: IDENTITY,
+        },
         rollup: "live|locked|isolated",
         node_gate: false,
         auto_heal: false,
@@ -514,7 +530,7 @@ export async function dispatch(op, payload, sessionId) {
         identity: IDENTITY,
         catalog_mcp: FRAGGATE_MCP,
         fraggate_slug: "mesh",
-        note: "PROXY to aziel-runtime /v1/mesh/*. Default OFF. Not a local op.",
+        note: "PROXY to aziel-runtime /v1/mesh/*. Default OFF. Not a local op. QNS-CD-1.0 cross-map only — no public qnsd proxy.",
       },
       display: displayOf("AZBrowser health", "Phase 1 research shell. Dual surface.", [["version", VERSION], ["ops", OPS.length]]),
     };
@@ -743,7 +759,10 @@ sibling aziel-runtime PR. Human chrome uses this Worker \`/v1/{op}\`
 (single-segment local ops only). \`/v1/fraggate/*\`, \`/v1/runtime/*\`,
 and \`/v1/mesh/*\` PROXY to aziel-runtime. \`GET|POST /mcp\` here is a
 pointer, not a second MCP. Catalog MCP \`mesh_*\` + FragGate \`slug=mesh\`.
-Suite mesh default OFF. QNM-BUILD-1.0 live\\|locked\\|isolated. No Node
+Suite mesh default OFF. QNM-BUILD-1.0 live\\|locked\\|isolated. QNS-CD-1.0
+photon QNS1 packet transfer is local qnm-node (https://github.com/AzielEliab/qnm-node);
+runtime cites live in aziel-runtime. Hub cite / Worker mesh cross-map only —
+not a Softwares-tab product. No public qnsd proxy. No Node
 Gate. No auto-heal. Not anonymity.
 
 **Human UI stays on this Worker.** AI path is FragGate + this OpenAPI.

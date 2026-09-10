@@ -34,6 +34,7 @@ assert.doesNotMatch(html, />AZNet<\/span>/);
 assert.match(html, /pairing order\/token only/);
 assert.match(html, /id="meshStrip"/);
 assert.match(html, /QNM-BUILD-1\.0/);
+assert.match(html, /QNS-CD-1\.0/);
 assert.match(html, /No Node Gate/);
 assert.match(html, /\/v1\/mesh/);
 assert.doesNotMatch(html, /id="node-gate"/);

@@ -1,10 +1,13 @@
 /**
- * Suite mesh Live Nodes + QNM-BUILD-1.0 contract.
+ * Suite mesh Live Nodes + QNM-BUILD-1.0 contract + QNS-CD-1.0 cross-map.
  * Default OFF. live|locked|isolated. No Node Gate. No auto-heal. Not anonymity.
+ * No public qnsd proxy. Not a Softwares-tab product.
  */
 import assert from "node:assert/strict";
 import {
   QNM_SPEC,
+  QNS_CD_SPEC,
+  QNS_CD,
   MESH_DEFAULT_OFF,
   MESH_ANONYMITY_NETWORK,
   MESH_NODE_GATE,
@@ -12,6 +15,7 @@ import {
   MESH_OPS,
   MESH_PATH,
   MESH_IDENTITY,
+  MESH_NOTE,
   alignLiveNodes,
   emptyMesh,
   meshOpenApiPaths,
@@ -26,6 +30,18 @@ import { dispatch } from "../workers/download-tracker/src/engine.js";
 import { homeHtml } from "../workers/download-tracker/src/ui.js";
 
 assert.equal(QNM_SPEC, "QNM-BUILD-1.0");
+assert.equal(QNS_CD_SPEC, "QNS-CD-1.0");
+assert.equal(QNS_CD.spec, "QNS-CD-1.0");
+assert.match(QNS_CD.title, /photon QNS1 packet transfer/);
+assert.equal(QNS_CD.local_qnsd, "https://github.com/AzielEliab/qnm-node");
+assert.equal(QNS_CD.runtime, "https://github.com/AzielEliab/aziel-runtime");
+assert.equal(QNS_CD.pair_custody, "azinterface");
+assert.equal(QNS_CD.qnsd_public_proxy, false);
+assert.equal(QNS_CD.softwares_tab, false);
+assert.equal(QNS_CD.node_gate, false);
+assert.equal(QNS_CD.default_off, true);
+assert.match(MESH_NOTE, /QNS-CD-1\.0/);
+assert.match(MESH_NOTE, /no public qnsd proxy/);
 assert.equal(MESH_DEFAULT_OFF, true);
 assert.equal(MESH_ANONYMITY_NETWORK, false);
 assert.equal(MESH_NODE_GATE, false);
@@ -41,6 +57,9 @@ assert.equal(empty.node_gate, false);
 assert.equal(empty.auto_heal, false);
 assert.equal(empty.anonymity_network, false);
 assert.equal(empty.identity, "Aziel Eliab");
+assert.equal(empty.qns_cd_spec, "QNS-CD-1.0");
+assert.equal(empty.qns_cd.spec, "QNS-CD-1.0");
+assert.equal(empty.qns_cd.qnsd_public_proxy, false);
 
 const qnm = parseMeshDoc({
   spec: "QNM-BUILD-1.0",
@@ -61,8 +80,10 @@ assert.deepEqual(off.rollup, { live: 0, locked: 0, isolated: 0 });
 const pub = publicMesh(qnm);
 assert.equal(pub.nodes, undefined);
 assert.equal(pub.slug, "mesh");
+assert.equal(pub.qns_cd_spec, "QNS-CD-1.0");
+assert.equal(pub.qns_cd.kind, "cross-map");
 assert.match(meshStatusLine(pub), /Suite mesh: on · live 2 · locked 1 · isolated 3/);
-assert.match(meshStatusLine(emptyMesh()), /Suite mesh: off \(default\)\. QNM-BUILD-1\.0/);
+assert.match(meshStatusLine(emptyMesh()), /Suite mesh: off \(default\)\. QNM-BUILD-1\.0 \+ QNS-CD-1\.0/);
 assert.equal(alignLiveNodes({ mesh: { enabled: true, rollup: { live: 4, locked: 1, isolated: 0 } } }), 4);
 assert.equal(alignLiveNodes({ mesh: { enabled: false, live_nodes: 9 } }), 0);
 
@@ -73,6 +94,10 @@ assert.equal(pointer.fraggate_slug, "mesh");
 assert.equal(pointer.node_gate, false);
 assert.equal(pointer.auto_heal, false);
 assert.equal(pointer.anonymity_network, false);
+assert.equal(pointer.qns_cd_spec, "QNS-CD-1.0");
+assert.equal(pointer.qns_cd.local_qnsd, "https://github.com/AzielEliab/qnm-node");
+assert.equal(pointer.qns_cd.qnsd_public_proxy, false);
+assert.equal(pointer.qns_cd.softwares_tab, false);
 
 assert.equal(classifyV1Path("/v1/mesh").kind, "door");
 assert.equal(classifyV1Path("/v1/mesh/nodes").originPath, "/v1/mesh/nodes");
@@ -88,12 +113,16 @@ assert.equal(refuse.code, "FG-HALLUC-TOOL");
 const health = await dispatch("health", {});
 assert.equal(health.mesh.enabled_default, false);
 assert.equal(health.mesh.identity, "Aziel Eliab");
+assert.equal(health.mesh.qns_cd_spec, "QNS-CD-1.0");
+assert.equal(health.mesh.qns_cd.qnsd_public_proxy, false);
+assert.equal(health.mesh.qns_cd.softwares_tab, false);
 
 const html = homeHtml({ views: 0, downloads: 0 });
 assert.match(html, /id="meshStrip"/);
 assert.match(html, /id="meshLiveCount"/);
 assert.match(html, /id="meshLine"/);
 assert.match(html, /QNM-BUILD-1\.0/);
+assert.match(html, /QNS-CD-1\.0/);
 assert.match(html, /Live Nodes/);
 assert.match(html, /No Node Gate/);
 assert.match(html, /No auto-heal/);
@@ -173,6 +202,7 @@ try {
   assert.ok(spec.paths["/v1/mesh/nodes"]);
   assert.ok(spec.paths["/v1/mesh/enable"]);
   assert.match(spec.info.description, /QNM-BUILD-1\.0/);
+  assert.match(spec.info.description, /QNS-CD-1\.0/);
   assert.match(spec.info.description, /No Node Gate/);
 
   const mcpReq = new Request("https://azbrowser-download-tracker.vibelock.workers.dev/mcp", { method: "GET" });
@@ -182,6 +212,9 @@ try {
   assert.equal(mcp.mesh.enabled_default, false);
   assert.equal(mcp.mesh.fraggate_slug, "mesh");
   assert.equal(mcp.mesh.rollup, "live|locked|isolated");
+  assert.equal(mcp.mesh.qns_cd_spec, "QNS-CD-1.0");
+  assert.equal(mcp.mesh.qns_cd.qnsd_public_proxy, false);
+  assert.equal(mcp.mesh.qns_cd.softwares_tab, false);
   assert.match(mcp.note, /mesh_\*/);
 
   const openapiPaths = meshOpenApiPaths();

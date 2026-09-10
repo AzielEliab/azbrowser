@@ -3,7 +3,10 @@ from azbrowser.mesh import (
     MESH_AUTO_HEAL,
     MESH_DEFAULT_OFF,
     MESH_NODE_GATE,
+    MESH_NOTE,
     QNM_SPEC,
+    QNS_CD,
+    QNS_CD_SPEC,
     align_live_nodes,
     empty_mesh,
     mesh_pointer,
@@ -19,6 +22,18 @@ from azbrowser.receipts import Ledger
 
 def test_qnm_contract_default_off():
     assert QNM_SPEC == "QNM-BUILD-1.0"
+    assert QNS_CD_SPEC == "QNS-CD-1.0"
+    assert QNS_CD["spec"] == "QNS-CD-1.0"
+    assert QNS_CD["title"] == "photon QNS1 packet transfer"
+    assert QNS_CD["local_qnsd"] == "https://github.com/AzielEliab/qnm-node"
+    assert QNS_CD["runtime"] == "https://github.com/AzielEliab/aziel-runtime"
+    assert QNS_CD["pair_custody"] == "azinterface"
+    assert QNS_CD["qnsd_public_proxy"] is False
+    assert QNS_CD["softwares_tab"] is False
+    assert QNS_CD["node_gate"] is False
+    assert QNS_CD["default_off"] is True
+    assert "QNS-CD-1.0" in MESH_NOTE
+    assert "no public qnsd proxy" in MESH_NOTE
     assert MESH_DEFAULT_OFF is True
     assert MESH_ANONYMITY_NETWORK is False
     assert MESH_NODE_GATE is False
@@ -31,6 +46,8 @@ def test_qnm_contract_default_off():
     assert empty["node_gate"] is False
     assert empty["auto_heal"] is False
     assert empty["anonymity_network"] is False
+    assert empty["qns_cd_spec"] == "QNS-CD-1.0"
+    assert empty["qns_cd"]["qnsd_public_proxy"] is False
 
 
 def test_parse_qnm_rollup_and_zero_when_off():
@@ -54,12 +71,15 @@ def test_parse_qnm_rollup_and_zero_when_off():
 def test_public_mesh_and_status_line():
     pub = public_mesh(parse_mesh_doc({"enabled": True, "live_nodes": 2}))
     assert pub["spec"] == "QNM-BUILD-1.0"
+    assert pub["qns_cd_spec"] == "QNS-CD-1.0"
+    assert pub["qns_cd"]["kind"] == "cross-map"
     assert pub["identity"] == "Aziel Eliab"
     assert "nodes" not in pub
     assert pub["mcp"].endswith("/mcp")
     assert pub["slug"] == "mesh"
     assert "live 2" in mesh_status_line(pub)
     assert "off (default)" in mesh_status_line(empty_mesh())
+    assert "QNS-CD-1.0" in mesh_status_line(empty_mesh())
     assert align_live_nodes({"enabled": True, "rollup": {"live": 4, "locked": 1, "isolated": 0}}) == 4
     assert align_live_nodes({"enabled": False, "live_nodes": 9}) == 0
     pointer = mesh_pointer()
@@ -67,6 +87,10 @@ def test_public_mesh_and_status_line():
     assert pointer["rollup"] == "live|locked|isolated"
     assert pointer["fraggate_slug"] == "mesh"
     assert pointer["origin"] == RUNTIME.rstrip("/") + "/v1/mesh"
+    assert pointer["qns_cd_spec"] == "QNS-CD-1.0"
+    assert pointer["qns_cd"]["local_qnsd"] == "https://github.com/AzielEliab/qnm-node"
+    assert pointer["qns_cd"]["qnsd_public_proxy"] is False
+    assert pointer["qns_cd"]["softwares_tab"] is False
 
 
 def test_mesh_paths_are_door_not_local_ops():
@@ -84,6 +108,7 @@ def test_local_chrome_has_live_nodes_strip():
     html = _chrome()
     assert 'id="meshStrip"' in html
     assert "QNM-BUILD-1.0" in html
+    assert "QNS-CD-1.0" in html
     assert "No Node Gate" in html
     assert "/v1/mesh" in html
     assert 'id="node-gate"' not in html
@@ -97,3 +122,6 @@ def test_engine_refuses_mesh_slash_status_as_op():
     assert health["mesh"]["enabled_default"] is False
     assert health["mesh"]["node_gate"] is False
     assert health["mesh"]["identity"] == "Aziel Eliab"
+    assert health["mesh"]["qns_cd_spec"] == "QNS-CD-1.0"
+    assert health["mesh"]["qns_cd"]["qnsd_public_proxy"] is False
+    assert health["mesh"]["qns_cd"]["softwares_tab"] is False

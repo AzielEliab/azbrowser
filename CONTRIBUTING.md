@@ -37,7 +37,8 @@ Python 3.10+. Engine is stdlib only. pytest is the dev extra.
 9. **Door vs local op.** `/v1/fraggate/*`, `/v1/runtime/*`, and
    `/v1/mesh/*` PROXY to aziel-runtime. Local ops are `/v1/{op}` only.
    Never treat `fraggate/call` or `mesh/status` as a local op name.
-   Suite mesh default OFF; QNM rollup live|locked|isolated; no Node Gate;
+   Suite mesh default OFF; QNM rollup live|locked|isolated; QNS-CD-1.0
+   cross-map cite only (no public qnsd proxy); no Node Gate;
    no auto-heal; not anonymity.
 10. New behavior needs a test that fails without the change.
 
@@ -45,7 +46,7 @@ Python 3.10+. Engine is stdlib only. pytest is the dev extra.
 
 - Ethics / search / airlock / receipts / tabs / dispatch: `azbrowser/`
 - Door path classifier: `azbrowser/door.py` + `workers/download-tracker/src/door.js`
-- Suite mesh / QNM Live Nodes: `azbrowser/mesh.py` + `workers/download-tracker/src/mesh.js`
+- Suite mesh / QNM Live Nodes + QNS-CD-1.0 cross-map: `azbrowser/mesh.py` + `workers/download-tracker/src/mesh.js`
 - Worker engine (same ops): `workers/download-tracker/src/engine.js`
 - OpenAPI / door proxy: `workers/download-tracker/src/runtime.js`
 - Browser chrome: `workers/download-tracker/src/ui.js`
