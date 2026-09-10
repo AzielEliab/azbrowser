@@ -21,6 +21,10 @@ This Worker's `/mcp` is a pointer, not a second MCP. Human chrome uses
 `/v1/{op}` (single-segment local ops). `/v1/fraggate/*`,
 `/v1/runtime/*`, and `/v1/mesh/*` PROXY to aziel-runtime — they are not
 local op names. Suite mesh default OFF. QNM rollup live|locked|isolated.
+QNS-CD-1.0 (photon QNS1 packet transfer) is a hub cite / Worker mesh
+cross-map only — local qnsd is https://github.com/AzielEliab/qnm-node;
+runtime cites live in https://github.com/AzielEliab/aziel-runtime.
+Not a Softwares-tab product. No public qnsd proxy.
 No Node Gate. No auto-heal. Not anonymity.
 
 No receipt = no action.

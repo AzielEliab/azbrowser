@@ -41,8 +41,12 @@ sibling aziel-runtime PR. Human chrome uses this Worker's `/v1/{op}`
 `/v1/mesh/*` PROXY to aziel-runtime. `GET|POST /mcp` on this host is a
 **pointer**, not a second MCP. AI / MCP path is FragGate only. Catalog
 MCP `mesh_*` + FragGate `slug=mesh` is the agent mesh door. Suite mesh
-default **OFF**. QNM-BUILD-1.0 rollup live|locked|isolated. No Node
-Gate. No auto-heal. Not anonymity. Author: Aziel Eliab only.
+default **OFF**. QNM-BUILD-1.0 rollup live|locked|isolated. QNS-CD-1.0
+(photon QNS1 packet transfer) is a hub cite / Worker mesh cross-map
+only — local qnsd is [qnm-node](https://github.com/AzielEliab/qnm-node);
+runtime cites live in [aziel-runtime](https://github.com/AzielEliab/aziel-runtime).
+AZInterface holds pair custody. Not a Softwares-tab product. No public
+qnsd proxy. No Node Gate. No auto-heal. Not anonymity. Author: Aziel Eliab only.
 
 **Human UI stays on this Worker.** Agents display `display.title`,
 `display.summary`, and `display.fields` in the AI client, then take the
@@ -80,7 +84,7 @@ Host: `https://azbrowser-download-tracker.vibelock.workers.dev`
 | GET | `/v1/fraggate/list` | PROXY to aziel-runtime FragGate list. |
 | POST | `/v1/fraggate/call` | PROXY to aziel-runtime FragGate call. |
 | GET/POST | `/v1/runtime/*` | PROXY aliases (`list`/`call` → FragGate). |
-| GET | `/v1/mesh` | PROXY suite mesh status. Default OFF. |
+| GET | `/v1/mesh` | PROXY suite mesh status. Default OFF. QNS-CD-1.0 cross-map in payload. |
 | GET | `/v1/mesh/nodes` | PROXY Live Nodes (5-minute presence). |
 | POST | `/v1/mesh/{enable,disable,join,heartbeat,leave,broadcast}` | PROXY. No auto-heal. Not AnonBroadcast. |
 | GET | `/download` | Counted tarball. |
@@ -123,8 +127,10 @@ THIS IS: a Phase 1 research-browser shell with Lamb Lens ethical search.
 THIS IS NOT: a Chromium replacement, a VPN, AZ-OS, Lumen, AZInterface,
 or AZNet. AZNet is a separate product/engine; pairing is order/token
 only — not a shared Phase-1 UI. AZMail is a separate repo. Suite mesh
-is presence + QNM live|locked|isolated (default OFF) — not an anonymity
-network, not a Node Gate, not auto-heal. Author: Aziel Eliab only.
+is presence + QNM live|locked|isolated (default OFF) plus QNS-CD-1.0
+photon QNS1 cross-map (local qnm-node; no public qnsd proxy) — not an
+anonymity network, not a Node Gate, not auto-heal, not a Softwares-tab
+product. Author: Aziel Eliab only.
 
 Apache-2.0. Forks are welcome and always allowed.
 
@@ -134,6 +140,8 @@ Apache-2.0. Forks are welcome and always allowed.
 - Agent door: `POST https://aziel-runtime.vibelock.workers.dev/v1/fraggate/call` `{slug:azbrowser,op,payload}`
 - FragGate: https://github.com/AzielEliab/fraggate
 - Runtime: https://github.com/AzielEliab/aziel-runtime
+- QNM local node + qnsd: https://github.com/AzielEliab/qnm-node
+- AZInterface (pair custody): https://github.com/AzielEliab/azinterface
 - Library: https://www.azielcorpuslibrary.net/
 - AZMail (sibling): https://github.com/AzielEliab/azmail
 - AZNet (sibling functional pair): https://github.com/AzielEliab/aznet

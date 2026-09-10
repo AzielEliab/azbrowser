@@ -75,7 +75,7 @@ a {{ color:var(--gold); }}
   </main>
   <div id="meshStrip" aria-label="Suite Live Nodes">
     <div class="live"><b id="meshLiveCount">0</b> Live Nodes</div>
-    <div id="meshLine">Suite mesh: off (default). QNM-BUILD-1.0. Not an anonymity network.</div>
+    <div id="meshLine">Suite mesh: off (default). QNM-BUILD-1.0 + QNS-CD-1.0. Not an anonymity network.</div>
     <div>live <b id="qnmLive">0</b> · locked <b id="qnmLocked">0</b> · isolated <b id="qnmIsolated">0</b></div>
     <div>No Node Gate · No auto-heal · Aziel Eliab only</div>
     <div>
@@ -84,7 +84,7 @@ a {{ color:var(--gold); }}
       <button id="meshJoin" type="button">Join</button>
       <button id="meshLeave" type="button">Leave</button>
     </div>
-    <div id="meshProducts">Catalog MCP mesh_* · FragGate slug=mesh · /v1/mesh/* PROXY</div>
+    <div id="meshProducts">Catalog MCP mesh_* · FragGate slug=mesh · /v1/mesh/* PROXY · QNS-CD-1.0 cross-map</div>
   </div>
   <div class="status">AZBrowser {__version__} local · Phase 1 research shell · No receipt = no action · not Chromium</div>
 </div>
@@ -168,7 +168,7 @@ function paintMesh(raw) {{
   document.getElementById("qnmIsolated").textContent = String(isolated);
   document.getElementById("meshLine").textContent = on
     ? ("Suite mesh: on · live " + live + " · locked " + locked + " · isolated " + isolated + ". Not an anonymity network.")
-    : "Suite mesh: off (default). QNM-BUILD-1.0. Not an anonymity network.";
+    : "Suite mesh: off (default). QNM-BUILD-1.0 + QNS-CD-1.0. Not an anonymity network.";
 }}
 async function refreshMesh() {{
   try {{

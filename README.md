@@ -52,7 +52,12 @@ Worker `/v1/{op}` is the **human UI backend** (single-segment local ops).
 `/v1/fraggate/*`, `/v1/runtime/*`, and `/v1/mesh/*` **PROXY** to
 aziel-runtime (`/v1/fraggate/list`, `/v1/fraggate/call`, `/v1/mesh`, …).
 They are not local ops. Suite mesh default **OFF**. QNM rollup
-live|locked|isolated. No Node Gate. No auto-heal. Not anonymity.
+live|locked|isolated. QNS-CD-1.0 (photon QNS1 packet transfer) is a
+hub cite / Worker mesh cross-map only — local qnsd lives in
+[qnm-node](https://github.com/AzielEliab/qnm-node); runtime cites live
+in [aziel-runtime](https://github.com/AzielEliab/aziel-runtime). Not a
+Softwares-tab product. No public qnsd proxy. No Node Gate. No auto-heal.
+Not anonymity.
 `GET|POST /mcp` and `/openapi.json` document those ops and **point at
 FragGate** — they are not a second agent brand.
 
@@ -103,7 +108,7 @@ URL pattern (same as sibling Aziel Eliab products):
 | `/v1/{op}` | Human UI backend — single-segment local ops only |
 | `/v1/fraggate/*` | PROXY to aziel-runtime FragGate door |
 | `/v1/runtime/*` | PROXY aliases (`list`/`call` → `/v1/fraggate/list`/`call`) |
-| `/v1/mesh/*` | PROXY to aziel-runtime suite mesh (default OFF; QNM live / locked / isolated) |
+| `/v1/mesh/*` | PROXY to aziel-runtime suite mesh (default OFF; QNM live / locked / isolated; QNS-CD-1.0 cross-map cite; no public qnsd proxy) |
 
 - Homepage: [https://azbrowser-download-tracker.vibelock.workers.dev/](https://azbrowser-download-tracker.vibelock.workers.dev/)
 - Direct tarball: [azbrowser-0.1.0.tar.gz](https://azbrowser-download-tracker.vibelock.workers.dev/download?asset=azbrowser-0.1.0.tar.gz)
@@ -140,7 +145,7 @@ Every control calls a real `/v1` handler (same op agents call). No dead buttons.
 | Tab click / × | `POST /v1/tab_switch` / `tab_close` | tabs |
 | FragGate list | `GET /v1/fraggate/list` | PROXY to aziel-runtime |
 | FragGate call | `POST /v1/fraggate/call` | PROXY to aziel-runtime |
-| Live Nodes strip | `GET /v1/mesh` · `GET /v1/mesh/nodes` | PROXY to aziel-runtime (default OFF) |
+| Live Nodes strip | `GET /v1/mesh` · `GET /v1/mesh/nodes` | PROXY to aziel-runtime (default OFF; QNS-CD-1.0 cross-map in payload) |
 | Mesh enable / disable / join / leave | `POST /v1/mesh/{op}` | PROXY; no auto-heal; no Node Gate |
 
 Prove locally (after `pip install -e ".[dev]"`):
@@ -206,6 +211,8 @@ SKILL.md            agent skill (also GET /v1/skill)
 ## Cross-links (optional, not required)
 
 - Runtime: https://github.com/AzielEliab/aziel-runtime · https://aziel-runtime.vibelock.workers.dev/
+- QNM local node + qnsd: https://github.com/AzielEliab/qnm-node (QNS-CD-1.0 photon QNS1; not hosted here)
+- AZInterface (pair custody): https://github.com/AzielEliab/azinterface
 - FragGate: https://github.com/AzielEliab/fraggate
 - Digital Library: https://www.azielcorpuslibrary.net/
 - AZMail (sibling): https://github.com/AzielEliab/azmail

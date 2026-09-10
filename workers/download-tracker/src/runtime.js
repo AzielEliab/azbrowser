@@ -154,7 +154,7 @@ function openapiSpec(origin) {
       title: "AZBrowser runtime",
       version: VERSION,
     summary: "Dual surface. Human UI is this Worker /v1. AI / MCP path is FragGate only (slug=azbrowser).",
-    description: LIMITATION + " Agent door is FragGate only: POST " + FRAGGATE_CALL + " {slug:azbrowser,op,payload}. Catalog MCP: POST " + FRAGGATE_MCP + ". This host /mcp is a pointer, not a second agent brand. Human chrome uses same-origin /v1. Suite mesh /v1/mesh/* PROXY to aziel-runtime (AZIEL_RUNTIME). Default OFF. QNM-BUILD-1.0 live|locked|isolated. No Node Gate. No auto-heal. Not anonymity. Aziel Eliab only.",
+    description: LIMITATION + " Agent door is FragGate only: POST " + FRAGGATE_CALL + " {slug:azbrowser,op,payload}. Catalog MCP: POST " + FRAGGATE_MCP + ". This host /mcp is a pointer, not a second agent brand. Human chrome uses same-origin /v1. Suite mesh /v1/mesh/* PROXY to aziel-runtime (AZIEL_RUNTIME). Default OFF. QNM-BUILD-1.0 live|locked|isolated. QNS-CD-1.0 photon QNS1 is local qnm-node (no public qnsd proxy; not Softwares-tab). No Node Gate. No auto-heal. Not anonymity. Aziel Eliab only.",
       license: { name: "Apache-2.0", identifier: "Apache-2.0" },
       contact: { name: IDENTITY, url: "https://github.com/AzielEliab/azbrowser" },
     },
@@ -240,7 +240,7 @@ function aiHtml(origin) {
 <pre>POST ${FRAGGATE_CALL}
 {"slug":"azbrowser","op":"ethical_search","payload":{"q":"FragGate"}}</pre>
 <p>Catalog MCP: <code>POST ${FRAGGATE_MCP}</code> (includes <code>mesh_*</code> + FragGate <code>slug=mesh</code>). This Worker <code>/mcp</code> is a pointer, not a second MCP.</p>
-<p>Suite mesh: <code>GET ${origin}/v1/mesh</code> PROXY to aziel-runtime. Default OFF. QNM-BUILD-1.0 live|locked|isolated. No Node Gate. No auto-heal. Not anonymity. Author: ${IDENTITY} only.</p>
+<p>Suite mesh: <code>GET ${origin}/v1/mesh</code> PROXY to aziel-runtime. Default OFF. QNM-BUILD-1.0 live|locked|isolated. QNS-CD-1.0 photon QNS1 is local qnm-node (no public qnsd proxy; hub cite / Worker mesh cross-map only). No Node Gate. No auto-heal. Not anonymity. Author: ${IDENTITY} only.</p>
 <p>OpenAPI: <a href="${origin}/openapi.json">${origin}/openapi.json</a></p>
 <p>Kernel: <a href="${FRAGGATE}">${FRAGGATE}</a> · AZMail sibling: <a href="${AZMAIL}">${AZMAIL}</a> · AZNet sibling (functional pair): <a href="${AZNET}">${AZNET}</a></p>
 <p><a href="/">Downloads + browser UI</a></p>
@@ -267,7 +267,7 @@ export async function handleRuntimeApi(request, url, env) {
   }
   if (path === "/llms.txt" || path === "/ai.txt") {
     return new Response(
-      `AZBrowser ${VERSION} by ${IDENTITY}. Apache-2.0. ${LIMITATION}\nAgent path is FragGate only: POST ${FRAGGATE_CALL} {"slug":"azbrowser","op":"…","payload":{}}\nThis Worker /v1/fraggate/*, /v1/runtime/*, and /v1/mesh/* PROXY to aziel-runtime. Local ops are /v1/{op} only.\nCatalog MCP: POST ${FRAGGATE_MCP} (mesh_* + slug=mesh)\nThis Worker /mcp is a pointer, not a second MCP.\nSuite mesh default OFF. QNM-BUILD-1.0 live|locked|isolated. No Node Gate. No auto-heal. Not anonymity.\nHuman UI: ${originOf(request)}/\nSkill: ${originOf(request)}/v1/skill\nOpenAPI: ${originOf(request)}/openapi.json\nAZMail sibling: ${AZMAIL}\nAZNet sibling (functional pair): ${AZNET}\n`,
+      `AZBrowser ${VERSION} by ${IDENTITY}. Apache-2.0. ${LIMITATION}\nAgent path is FragGate only: POST ${FRAGGATE_CALL} {"slug":"azbrowser","op":"…","payload":{}}\nThis Worker /v1/fraggate/*, /v1/runtime/*, and /v1/mesh/* PROXY to aziel-runtime. Local ops are /v1/{op} only.\nCatalog MCP: POST ${FRAGGATE_MCP} (mesh_* + slug=mesh)\nThis Worker /mcp is a pointer, not a second MCP.\nSuite mesh default OFF. QNM-BUILD-1.0 live|locked|isolated. QNS-CD-1.0 photon QNS1 is local qnm-node (no public qnsd proxy). No Node Gate. No auto-heal. Not anonymity.\nHuman UI: ${originOf(request)}/\nSkill: ${originOf(request)}/v1/skill\nOpenAPI: ${originOf(request)}/openapi.json\nAZMail sibling: ${AZMAIL}\nAZNet sibling (functional pair): ${AZNET}\n`,
       { headers: { "Content-Type": "text/plain; charset=utf-8", ...corsHeaders() } },
     );
   }

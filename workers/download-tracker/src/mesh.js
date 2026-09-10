@@ -1,13 +1,39 @@
 /**
- * Suite node mesh — QNM-BUILD-1.0 Live Nodes contract.
+ * Suite node mesh — QNM-BUILD-1.0 Live Nodes contract + QNS-CD-1.0 cross-map.
  * Default OFF. Public rollup is live|locked|isolated counts only.
  * No Node Gate. No auto-heal. Not an anonymity network.
+ * No public qnsd proxy. Local qnsd lives in AzielEliab/qnm-node.
  * /v1/mesh/* PROXY to aziel-runtime (AZIEL_RUNTIME binding).
+ * QNS-CD-1.0 is hub cite / Worker mesh cross-map only — not a Softwares-tab product.
  * Author: Aziel Eliab only.
  */
 import { FRAGGATE_CALL, FRAGGATE_MCP, IDENTITY, RUNTIME } from "./engine.js";
 
 export const QNM_SPEC = "QNM-BUILD-1.0";
+export const QNS_CD_SPEC = "QNS-CD-1.0";
+export const QNM_NODE = "https://github.com/AzielEliab/qnm-node";
+export const AZIEL_RUNTIME_REPO = "https://github.com/AzielEliab/aziel-runtime";
+export const AZINTERFACE_REPO = "https://github.com/AzielEliab/azinterface";
+export const QNS_CD_DESIGNS = "https://github.com/AzielEliab/aziel-runtime/tree/main/docs/designs";
+export const QNS_CD = Object.freeze({
+  spec: QNS_CD_SPEC,
+  title: "photon QNS1 packet transfer",
+  kind: "cross-map",
+  local_qnsd: QNM_NODE,
+  qnsd_public_proxy: false,
+  runtime: AZIEL_RUNTIME_REPO,
+  designs: QNS_CD_DESIGNS,
+  qnm_wp: "https://github.com/AzielEliab/aziel-runtime/blob/main/docs/designs/QNM-WP-1.0.md",
+  qnm_build: "https://github.com/AzielEliab/qnm-node/blob/main/docs/QNM-BUILD-1.0.md",
+  pair_custody: "azinterface",
+  pair_custody_repo: AZINTERFACE_REPO,
+  softwares_tab: false,
+  node_gate: false,
+  default_off: true,
+  author: IDENTITY,
+  identity: IDENTITY,
+  note: "Hub cite / Worker mesh cross-map only. Local qnsd is qnm-node. Not a Softwares-tab product. No public qnsd proxy. Author: Aziel Eliab only.",
+});
 export const MESH_KERNEL = "NM-0.1";
 export const MESH_DEFAULT_OFF = true;
 export const MESH_ANONYMITY_NETWORK = false;
@@ -28,7 +54,7 @@ export const MESH_BROADCAST_PATH = "/v1/mesh/broadcast";
 export const ANON_BROADCAST = "https://github.com/AzielEliab/anon-broadcast";
 
 export const MESH_NOTE =
-  "QNM-BUILD-1.0. Suite mesh default off. Live|locked|isolated counts only. No Node Gate. No auto-heal. Not an anonymity network. Author: Aziel Eliab only.";
+  "QNM-BUILD-1.0 + QNS-CD-1.0. Suite mesh default off. Live|locked|isolated counts only. Photon QNS1 packet transfer is local qnm-node (no public qnsd proxy). No Node Gate. No auto-heal. Not an anonymity network. Author: Aziel Eliab only.";
 
 export const MESH_OPS = Object.freeze([
   "status",
@@ -137,6 +163,8 @@ export function emptyMesh(extra = {}) {
     door: MESH_PATH,
     ...extra,
     spec: QNM_SPEC,
+    qns_cd_spec: QNS_CD_SPEC,
+    qns_cd: QNS_CD,
     rollup,
     node_gate: false,
     auto_heal: false,
@@ -204,7 +232,7 @@ export function parseMeshDoc(body) {
     source: inner.source || "parsed",
     door: inner.door || MESH_PATH,
     note: enabled
-      ? "QNM-BUILD-1.0. Suite mesh is on. Live|locked|isolated counts only. No Node Gate. No auto-heal. Not an anonymity network."
+      ? "QNM-BUILD-1.0 + QNS-CD-1.0. Suite mesh is on. Live|locked|isolated counts only. Photon QNS1 packet transfer is local qnm-node (no public qnsd proxy). No Node Gate. No auto-heal. Not an anonymity network."
       : MESH_NOTE,
   });
 }
@@ -215,6 +243,8 @@ export function publicMesh(mesh) {
   const rollup = enabled ? meshRollup(m) : emptyRollup();
   return {
     spec: QNM_SPEC,
+    qns_cd_spec: QNS_CD_SPEC,
+    qns_cd: QNS_CD,
     kernel: MESH_KERNEL,
     enabled,
     default_off: m.default_off !== false,
@@ -253,9 +283,9 @@ export function meshStatusLine(mesh) {
     return "Suite mesh: on · live " + r.live + " · locked " + r.locked + " · isolated " + r.isolated + ". Not an anonymity network.";
   }
   if (m.status === "unavailable") {
-    return "Suite mesh: off (unavailable). QNM-BUILD-1.0. Not an anonymity network.";
+    return "Suite mesh: off (unavailable). QNM-BUILD-1.0 + QNS-CD-1.0. Not an anonymity network.";
   }
-  return "Suite mesh: off (default). QNM-BUILD-1.0. Not an anonymity network.";
+  return "Suite mesh: off (default). QNM-BUILD-1.0 + QNS-CD-1.0. Not an anonymity network.";
 }
 
 /** Public Live Nodes count. Never auto-heal a visiting floor. */
@@ -270,6 +300,8 @@ export function meshPointer() {
     path: MESH_PATH,
     enabled_default: false,
     spec: QNM_SPEC,
+    qns_cd_spec: QNS_CD_SPEC,
+    qns_cd: QNS_CD,
     kernel: MESH_KERNEL,
     rollup: "live|locked|isolated",
     node_gate: false,

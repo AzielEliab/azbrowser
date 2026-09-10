@@ -1,8 +1,11 @@
-"""Suite node mesh — QNM-BUILD-1.0 Live Nodes contract.
+"""Suite node mesh — QNM-BUILD-1.0 Live Nodes contract + QNS-CD-1.0 cross-map.
 
 Default OFF. Public rollup is live|locked|isolated counts only.
 No Node Gate. No auto-heal. Not an anonymity network.
-``/v1/mesh/*`` PROXY to aziel-runtime. Author: Aziel Eliab only.
+No public qnsd proxy. Local qnsd lives in AzielEliab/qnm-node.
+``/v1/mesh/*`` PROXY to aziel-runtime.
+QNS-CD-1.0 is hub cite / Worker mesh cross-map only — not a Softwares-tab product.
+Author: Aziel Eliab only.
 """
 
 from __future__ import annotations
@@ -12,6 +15,33 @@ from typing import Any
 from .meta import FRAGGATE_CALL, FRAGGATE_MCP, IDENTITY, RUNTIME
 
 QNM_SPEC = "QNM-BUILD-1.0"
+QNS_CD_SPEC = "QNS-CD-1.0"
+QNM_NODE = "https://github.com/AzielEliab/qnm-node"
+AZIEL_RUNTIME_REPO = "https://github.com/AzielEliab/aziel-runtime"
+AZINTERFACE_REPO = "https://github.com/AzielEliab/azinterface"
+QNS_CD_DESIGNS = "https://github.com/AzielEliab/aziel-runtime/tree/main/docs/designs"
+QNS_CD = {
+    "spec": QNS_CD_SPEC,
+    "title": "photon QNS1 packet transfer",
+    "kind": "cross-map",
+    "local_qnsd": QNM_NODE,
+    "qnsd_public_proxy": False,
+    "runtime": AZIEL_RUNTIME_REPO,
+    "designs": QNS_CD_DESIGNS,
+    "qnm_wp": "https://github.com/AzielEliab/aziel-runtime/blob/main/docs/designs/QNM-WP-1.0.md",
+    "qnm_build": "https://github.com/AzielEliab/qnm-node/blob/main/docs/QNM-BUILD-1.0.md",
+    "pair_custody": "azinterface",
+    "pair_custody_repo": AZINTERFACE_REPO,
+    "softwares_tab": False,
+    "node_gate": False,
+    "default_off": True,
+    "author": IDENTITY,
+    "identity": IDENTITY,
+    "note": (
+        "Hub cite / Worker mesh cross-map only. Local qnsd is qnm-node. "
+        "Not a Softwares-tab product. No public qnsd proxy. Author: Aziel Eliab only."
+    ),
+}
 MESH_KERNEL = "NM-0.1"
 MESH_DEFAULT_OFF = True
 MESH_ANONYMITY_NETWORK = False
@@ -31,7 +61,8 @@ MESH_LEAVE_PATH = "/v1/mesh/leave"
 MESH_BROADCAST_PATH = "/v1/mesh/broadcast"
 ANON_BROADCAST = "https://github.com/AzielEliab/anon-broadcast"
 MESH_NOTE = (
-    "QNM-BUILD-1.0. Suite mesh default off. Live|locked|isolated counts only. "
+    "QNM-BUILD-1.0 + QNS-CD-1.0. Suite mesh default off. Live|locked|isolated counts only. "
+    "Photon QNS1 packet transfer is local qnm-node (no public qnsd proxy). "
     "No Node Gate. No auto-heal. Not an anonymity network. Author: Aziel Eliab only."
 )
 MESH_OPS = (
@@ -112,6 +143,8 @@ def empty_mesh(extra: dict[str, Any] | None = None) -> dict[str, Any]:
     }
     out.update(extra)
     out["spec"] = QNM_SPEC
+    out["qns_cd_spec"] = QNS_CD_SPEC
+    out["qns_cd"] = dict(QNS_CD)
     out["rollup"] = rollup
     out["node_gate"] = False
     out["auto_heal"] = False
@@ -204,7 +237,8 @@ def parse_mesh_doc(body: Any) -> dict[str, Any]:
         "source": inner.get("source") or "parsed",
         "door": inner.get("door") or MESH_PATH,
         "note": (
-            "QNM-BUILD-1.0. Suite mesh is on. Live|locked|isolated counts only. "
+            "QNM-BUILD-1.0 + QNS-CD-1.0. Suite mesh is on. Live|locked|isolated counts only. "
+            "Photon QNS1 packet transfer is local qnm-node (no public qnsd proxy). "
             "No Node Gate. No auto-heal. Not an anonymity network."
             if enabled else MESH_NOTE
         ),
@@ -217,6 +251,8 @@ def public_mesh(mesh: dict[str, Any] | None = None) -> dict[str, Any]:
     rollup = mesh_rollup(m) if enabled else empty_rollup()
     return {
         "spec": QNM_SPEC,
+        "qns_cd_spec": QNS_CD_SPEC,
+        "qns_cd": dict(QNS_CD),
         "kernel": MESH_KERNEL,
         "enabled": enabled,
         "default_off": m.get("default_off") is not False,
@@ -257,8 +293,8 @@ def mesh_status_line(mesh: dict[str, Any] | None = None) -> str:
             "Not an anonymity network."
         )
     if m.get("status") == "unavailable":
-        return "Suite mesh: off (unavailable). QNM-BUILD-1.0. Not an anonymity network."
-    return "Suite mesh: off (default). QNM-BUILD-1.0. Not an anonymity network."
+        return "Suite mesh: off (unavailable). QNM-BUILD-1.0 + QNS-CD-1.0. Not an anonymity network."
+    return "Suite mesh: off (default). QNM-BUILD-1.0 + QNS-CD-1.0. Not an anonymity network."
 
 
 def align_live_nodes(mesh: dict[str, Any] | None = None) -> int:
@@ -274,6 +310,8 @@ def mesh_pointer() -> dict[str, Any]:
         "path": MESH_PATH,
         "enabled_default": False,
         "spec": QNM_SPEC,
+        "qns_cd_spec": QNS_CD_SPEC,
+        "qns_cd": dict(QNS_CD),
         "kernel": MESH_KERNEL,
         "rollup": "live|locked|isolated",
         "node_gate": False,

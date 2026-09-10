@@ -14,7 +14,7 @@ URL pattern after deploy (workers.dev + account subdomain, same as sibling produ
 - `GET /v1/*` — health/skill (does **not** increment downloads)
 - `POST /v1/{op}` — human UI backend; single-segment local ops only
 - `/v1/fraggate/*` and `/v1/runtime/*` — PROXY to aziel-runtime FragGate door
-- `/v1/mesh/*` — PROXY to aziel-runtime suite mesh (AZIEL_RUNTIME). Default OFF. QNM-BUILD-1.0 live|locked|isolated. No Node Gate. No auto-heal. Not anonymity. Human UI Live Nodes strip polls `GET /v1/mesh`.
+- `/v1/mesh/*` — PROXY to aziel-runtime suite mesh (AZIEL_RUNTIME). Default OFF. QNM-BUILD-1.0 live|locked|isolated. QNS-CD-1.0 photon QNS1 packet transfer is a hub cite / Worker mesh cross-map only (local qnsd in https://github.com/AzielEliab/qnm-node; runtime cites in https://github.com/AzielEliab/aziel-runtime). Not a Softwares-tab product. No public qnsd proxy. No Node Gate. No auto-heal. Not anonymity. Human UI Live Nodes strip polls `GET /v1/mesh`.
 
 KV binding `DOWNLOADS` (create `AZBROWSER_DOWNLOADS` on first deploy). Account `ac575a9b822bea2bed97d0ab73aed238`.
 
