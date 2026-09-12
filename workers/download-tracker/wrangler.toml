@@ -16,6 +16,7 @@ id = "d6b7b64cb03a43768bb094da62634e7e"  # AZBROWSER_DOWNLOADS
 [assets]
 directory = "./public"
 binding = "ASSETS"
+# /sigil.png is served from public/ (not run_worker_first) so local GET /sigil.png is 200.
 run_worker_first = ["/", "/download", "/download/*", "/stats", "/event", "/go", "/count", "/install.sh", "/v1", "/v1/*", "/openapi.json", "/ai", "/ai/*", "/mcp", "/mcp/", "/robots.txt", "/sitemap.xml", "/cite.json", "/llms.txt", "/ai.txt"]
 
 [vars]

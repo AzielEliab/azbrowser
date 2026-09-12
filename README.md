@@ -26,7 +26,7 @@ AZ-OS / Lumen / AZInterface are **not** this product.
 
 v0.1 is a **research shell**. It cannot ship a Chromium binary. The
 Worker looks like a real browser (tabs, omnibox, Back/Forward/Reload,
-Home = everblooming sigil) and sandboxes navigation via controlled
+Home brandmark) and sandboxes navigation via controlled
 fetch/proxy preview + receipted airlock + AZNet ethical search. It does
 **not** replace the operator's OS browser.
 
@@ -112,7 +112,7 @@ URL pattern (same as sibling Aziel Eliab products):
 
 - Homepage: [https://azbrowser-download-tracker.vibelock.workers.dev/](https://azbrowser-download-tracker.vibelock.workers.dev/)
 - Direct tarball: [azbrowser-0.1.0.tar.gz](https://azbrowser-download-tracker.vibelock.workers.dev/download?asset=azbrowser-0.1.0.tar.gz)
-- Sigil: [https://www.azielcorpuslibrary.net/sigil.png](https://www.azielcorpuslibrary.net/sigil.png)
+- Sigil: [/sigil.png](https://azbrowser-download-tracker.vibelock.workers.dev/sigil.png)
 - Cite: [cite.json](https://azbrowser-download-tracker.vibelock.workers.dev/cite.json) — Eliab, Aziel. (2026). AZBrowser 0.1.0 [Software]. Apache-2.0. Do not invent a DOI.
 
 Isolated counter: Worker `azbrowser-download-tracker`, KV `AZBROWSER_DOWNLOADS`. `/v1` and `/mcp` do not increment downloads.

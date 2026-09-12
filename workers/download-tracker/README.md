@@ -6,7 +6,8 @@ URL pattern after deploy (workers.dev + account subdomain, same as sibling produ
 
 `https://azbrowser-download-tracker.vibelock.workers.dev`
 
-- `GET /` — complete browser-chrome UI (tabs, omnibox, Home sigil, Lamb Lens, airlock, receipts) + counted views. AZNet is a separate product/engine; pairing order/token only — not shared Phase-1 UI.
+- `GET /` — complete browser-chrome UI (tabs, omnibox, Home brandmark, Lamb Lens, airlock, receipts) + counted views. AZNet is a separate product/engine; pairing order/token only — not shared Phase-1 UI.
+- `GET /sigil.png` — official rose-star brand mark (local Worker asset)
 - `GET /download` — counted tarball (HTTP 200 gzip, no 302)
 - `GET /count` — `{views, downloads, total}`
 - `GET /openapi.json` — documents ops; agents use FragGate
