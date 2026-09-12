@@ -59,7 +59,7 @@ next input. No technical MCP UI is required for the human.
 | Address Go / preview | `navigate` / `preview` |
 | Lamb Lens search | `ethical_search` / `lamb_lens` / `lamb_lens_search` / `search` |
 | Back / Forward / Reload | `back` `forward` `reload` |
-| Home (everblooming sigil) | `home` |
+| Home | `home` |
 | New / close / switch tab | `tab_new` `tab_close` `tab_switch` `tab_list` |
 | Airlock panel | `airlock` `airlock_status` |
 | Receipts list | `receipts` `receipt` `receipt_verify` |

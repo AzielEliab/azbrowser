@@ -57,7 +57,7 @@ function toolDefs() {
     reload: "Reload the active tab preview.",
     back: "Tab history back.",
     forward: "Tab history forward.",
-    home: "Home — everblooming sigil new-tab panel.",
+    home: "Home — new-tab panel.",
     tab_new: "Open an isolated tab.",
     tab_close: "Close a tab.",
     tab_switch: "Switch active tab.",

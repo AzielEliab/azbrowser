@@ -12,7 +12,7 @@ export const FRAGGATE = "https://github.com/AzielEliab/fraggate";
 export const FRAGGATE_CALL = "https://aziel-runtime.vibelock.workers.dev/v1/fraggate/call";
 export const FRAGGATE_MCP = "https://aziel-runtime.vibelock.workers.dev/mcp";
 export const HOST = "https://azbrowser-download-tracker.vibelock.workers.dev";
-export const SIGIL = "https://www.azielcorpuslibrary.net/sigil.png";
+export const SIGIL = "/sigil.png";
 export const AZMAIL = "https://github.com/AzielEliab/azmail";
 export const AZMAIL_WORKER = "https://azmail-download-tracker.vibelock.workers.dev";
 export const AZNET = "https://github.com/AzielEliab/aznet";
@@ -596,7 +596,7 @@ export async function dispatch(op, payload, sessionId) {
   if (name === "home") {
     pushTab(session, "azbrowser://newtab", "Home", "newtab");
     const rec = await appendReceipt(session, "home", { url: "azbrowser://newtab" });
-    return { ok: true, action: "home", sigil: SIGIL, tab: current(session), receipt: rec, session_id: session.id, display: displayOf("Home", "Everblooming sigil home.", [["sigil", SIGIL], ["receipt", rec.hash.slice(0, 16)]]), limitation: LIMITATION };
+    return { ok: true, action: "home", sigil: SIGIL, tab: current(session), receipt: rec, session_id: session.id, display: displayOf("Home", "Home panel.", [["sigil", SIGIL], ["receipt", rec.hash.slice(0, 16)]]), limitation: LIMITATION };
   }
 
   if (name === "tab_new") {
@@ -774,7 +774,7 @@ Gate. No auto-heal. Not anonymity.
 | Address Go / preview | \`navigate\` / \`preview\` |
 | Lamb Lens search | \`ethical_search\` / \`lamb_lens\` / \`lamb_lens_search\` / \`search\` |
 | Back / Forward / Reload | \`back\` \`forward\` \`reload\` |
-| Home (everblooming sigil) | \`home\` |
+| Home | \`home\` |
 | New / close / switch tab | \`tab_new\` \`tab_close\` \`tab_switch\` \`tab_list\` |
 | Airlock panel | \`airlock\` \`airlock_status\` |
 | Receipts list | \`receipts\` \`receipt\` \`receipt_verify\` |

@@ -48,8 +48,8 @@ ethical search. It does **not** replace the operator's OS browser.
 ### Browser runtime
 
 Human chrome matches a real browser: tab strip, Back / Forward / Reload,
-Home = everblooming sigil
-(`https://www.azielcorpuslibrary.net/sigil.png`), address/search bar,
+Home brandmark
+(`/sigil.png` on the Worker), address/search bar,
 black background / gold trim / white text. Tabs are isolated in UX even
 when rendering is an iframe / proxy sandbox.
 

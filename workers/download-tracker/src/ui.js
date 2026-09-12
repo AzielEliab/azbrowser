@@ -69,7 +69,7 @@ iframe.preview{width:100%;min-height:420px;border:1px solid var(--trim);backgrou
     <button id="btnBack" type="button" title="Back">◀</button>
     <button id="btnFwd" type="button" title="Forward">▶</button>
     <button id="btnReload" type="button" title="Reload">↻</button>
-    <button id="btnHome" type="button" title="Home — everblooming sigil"><span id="homeBtn"><img alt="Home" src="${SIGIL}"></span></button>
+    <button id="btnHome" type="button" title="Home"><span id="homeBtn"><img class="brandmark" alt="" src="${SIGIL}"></span></button>
     <input id="omnibox" placeholder="Search Lamb Lens ethically or enter a URL" spellcheck="false" autocomplete="off">
     <button id="btnGo" type="button" title="Go / ethical search">Go</button>
     <span class="lens">Lamb Lens</span>
@@ -148,10 +148,10 @@ async function fraggate(slug, op, payload) {
   return r.json();
 }
 function homePanel() {
-  return '<div class="sigil-home"><img alt="everblooming sigil" src="'+SIGIL+'"><h1 style="color:#c9a227;font-weight:500">AZBrowser</h1><p>Lamb Lens ethical search · Phase 1 research shell</p></div>'
+  return '<div class="sigil-home"><img class="brandmark" alt="" src="'+SIGIL+'"><h1 style="color:#c9a227;font-weight:500">AZBrowser</h1><p>Lamb Lens ethical search · Phase 1 research shell</p></div>'
     + '<div class="banner">'+LIMITATION+'</div>'
     + '<div class="card"><p>New-tab search is Lamb Lens: cite sources, refuse doxxing / credential harvest / malware lure. Advisory. AZNet is a separate product/engine; pairing order/token only — not shared Phase-1 UI.</p>'
-    + '<p>Type a query or HTTPS URL in the address bar. Home button is the everblooming sigil.</p></div>';
+    + '<p>Type a query or HTTPS URL in the address bar. Home returns to the new-tab panel.</p></div>';
 }
 function renderResult(j) {
   const stage = document.getElementById("stage");
