@@ -1,4 +1,4 @@
-import { AZNET, IDENTITY, LIMITATION, SIGIL, VERSION } from "./engine.js";
+import { IDENTITY, SIGIL, VERSION } from "./engine.js";
 
 function esc(s) {
   return String(s)
@@ -8,10 +8,7 @@ function esc(s) {
     .replace(/"/g, "&quot;");
 }
 
-export function homeHtml({ views = 0, downloads = 0, github = {} } = {}) {
-  const stars = github.stars || 0;
-  const forks = github.forks || 0;
-  const watchers = github.watchers || 0;
+export function homeHtml({ views = 0, downloads = 0 } = {}) {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -36,6 +33,25 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:15px/
 #toolbar button:hover{border-color:var(--focus)}
 #toolbar button:focus-visible,#omnibox:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 #btnGo,#azielMode[aria-pressed="true"]{background:var(--gold);color:var(--ink);border-color:var(--gold)}
+.start{min-height:62vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding:48px 20px 32px}
+.start h1{font-size:1.35rem;font-weight:500;margin:0}
+.start img{width:84px;height:84px}
+#startBox{width:min(560px,92vw);background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:999px;padding:12px 18px;font:16px/1.3 inherit}
+.quick{display:flex;flex-wrap:wrap;gap:6px 8px;justify-content:center;max-width:640px}
+.quick button{background:transparent;color:var(--muted);border:0;border-radius:8px;padding:6px 10px;cursor:pointer;font:14px/1.3 inherit}
+.quick button:hover{color:var(--text);background:var(--banner)}
+.theme{position:relative}
+#themeMenu{position:absolute;right:0;top:40px;z-index:4;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;display:flex;flex-direction:column;min-width:132px}
+#themeMenu[hidden]{display:none}
+#themeMenu button{text-align:left;width:100%}
+#sidePanel[hidden]{display:none !important}
+#body{grid-template-columns:1fr}
+html[data-panel="open"] #body{grid-template-columns:1fr 300px}
+.statusline{border-top:1px solid var(--line);padding:8px 14px;font-size:12px;color:var(--muted);display:flex;gap:16px;align-items:center}
+.settings-page{max-width:40rem}
+.settings-page h1{font-size:1.7rem;font-weight:560;margin:0 0 12px}
+#ownerLine:empty{display:none}
+.iconbtn{font-size:16px}
 #homeBtn img{width:20px;height:20px;vertical-align:middle}
 #omnibox{flex:1;min-width:200px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:999px;padding:9px 16px;font:15px/1.3 inherit}
 #handleChip{font-size:12px;color:var(--muted);white-space:nowrap}
@@ -43,8 +59,8 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:15px/
 #bookmarks[hidden]{display:none}
 #ownerLine{padding:4px 14px 8px;min-height:1.2em;color:var(--muted);background:var(--bar);font-size:13px}
 .lens{color:var(--gold);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
-#body{flex:1;display:grid;grid-template-columns:1fr 340px;min-height:0}
-@media(max-width:860px){#body{grid-template-columns:1fr}}
+#body{flex:1;display:grid;grid-template-columns:1fr;min-height:0}
+@media(max-width:860px){#body,html[data-panel="open"] #body{grid-template-columns:1fr}}
 #stage{overflow:auto;padding:18px}
 #side{border-left:1px solid var(--line);overflow:auto;padding:16px;background:var(--panel)}
 h2{color:var(--muted);font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin:16px 0 8px}
@@ -78,7 +94,6 @@ iframe.preview{width:100%;min-height:420px;border:1px solid var(--trim);backgrou
   try { saved = JSON.parse(localStorage.getItem("azbrowser-appearance") || "null"); } catch (e) {}
   var theme = "night";
   if (saved && (saved.theme === "day" || saved.theme === "night" || saved.theme === "aziel")) theme = saved.theme;
-  else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) theme = "day";
   document.documentElement.setAttribute("data-theme", theme);
 })();
 </script>
@@ -91,13 +106,20 @@ iframe.preview{width:100%;min-height:420px;border:1px solid var(--trim);backgrou
     <button id="btnFwd" type="button" title="Forward">▶</button>
     <button id="btnReload" type="button" title="Reload">↻</button>
     <button id="btnHome" type="button" title="Home"><span id="homeBtn"><img class="brandmark" alt="" src="${SIGIL}"></span></button>
-    <input id="omnibox" placeholder="Search Lamb Lens, a URL, or a .aziel name" spellcheck="false" autocomplete="off" aria-label="Address">
+    <input id="omnibox" placeholder="Search or enter a .aziel name or web address" spellcheck="false" autocomplete="off" aria-label="Address">
     <span id="handleChip"></span>
     <button id="btnGo" type="button" title="Go / ethical search">Go</button>
-    <button id="themeToggle" type="button" title="Switch day and night">Day</button>
-    <button id="azielMode" type="button" title="Aziel mode. Gold, black, and royal purple." aria-pressed="false">Aziel</button>
-    <button id="settingsBtn" type="button" title="Settings">Settings</button>
-    <button id="designBtn" type="button" title="Open design mode as a local tab">Design</button>
+    <div class="theme">
+      <button id="themeToggle" class="iconbtn" type="button" title="Theme. Night, day, or Aziel." aria-haspopup="true" aria-expanded="false">☾</button>
+      <div id="themeMenu" hidden>
+        <button type="button" data-theme-choice="night">Night</button>
+        <button type="button" data-theme-choice="day">Day</button>
+        <button id="azielMode" type="button" data-theme-choice="aziel" title="Aziel mode. Gold, black, and royal purple." aria-pressed="false">Aziel</button>
+      </div>
+    </div>
+    <button id="settingsBtn" class="iconbtn" type="button" title="Settings" aria-label="Settings">⚙</button>
+    <button id="designBtn" class="iconbtn" type="button" title="Design mode" aria-label="Design mode">✎</button>
+    <button id="panelToggle" class="iconbtn" type="button" title="Tools" aria-label="Tools" aria-expanded="false">☰</button>
   </div>
   <div id="bookmarks" hidden>
     <span>Bookmarks</span>
@@ -107,56 +129,39 @@ iframe.preview{width:100%;min-height:420px;border:1px solid var(--trim);backgrou
   <div id="ownerLine"></div>
   <div id="body">
     <section id="stage"></section>
-    <aside id="side">
-      <div class="count">Views <strong id="views">${views}</strong> · Downloads <strong id="downloads">${downloads}</strong>
-        <a href="/download?asset=azbrowser-0.1.0.tar.gz">tarball</a>
-        <a href="/count">/count</a>
-      </div>
-      <h2>This node</h2>
+    <aside id="sidePanel" hidden>
+      <p class="cite">Views <strong id="views">${views}</strong> · Downloads <strong id="downloads">${downloads}</strong></p>
+      <h2>Tools</h2>
       <div class="node">
-        <button id="btnAirlock" type="button" title="Airlock current URL">Airlock</button>
-        <button id="btnPromote" type="button" title="Operator override. Promotes quarantined mesh bytes on this node.">Promote</button>
-        <button id="btnIsland" type="button" title="Drop this node's mesh peers. Local runtime stays up.">Island</button>
-        <button id="btnBlock" type="button" title="Block the current mesh handle on this node only.">Block peer</button>
-        <button id="btnTrust" type="button" title="Local trust for the current handle.">Trust</button>
-        <button id="slotsBtn" type="button" title="Show this handle's domain slots">Slots</button>
+        <button id="btnAirlock" type="button" title="Check the current address in the airlock">Airlock</button>
+        <button id="btnPromote" type="button" title="Show a quarantined page on this machine">Promote</button>
+        <button id="btnIsland" type="button" title="Leave mesh peers. Local apps and the web stay open">Island</button>
+        <button id="btnBlock" type="button" title="Block the current handle on this machine">Block peer</button>
+        <button id="btnTrust" type="button" title="Local trust for the current handle">Trust</button>
+        <button id="slotsBtn" type="button" title="Reserved hub mirrors and your three sites">Slots</button>
       </div>
-      <h2>Airlock pipeline</h2>
-      <div id="airlockPanel"><p class="cite">download → scan → scrub → verify → vault</p></div>
-      <h2>Integrity receipts</h2>
+      <h2>Mesh</h2>
+      <div class="node">
+        <button id="meshEnable" type="button" title="Turn mesh presence on">Turn on</button>
+        <button id="meshDisable" type="button" title="Turn mesh presence off">Turn off</button>
+        <button id="meshJoin" type="button" title="Join this browser to the mesh">Join</button>
+        <button id="meshLeave" type="button" title="Leave the mesh">Leave</button>
+      </div>
+      <p hidden>live <b id="qnmLive">0</b> locked <b id="qnmLocked">0</b> isolated <b id="qnmIsolated">0</b></p>
+      <h2>Airlock</h2>
+      <div id="airlockPanel"></div>
+      <h2>Receipts</h2>
       <div id="receipts"></div>
-      <h2>FragGate</h2>
-      <div class="card cite">
-        AI path is FragGate only: <code>POST /v1/fraggate/call</code> slug=<b>azbrowser</b><br>
-        Door paths (<code>/v1/fraggate/*</code>, <code>/v1/runtime/*</code>, <code>/v1/mesh/*</code>) proxy to aziel-runtime. Local ops are <code>/v1/{op}</code> only.<br>
-        Suite mesh default OFF. QNM-BUILD-1.0 live|locked|isolated. QNS-CD-1.0 photon QNS1 (local qnm-node; no public qnsd proxy). No Node Gate. No auto-heal. Not anonymity.<br>
-        <a href="/openapi.json">OpenAPI</a> · <a href="/mcp">/mcp pointer</a> · <a href="/ai">AI</a> · <a href="/v1/skill">skill</a><br>
-        Siblings: <a href="https://github.com/AzielEliab/azmail">AZMail</a> · <a href="${AZNET}">AZNet (separate product)</a><br>
-        AZNet is a separate product/engine; pairing order/token only — not shared Phase-1 UI.
-      </div>
     </aside>
   </div>
-  <div id="meshStrip" aria-label="Suite Live Nodes">
-    <div class="live"><b id="meshLiveCount">0</b> Live Nodes</div>
-    <div id="meshLine">Suite mesh: off (default). QNM-BUILD-1.0 + QNS-CD-1.0. Not an anonymity network.</div>
-    <div class="rollup">live <b id="qnmLive">0</b> · locked <b id="qnmLocked">0</b> · isolated <b id="qnmIsolated">0</b></div>
-    <div>No Node Gate · No auto-heal · Aziel Eliab only</div>
-    <div>
-      <button id="meshEnable" type="button" title="Enable suite mesh (global kill switch; default off)">Enable</button>
-      <button id="meshDisable" type="button" title="Disable suite mesh (always allowed)">Disable</button>
-      <button id="meshJoin" type="button" title="Join as azbrowser. Refused while mesh is OFF. No auto-join.">Join</button>
-      <button id="meshLeave" type="button" title="Leave this node. No auto-heal.">Leave</button>
-    </div>
-    <div id="meshProducts" class="cite">Catalog MCP mesh_* · FragGate slug=mesh · /v1/mesh/* PROXY · QNS-CD-1.0 cross-map · not AnonBroadcast · not AZMail ring · not Softwares-tab</div>
-  </div>
-  <div id="status">
-    <span>AZBrowser ${VERSION} · Phase 1 research shell · not Chromium · No receipt = no action</span>
-    <span>GitHub ★ ${stars} · forks ${forks} · watchers ${watchers}</span>
+  <div id="meshStrip" class="statusline" aria-label="Mesh status">
+    <span id="meshLine">Mesh off</span>
+    <span>Nodes <b id="meshNodeCount">0</b></span>
+    <span>Live Nodes <b id="meshLiveCount">0</b></span>
   </div>
 </div>
 <script>
 const SIGIL = ${JSON.stringify(SIGIL)};
-const LIMITATION = ${JSON.stringify(LIMITATION)};
 let sessionId = "";
 const clientTabs = [];
 function addReceipt(rec) {
@@ -187,10 +192,33 @@ async function fraggate(slug, op, payload) {
   return r.json();
 }
 function homePanel() {
-  return '<div class="sigil-home"><img class="brandmark" alt="" src="'+SIGIL+'"><h1 style="font-weight:500">AZBrowser</h1><p>Lamb Lens ethical search · Phase 1 research shell</p></div>'
-    + '<div class="banner">'+LIMITATION+'</div>'
-    + '<div class="card"><p>New-tab search is Lamb Lens: cite sources, refuse doxxing / credential harvest / malware lure. Advisory. AZNet is a separate product/engine; pairing order/token only — not shared Phase-1 UI.</p>'
-    + '<p>Type a query or HTTPS URL in the address bar. Home returns to the new-tab panel.</p></div>';
+  return '<section class="start"><img class="brandmark" alt="" src="'+SIGIL+'"><h1>AZBrowser</h1>'
+    + '<form id="startForm"><input id="startBox" aria-label="Search" placeholder="Search or enter a .aziel name or web address" spellcheck="false"></form>'
+    + '<nav class="quick" aria-label="Quick links">'
+    + '<button type="button" data-go="azbrowser://local/design">Local apps</button>'
+    + '<button type="button" id="quickSites">Your sites</button>'
+    + '<button type="button" data-go="az.azieleliab.az">Aziel</button>'
+    + '<button type="button" data-go="az.azielcorpuslibrary.az">Corpus</button>'
+    + '<button type="button" data-go="az.godlock.az">Godlock</button>'
+    + '<button type="button" data-go="az.hedidntjump.az">HeDidntJump</button>'
+    + '</nav></section>';
+}
+function bindStart() {
+  const form = document.getElementById("startForm");
+  if (!form) return;
+  form.onsubmit = (e) => {
+    e.preventDefault();
+    document.getElementById("omnibox").value = document.getElementById("startBox").value.trim();
+    go();
+  };
+  document.querySelectorAll("#stage [data-go]").forEach((btn) => {
+    btn.onclick = () => {
+      document.getElementById("omnibox").value = btn.getAttribute("data-go");
+      go();
+    };
+  });
+  const sites = document.getElementById("quickSites");
+  if (sites) sites.onclick = () => document.getElementById("slotsBtn").click();
 }
 let lastHandle = "";
 let islandOn = false;
@@ -275,6 +303,7 @@ function renderResult(j) {
   }
   if (j.action === "home" || (j.tab && j.tab.kind === "newtab" && !j.results && !j.html)) {
     stage.innerHTML = homePanel();
+    bindStart();
     return;
   }
   if (j.code === "ETHICS_REFUSE" || (j.ethics && j.ethics.refuse && j.ok === false)) {
@@ -327,7 +356,7 @@ async function paintTabs() {
   plus.type = "button";
   plus.title = "New tab";
   plus.textContent = "+";
-  plus.onclick = async () => { renderResult(await callOp("tab_new", {})); document.getElementById("stage").innerHTML = homePanel(); paintTabs(); };
+  plus.onclick = async () => { renderResult(await callOp("tab_new", {})); document.getElementById("stage").innerHTML = homePanel(); bindStart(); paintTabs(); };
   box.appendChild(plus);
 }
 async function go() {
@@ -350,6 +379,7 @@ document.getElementById("btnPromote").onclick = async () => {
 document.getElementById("btnIsland").onclick = async () => {
   islandOn = !islandOn;
   renderResult(await callOp("island_mode", { enabled: islandOn }));
+  refreshMesh();
 };
 document.getElementById("btnBlock").onclick = async () => {
   const handle = lastHandle || (document.getElementById("omnibox").value.trim().split(".")[0] || "");
@@ -374,28 +404,57 @@ function readAppearance() {
   var saved = null;
   try { saved = JSON.parse(localStorage.getItem(APPEAR_KEY) || "null"); } catch (e) {}
   if (saved && saved.theme) return saved;
-  var day = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
-  return { theme: day ? "day" : "night", mode: day ? "day" : "night", aziel: false, bookmarks: false };
+  return { theme: "night", mode: "night", aziel: false, bookmarks: false };
 }
 function paintAppearance(state) {
-  const theme = state.aziel ? "aziel" : state.mode;
+  const theme = state.aziel ? "aziel" : (state.mode || "night");
   document.documentElement.setAttribute("data-theme", theme);
   document.getElementById("bookmarks").hidden = !state.bookmarks;
-  document.getElementById("themeToggle").textContent = state.mode === "day" ? "Night" : "Day";
-  document.getElementById("azielMode").setAttribute("aria-pressed", state.aziel ? "true" : "false");
+  const mark = theme === "day" ? "☀" : (theme === "aziel" ? "✦" : "☾");
+  const toggle = document.getElementById("themeToggle");
+  toggle.textContent = mark;
+  toggle.title = theme === "aziel" ? "Theme. Aziel mode." : (theme === "day" ? "Theme. Day." : "Theme. Night.");
+  document.querySelectorAll("[data-theme-choice]").forEach((btn) => {
+    const choice = btn.getAttribute("data-theme-choice");
+    const on = choice === "aziel" ? !!state.aziel : (!state.aziel && state.mode === choice);
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+  });
   localStorage.setItem(APPEAR_KEY, JSON.stringify({ theme, mode: state.mode, aziel: state.aziel, bookmarks: !!state.bookmarks }));
+}
+function chooseTheme(choice) {
+  if (choice === "aziel") {
+    appearance.aziel = true;
+    if (!appearance.mode) appearance.mode = "night";
+  } else {
+    appearance.aziel = false;
+    appearance.mode = choice === "day" ? "day" : "night";
+  }
+  paintAppearance(appearance);
+  const menu = document.getElementById("themeMenu");
+  if (menu) menu.hidden = true;
+  document.getElementById("themeToggle").setAttribute("aria-expanded", "false");
 }
 let appearance = readAppearance();
 if (appearance.theme === "aziel") appearance.aziel = true;
 if (!appearance.mode) appearance.mode = appearance.theme === "day" ? "day" : "night";
-document.getElementById("themeToggle").onclick = () => {
-  appearance.mode = appearance.mode === "day" ? "night" : "day";
-  appearance.aziel = false;
-  paintAppearance(appearance);
+document.getElementById("themeToggle").onclick = (e) => {
+  e.stopPropagation();
+  const menu = document.getElementById("themeMenu");
+  menu.hidden = !menu.hidden;
+  document.getElementById("themeToggle").setAttribute("aria-expanded", menu.hidden ? "false" : "true");
 };
-document.getElementById("azielMode").onclick = () => {
-  appearance.aziel = !appearance.aziel;
-  paintAppearance(appearance);
+document.querySelectorAll("#themeMenu [data-theme-choice]").forEach((btn) => {
+  btn.onclick = (e) => { e.stopPropagation(); chooseTheme(btn.getAttribute("data-theme-choice")); };
+});
+document.addEventListener("click", () => {
+  const menu = document.getElementById("themeMenu");
+  if (menu) menu.hidden = true;
+});
+document.getElementById("panelToggle").onclick = () => {
+  const panel = document.getElementById("sidePanel");
+  panel.hidden = !panel.hidden;
+  document.documentElement.setAttribute("data-panel", panel.hidden ? "closed" : "open");
+  document.getElementById("panelToggle").setAttribute("aria-expanded", panel.hidden ? "false" : "true");
 };
 document.getElementById("bookmarkAdd").onclick = () => {
   const url = document.getElementById("omnibox").value.trim();
@@ -406,11 +465,27 @@ document.getElementById("bookmarkAdd").onclick = () => {
 };
 document.getElementById("settingsBtn").onclick = () => {
   const on = appearance.bookmarks ? " checked" : "";
-  document.getElementById("stage").innerHTML = '<section class="refusal"><h1>Settings</h1><p>Day and Night, Aziel mode, and the bookmarks bar are the appearance controls. They are remembered on this machine. Mesh tools stay in the side panel. Nothing on this page is hidden.</p><label><input id="bookmarkPref" type="checkbox"' + on + '> Show bookmarks bar</label><p>This shell has no ads, no tracking, and no telemetry. Design mode on this hosted chrome is refused. It opens only on the local node.</p></section>';
+  document.getElementById("stage").innerHTML = '<section class="settings-page"><h1>Settings</h1>'
+    + '<h2>Appearance</h2><p>Night is the first look: black background, white text. Day is white with black text. Aziel is gold, black, and royal purple. The choice is remembered on this machine.</p>'
+    + '<div class="node"><button type="button" data-theme-choice="night">Night</button><button type="button" data-theme-choice="day">Day</button><button type="button" data-theme-choice="aziel">Aziel</button></div>'
+    + '<label><input id="bookmarkPref" type="checkbox"' + on + '> Show bookmarks bar</label>'
+    + '<h2>Tools</h2><p>The tools icon opens Airlock, Promote, Island, Block peer, Trust, and Slots. Design mode on this hosted page stays on the machine that holds the handle key.</p>'
+    + '<h2>About</h2>'
+    + '<p>AZBrowser is a research shell for search, tabs, and mesh names. Version ${VERSION}. Author Aziel Eliab.</p>'
+    + '<p>A search, a .aziel name, or a web address goes in one step. Local apps open on the machine that hosts them. Web addresses keep working.</p>'
+    + '<p>A verified handle is named beside the address. A pending name is marked Pending and is not opened. An isolated handle explains what happened and what you can do next.</p>'
+    + '<p>Mesh pages stay in quarantine until you choose Promote. This shell has no malware scanner, and it does not run page scripts. Handle keys stay on the local machine.</p>'
+    + '<p>Island and Block peer apply on this machine. Each action keeps a receipt.</p>'
+    + '<p>There are no ads, no tracking, and no telemetry.</p>'
+    + '<p>AZMail and AZNet are separate programs. This node has four reserved hub mirrors and three user sites. MirageGrid decoy names stay on their own list.</p>'
+    + '</section>';
   document.getElementById("bookmarkPref").onchange = (e) => {
     appearance.bookmarks = e.target.checked;
     paintAppearance(appearance);
   };
+  document.querySelectorAll(".settings-page [data-theme-choice]").forEach((btn) => {
+    btn.onclick = () => chooseTheme(btn.getAttribute("data-theme-choice"));
+  });
 };
 paintAppearance(appearance);
 document.getElementById("btnAirlock").onclick = async () => {
@@ -440,19 +515,15 @@ function paintMesh(raw) {
   const live = on ? meshNum(r.live, j.live_nodes, j.live) : 0;
   const locked = on ? meshNum(r.locked, j.locked_nodes, j.locked) : 0;
   const isolated = on ? meshNum(r.isolated, j.isolated_nodes, j.isolated) : 0;
+  const nodes = live + locked + isolated;
   document.getElementById("meshLiveCount").textContent = String(live);
+  const nodeCount = document.getElementById("meshNodeCount");
+  if (nodeCount) nodeCount.textContent = String(nodes);
   document.getElementById("qnmLive").textContent = String(live);
   document.getElementById("qnmLocked").textContent = String(locked);
   document.getElementById("qnmIsolated").textContent = String(isolated);
   const line = document.getElementById("meshLine");
-  if (on) line.textContent = "Suite mesh: on · live " + live + " · locked " + locked + " · isolated " + isolated + ". Not an anonymity network.";
-  else if (j.status === "unavailable" || (j.ok === false && j.error)) line.textContent = "Suite mesh: off (unavailable). QNM-BUILD-1.0 + QNS-CD-1.0. Not an anonymity network.";
-  else line.textContent = "Suite mesh: off (default). QNM-BUILD-1.0 + QNS-CD-1.0. Not an anonymity network.";
-  const products = j.products_present || j.products || [];
-  const names = Array.isArray(products) ? products.map(p => (typeof p === "string" ? p : (p && (p.product || p.slug)) || "")).filter(Boolean) : [];
-  const nodes = Array.isArray(j.nodes) ? j.nodes : [];
-  const extra = names.length ? " · products " + names.join(", ") : (nodes.length ? " · " + nodes.length + " node labels" : "");
-  document.getElementById("meshProducts").textContent = "Catalog MCP mesh_* · FragGate slug=mesh · /v1/mesh/* PROXY · not AnonBroadcast · not AZMail ring" + extra;
+  line.textContent = islandOn ? "Island" : (on ? "Mesh connected" : "Mesh off");
 }
 async function meshGet(path) {
   const r = await fetch(path, { headers: { "user-agent": "Mozilla/5.0", accept: "application/json" } });
@@ -507,14 +578,8 @@ refreshMesh();
 setInterval(refreshMesh, 30000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshMesh(); });
 document.getElementById("stage").innerHTML = homePanel();
+bindStart();
 paintTabs();
-fetch("/v1/fraggate/list", { headers: { "user-agent": "Mozilla/5.0" } }).then(r => r.json()).then(j => {
-  const ops = (j.allowlist && j.allowlist.azbrowser) || (j.result && j.result.allowlist && j.result.allowlist.azbrowser) || j.ops || [];
-  const el = document.createElement("div");
-  el.className = "cite";
-  el.textContent = "FragGate door proxied. azbrowser ops: " + ops.length;
-  document.getElementById("side").appendChild(el);
-}).catch(() => {});
 </script>
 </body>
 </html>`;

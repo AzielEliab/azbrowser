@@ -180,7 +180,7 @@ Every control calls a real `/v1` handler (same op agents call). No dead buttons.
 | Island / block peer / trust | `POST /v1/island_mode` · `/v1/peer_block` · `/v1/trust` | this node only; no network-wide cutoff |
 | Domain slots | `POST /v1/slots` | 4 reserved hub mirrors + 3 user names |
 | Design mode | `POST /v1/design_mode` | local tab on the loopback shell; hosted Worker refuses |
-| Day / Night / Aziel | chrome only | remembered on this machine; first run follows the OS |
+| Day / Night / Aziel | chrome only | night on first run; later choice is remembered |
 | Mesh enable / disable / join / leave | `POST /v1/mesh/{op}` | PROXY to suite mesh; not an edge-mesh cutoff |
 
 Prove locally (after `pip install -e ".[dev]"`):

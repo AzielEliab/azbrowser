@@ -107,11 +107,17 @@ def test_local_chrome_has_live_nodes_strip():
     from azbrowser.ui import _chrome
     html = _chrome()
     assert 'id="meshStrip"' in html
-    assert "QNM-BUILD-1.0" in html
-    assert "QNS-CD-1.0" in html
-    assert "No Node Gate" in html
-    assert "/v1/mesh" in html
+    assert 'id="meshLine"' in html
+    assert 'id="meshLiveCount"' in html
+    assert "Live Nodes" in html
+    assert "Mesh off" in html
+    assert 'id="sidePanel" hidden' in html
+    assert "Search or enter a .aziel name or web address" in html
+    assert "THIS IS NOT" not in html
+    assert "QNM-BUILD-1.0" not in html
+    assert "QNS-CD-1.0" not in html
     assert 'id="node-gate"' not in html
+    assert "/v1/mesh" in html
     assert HOST in html
 
 

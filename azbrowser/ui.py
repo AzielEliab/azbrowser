@@ -48,7 +48,7 @@ html,body {{ margin:0; height:100%; background:var(--bg); color:var(--text); fon
 #bookmarkList {{ display:flex; gap:8px; flex-wrap:wrap; }}
 #ownerLine {{ padding:4px 14px 8px; min-height:1.2em; color:var(--muted); background:var(--bar); font-size:13px; }}
 .mode {{ color:var(--muted); font-size:12px; letter-spacing:.04em; }}
-main {{ flex:1; display:grid; grid-template-columns: 1fr 300px; min-height:0; }}
+main {{ flex:1; display:grid; grid-template-columns: 1fr; min-height:0; }}
 #stage {{ overflow:auto; padding:28px 32px; }}
 aside {{ border-left:1px solid var(--line); overflow:auto; padding:16px; background:var(--panel); }}
 h2 {{ color:var(--muted); font-size:12px; letter-spacing:.06em; text-transform:uppercase; margin:16px 0 8px; }}
@@ -63,11 +63,29 @@ pre {{ white-space:pre-wrap; word-break:break-word; font-size:12px; color:var(--
 #meshStrip button {{ background:transparent; color:var(--text); border:1px solid var(--line); border-radius:6px; height:28px; padding:0 10px; cursor:pointer; }}
 .node {{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }}
 a {{ color:inherit; }}
-.start h1 {{ font-size:1.7rem; font-weight:560; margin:0 0 8px; }}
+.start {{ min-height:62vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; text-align:center; padding:48px 20px 32px; }}
+.start h1 {{ font-size:1.35rem; font-weight:500; margin:0; letter-spacing:0; }}
+.start img {{ width:84px; height:84px; }}
+#startBox {{ width:min(560px, 92vw); background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:999px; padding:12px 18px; font:16px/1.3 inherit; }}
+.quick {{ display:flex; flex-wrap:wrap; gap:6px 8px; justify-content:center; max-width:640px; }}
+.quick button {{ background:transparent; color:var(--muted); border:0; border-radius:8px; padding:6px 10px; cursor:pointer; font:14px/1.3 inherit; }}
+.quick button:hover {{ color:var(--text); background:var(--banner); }}
+.theme {{ position:relative; }}
+#themeMenu {{ position:absolute; right:0; top:40px; z-index:4; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:6px; display:flex; flex-direction:column; min-width:132px; }}
+#themeMenu[hidden] {{ display:none; }}
+#themeMenu button {{ text-align:left; width:100%; }}
+#sidePanel[hidden] {{ display:none !important; }}
+main {{ grid-template-columns: 1fr; }}
+html[data-panel="open"] main {{ grid-template-columns: 1fr 280px; }}
+.statusline {{ border-top:1px solid var(--line); padding:8px 14px; font-size:12px; color:var(--muted); display:flex; gap:16px; align-items:center; }}
+.settings-page {{ max-width:40rem; }}
+.settings-page h1 {{ font-size:1.7rem; font-weight:560; margin:0 0 12px; }}
+#ownerLine:empty {{ display:none; }}
+.iconbtn {{ font-size:16px; }}
 #chrome, .bar, .tabs, aside, #stage {{ transition: background-color .12s ease, color .12s ease; }}
 @media (max-width: 860px) {{
-  main {{ grid-template-columns: 1fr; }}
-  aside {{ border-left: 0; border-top: 1px solid var(--line); }}
+  html[data-panel="open"] main {{ grid-template-columns: 1fr; }}
+  html[data-panel="open"] #sidePanel {{ border-left: 0; border-top: 1px solid var(--line); }}
 }}
 </style>
 <script>
@@ -76,7 +94,6 @@ a {{ color:inherit; }}
   try {{ saved = JSON.parse(localStorage.getItem('azbrowser-appearance') || 'null'); }} catch (e) {{}}
   var theme = 'night';
   if (saved && (saved.theme === 'day' || saved.theme === 'night' || saved.theme === 'aziel')) theme = saved.theme;
-  else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) theme = 'day';
   document.documentElement.setAttribute('data-theme', theme);
   if (saved && saved.bookmarks) document.documentElement.setAttribute('data-bookmarks', 'on');
 }})();
@@ -88,13 +105,20 @@ a {{ color:inherit; }}
     <button id="fwd" title="Forward" type="button">▶</button>
     <button id="reload" title="Reload" type="button">↻</button>
     <button id="home" title="Home" type="button"><img alt="Home" src="{SIGIL}"></button>
-    <input id="omnibox" placeholder="Search Lamb Lens, a URL, or a .aziel name" spellcheck="false" aria-label="Address">
+    <input id="omnibox" placeholder="Search or enter a .aziel name or web address" spellcheck="false" aria-label="Address">
     <span id="handleChip"></span>
-    <button id="go" type="button">Go</button>
-    <button id="themeToggle" type="button" title="Switch day and night">Day</button>
-    <button id="azielMode" type="button" title="Aziel mode. Gold, black, and royal purple." aria-pressed="false">Aziel</button>
-    <button id="settingsBtn" type="button" title="Settings">Settings</button>
-    <button id="designBtn" type="button" title="Open design mode as a local tab">Design</button>
+    <button id="go" type="button" title="Go">Go</button>
+    <div class="theme">
+      <button id="themeToggle" class="iconbtn" type="button" title="Theme. Night, day, or Aziel." aria-haspopup="true" aria-expanded="false">☾</button>
+      <div id="themeMenu" hidden>
+        <button type="button" data-theme-choice="night">Night</button>
+        <button type="button" data-theme-choice="day">Day</button>
+        <button id="azielMode" type="button" data-theme-choice="aziel" title="Aziel mode. Gold, black, and royal purple." aria-pressed="false">Aziel</button>
+      </div>
+    </div>
+    <button id="settingsBtn" class="iconbtn" type="button" title="Settings" aria-label="Settings">⚙</button>
+    <button id="designBtn" class="iconbtn" type="button" title="Design mode" aria-label="Design mode">✎</button>
+    <button id="panelToggle" class="iconbtn" type="button" title="Tools" aria-label="Tools" aria-expanded="false">☰</button>
   </div>
   <div id="bookmarks" hidden>
     <span>Bookmarks</span>
@@ -104,36 +128,35 @@ a {{ color:inherit; }}
   <div id="ownerLine"></div>
   <main>
     <section id="stage"></section>
-    <aside>
-      <h2>This node</h2>
+    <aside id="sidePanel" hidden>
+      <h2>Tools</h2>
       <div class="node">
-        <button id="airlockBtn" type="button">Airlock</button>
-        <button id="promoteBtn" type="button" title="Operator override. Promotes quarantined mesh bytes on this node.">Promote</button>
-        <button id="islandBtn" type="button" title="Drop this node's mesh peers. Local runtime stays up.">Island</button>
-        <button id="blockBtn" type="button" title="Block the current mesh handle on this node only.">Block peer</button>
-        <button id="trustBtn" type="button" title="Local trust for the current handle.">Trust</button>
-        <button id="slotsBtn" type="button" title="Show this handle's domain slots">Slots</button>
+        <button id="airlockBtn" type="button" title="Check the current address in the airlock">Airlock</button>
+        <button id="promoteBtn" type="button" title="Show a quarantined page on this machine">Promote</button>
+        <button id="islandBtn" type="button" title="Leave mesh peers. Local apps and the web stay open">Island</button>
+        <button id="blockBtn" type="button" title="Block the current handle on this machine">Block peer</button>
+        <button id="trustBtn" type="button" title="Local trust for the current handle">Trust</button>
+        <button id="slotsBtn" type="button" title="Reserved hub mirrors and your three sites">Slots</button>
       </div>
+      <h2>Mesh</h2>
+      <div class="node">
+        <button id="meshEnable" type="button" title="Turn mesh presence on">Turn on</button>
+        <button id="meshDisable" type="button" title="Turn mesh presence off">Turn off</button>
+        <button id="meshJoin" type="button" title="Join this browser to the mesh">Join</button>
+        <button id="meshLeave" type="button" title="Leave the mesh">Leave</button>
+      </div>
+      <p class="cite" hidden>live <b id="qnmLive">0</b> locked <b id="qnmLocked">0</b> isolated <b id="qnmIsolated">0</b></p>
       <h2>Airlock</h2>
       <div id="airlockPanel"></div>
       <h2>Receipts</h2>
       <div id="receipts"></div>
     </aside>
   </main>
-  <div id="meshStrip" aria-label="Suite Live Nodes">
-    <div class="live"><b id="meshLiveCount">0</b> Live Nodes</div>
-    <div id="meshLine">Suite mesh: off (default). QNM-BUILD-1.0 + QNS-CD-1.0. Not an anonymity network.</div>
-    <div>live <b id="qnmLive">0</b> · locked <b id="qnmLocked">0</b> · isolated <b id="qnmIsolated">0</b></div>
-    <div>No Node Gate · No auto-heal · Aziel Eliab only</div>
-    <div>
-      <button id="meshEnable" type="button">Enable</button>
-      <button id="meshDisable" type="button">Disable</button>
-      <button id="meshJoin" type="button">Join</button>
-      <button id="meshLeave" type="button">Leave</button>
-    </div>
-    <div id="meshProducts">Catalog MCP mesh_* · FragGate slug=mesh · /v1/mesh/* PROXY · QNS-CD-1.0 cross-map</div>
+  <div id="meshStrip" class="statusline" aria-label="Mesh status">
+    <span id="meshLine">Mesh off</span>
+    <span>Nodes <b id="meshNodeCount">0</b></span>
+    <span>Live Nodes <b id="meshLiveCount">0</b></span>
   </div>
-  <div class="status">AZBrowser {__version__} local · Phase 1 research shell · No receipt = no action · not Chromium</div>
 </div>
 <script>
 const SIGIL = {json.dumps(SIGIL)};
@@ -231,6 +254,11 @@ function show(obj) {{
     stage.innerHTML = refusalHtml(obj, summary);
     return;
   }}
+  if (obj && (obj.action === 'home' || (obj.tab && obj.tab.kind === 'newtab' && !obj.html && !obj.results && obj.action !== 'navigate'))) {{
+    stage.innerHTML = startPage();
+    bindStart();
+    return;
+  }}
   let body = '<div class="banner">' + summary + '</div>';
   if (obj.name_status === 'PENDING') {{
     body += '<p>Pending · not a verified site</p>';
@@ -258,7 +286,7 @@ async function paintTabs() {{
   const plus = document.createElement('button');
   plus.className = 'plus';
   plus.textContent = '+';
-  plus.onclick = async () => {{ show(await op('tab_new', {{}})); paintTabs(); }};
+  plus.onclick = async () => {{ await op('tab_new', {{}}); document.getElementById('stage').innerHTML = startPage(); bindStart(); paintTabs(); }};
   box.appendChild(plus);
 }}
 document.getElementById('back').onclick = async () => show(await op('back', {{}}));
@@ -282,6 +310,7 @@ document.getElementById('promoteBtn').onclick = async () => {{
 document.getElementById('islandBtn').onclick = async () => {{
   islandOn = !islandOn;
   show(await op('island_mode', {{enabled: islandOn}}));
+  refreshMesh();
 }};
 document.getElementById('blockBtn').onclick = async () => {{
   const handle = lastHandle || (document.getElementById('omnibox').value.trim().split('.')[0] || '');
@@ -310,15 +339,21 @@ function readAppearance() {{
   var saved = null;
   try {{ saved = JSON.parse(localStorage.getItem(APPEAR_KEY) || 'null'); }} catch (e) {{}}
   if (saved && saved.theme) return saved;
-  var day = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
-  return {{ theme: day ? 'day' : 'night', mode: day ? 'day' : 'night', aziel: false, bookmarks: false }};
+  return {{ theme: 'night', mode: 'night', aziel: false, bookmarks: false }};
 }}
 function paintAppearance(state) {{
-  const theme = state.aziel ? 'aziel' : state.mode;
+  const theme = state.aziel ? 'aziel' : (state.mode || 'night');
   document.documentElement.setAttribute('data-theme', theme);
   document.getElementById('bookmarks').hidden = !state.bookmarks;
-  document.getElementById('themeToggle').textContent = state.mode === 'day' ? 'Night' : 'Day';
-  document.getElementById('azielMode').setAttribute('aria-pressed', state.aziel ? 'true' : 'false');
+  const mark = theme === 'day' ? '☀' : (theme === 'aziel' ? '✦' : '☾');
+  const toggle = document.getElementById('themeToggle');
+  toggle.textContent = mark;
+  toggle.title = theme === 'aziel' ? 'Theme. Aziel mode.' : (theme === 'day' ? 'Theme. Day.' : 'Theme. Night.');
+  document.querySelectorAll('[data-theme-choice]').forEach(btn => {{
+    const choice = btn.getAttribute('data-theme-choice');
+    const on = choice === 'aziel' ? !!state.aziel : (!state.aziel && state.mode === choice);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  }});
   localStorage.setItem(APPEAR_KEY, JSON.stringify({{ theme: theme, mode: state.mode, aziel: state.aziel, bookmarks: state.bookmarks }}));
   paintBookmarks();
 }}
@@ -337,14 +372,37 @@ function paintBookmarks() {{
     list.appendChild(b);
   }});
 }}
-document.getElementById('themeToggle').onclick = () => {{
-  appearance.mode = appearance.mode === 'day' ? 'night' : 'day';
-  appearance.aziel = false;
+function chooseTheme(choice) {{
+  if (choice === 'aziel') {{
+    appearance.aziel = true;
+    if (!appearance.mode) appearance.mode = 'night';
+  }} else {{
+    appearance.aziel = false;
+    appearance.mode = choice === 'day' ? 'day' : 'night';
+  }}
   paintAppearance(appearance);
+  const menu = document.getElementById('themeMenu');
+  menu.hidden = true;
+  document.getElementById('themeToggle').setAttribute('aria-expanded', 'false');
+}}
+document.getElementById('themeToggle').onclick = (e) => {{
+  e.stopPropagation();
+  const menu = document.getElementById('themeMenu');
+  menu.hidden = !menu.hidden;
+  document.getElementById('themeToggle').setAttribute('aria-expanded', menu.hidden ? 'false' : 'true');
 }};
-document.getElementById('azielMode').onclick = () => {{
-  appearance.aziel = !appearance.aziel;
-  paintAppearance(appearance);
+document.querySelectorAll('#themeMenu [data-theme-choice]').forEach(btn => {{
+  btn.onclick = (e) => {{ e.stopPropagation(); chooseTheme(btn.getAttribute('data-theme-choice')); }};
+}});
+document.addEventListener('click', () => {{
+  const menu = document.getElementById('themeMenu');
+  if (menu) menu.hidden = true;
+}});
+document.getElementById('panelToggle').onclick = () => {{
+  const panel = document.getElementById('sidePanel');
+  panel.hidden = !panel.hidden;
+  document.documentElement.setAttribute('data-panel', panel.hidden ? 'closed' : 'open');
+  document.getElementById('panelToggle').setAttribute('aria-expanded', panel.hidden ? 'false' : 'true');
 }};
 document.getElementById('bookmarkAdd').onclick = () => {{
   const url = document.getElementById('omnibox').value.trim();
@@ -354,20 +412,70 @@ document.getElementById('bookmarkAdd').onclick = () => {{
   localStorage.setItem('azbrowser-bookmarks', JSON.stringify(rows.slice(-12)));
   paintBookmarks();
 }};
-document.getElementById('settingsBtn').onclick = () => {{
+function settingsPage() {{
   const on = appearance.bookmarks ? ' checked' : '';
-  document.getElementById('stage').innerHTML = '<section class="refusal"><h1>Settings</h1><p>Day and Night, Aziel mode, and the bookmarks bar are the appearance controls. They are remembered on this machine. Mesh tools stay in the side panel: Airlock, Promote, Island, Block peer, Trust, and Slots. Nothing on this page is hidden.</p><label><input id="bookmarkPref" type="checkbox"' + on + '> Show bookmarks bar</label><p>This shell has no ads, no tracking, and no telemetry. Design mode opens as a local tab. Domain slots are four reserved hub mirrors and three user names. MirageGrid decoys are a separate layer.</p></section>';
+  return '<section class="settings-page"><h1>Settings</h1>'
+    + '<h2>Appearance</h2><p>Night is the first look: black background, white text. Day is white with black text. Aziel is gold, black, and royal purple. The choice is remembered on this machine.</p>'
+    + '<div class="node"><button type="button" data-theme-choice="night">Night</button><button type="button" data-theme-choice="day">Day</button><button type="button" data-theme-choice="aziel">Aziel</button></div>'
+    + '<label><input id="bookmarkPref" type="checkbox"' + on + '> Show bookmarks bar</label>'
+    + '<h2>Tools</h2><p>The tools icon opens Airlock, Promote, Island, Block peer, Trust, and Slots. The pencil opens design mode on this machine. Mesh on, off, join, and leave are in that same panel.</p>'
+    + '<h2>About</h2>'
+    + '<p>AZBrowser is a research shell for search, tabs, and mesh names. Version {__version__}. Author Aziel Eliab.</p>'
+    + '<p>A search, a .aziel name, or a web address goes in one step. Local apps open here. Web addresses keep working.</p>'
+    + '<p>A verified handle is named beside the address. A pending name is marked Pending and is not opened. An isolated handle explains what happened and what you can do next.</p>'
+    + '<p>Mesh pages stay in quarantine until you choose Promote. This shell has no malware scanner, and it does not run page scripts. Handle keys stay on this machine.</p>'
+    + '<p>Island and Block peer apply on this machine. Each action keeps a receipt here.</p>'
+    + '<p>There are no ads, no tracking, and no telemetry.</p>'
+    + '<p>AZMail and AZNet are separate programs. This node has four reserved hub mirrors and three user sites. MirageGrid decoy names stay on their own list.</p>'
+    + '<p>The public copy is at {HOST}.</p>'
+    + '</section>';
+}}
+document.getElementById('settingsBtn').onclick = () => {{
+  document.getElementById('stage').innerHTML = settingsPage();
   document.getElementById('bookmarkPref').onchange = (e) => {{
     appearance.bookmarks = e.target.checked;
     paintAppearance(appearance);
   }};
+  document.querySelectorAll('.settings-page [data-theme-choice]').forEach(btn => {{
+    btn.onclick = () => chooseTheme(btn.getAttribute('data-theme-choice'));
+  }});
 }};
 paintAppearance(appearance);
 if (document.documentElement.getAttribute('data-bookmarks') === 'on') {{
   appearance.bookmarks = true;
   document.getElementById('bookmarks').hidden = false;
 }}
-document.getElementById('stage').innerHTML = '<section class="start"><h1>AZBrowser</h1><p>Lamb Lens search, a URL, or a .aziel name.</p><div class="banner">{LIMITATION}</div><p>Counted Worker: <a href="{HOST}">{HOST}</a></p><img alt="sigil" src="'+SIGIL+'" width="96" height="96"></section>';
+function startPage() {{
+  return '<section class="start"><img class="brandmark" alt="" src="'+SIGIL+'" width="84" height="84"><h1>AZBrowser</h1>'
+    + '<form id="startForm"><input id="startBox" aria-label="Search" placeholder="Search or enter a .aziel name or web address" spellcheck="false"></form>'
+    + '<nav class="quick" aria-label="Quick links">'
+    + '<button type="button" data-go="azbrowser://local/design">Local apps</button>'
+    + '<button type="button" id="quickSites">Your sites</button>'
+    + '<button type="button" data-go="az.azieleliab.az">Aziel</button>'
+    + '<button type="button" data-go="az.azielcorpuslibrary.az">Corpus</button>'
+    + '<button type="button" data-go="az.godlock.az">Godlock</button>'
+    + '<button type="button" data-go="az.hedidntjump.az">HeDidntJump</button>'
+    + '</nav></section>';
+}}
+function bindStart() {{
+  const form = document.getElementById('startForm');
+  if (!form) return;
+  form.onsubmit = (e) => {{
+    e.preventDefault();
+    document.getElementById('omnibox').value = document.getElementById('startBox').value.trim();
+    document.getElementById('go').click();
+  }};
+  document.querySelectorAll('#stage [data-go]').forEach(btn => {{
+    btn.onclick = () => {{
+      document.getElementById('omnibox').value = btn.getAttribute('data-go');
+      document.getElementById('go').click();
+    }};
+  }});
+  const sites = document.getElementById('quickSites');
+  if (sites) sites.onclick = () => document.getElementById('slotsBtn').click();
+}}
+document.getElementById('stage').innerHTML = startPage();
+bindStart();
 function meshNum() {{
   for (let i = 0; i < arguments.length; i++) {{
     const raw = arguments[i];
@@ -390,13 +498,13 @@ function paintMesh(raw) {{
   const live = on ? meshNum(r.live, j.live_nodes, j.live) : 0;
   const locked = on ? meshNum(r.locked, j.locked_nodes, j.locked) : 0;
   const isolated = on ? meshNum(r.isolated, j.isolated_nodes, j.isolated) : 0;
+  const nodes = live + locked + isolated;
   document.getElementById("meshLiveCount").textContent = String(live);
+  document.getElementById("meshNodeCount").textContent = String(nodes);
   document.getElementById("qnmLive").textContent = String(live);
   document.getElementById("qnmLocked").textContent = String(locked);
   document.getElementById("qnmIsolated").textContent = String(isolated);
-  document.getElementById("meshLine").textContent = on
-    ? ("Suite mesh: on · live " + live + " · locked " + locked + " · isolated " + isolated + ". Not an anonymity network.")
-    : "Suite mesh: off (default). QNM-BUILD-1.0 + QNS-CD-1.0. Not an anonymity network.";
+  document.getElementById("meshLine").textContent = islandOn ? "Island" : (on ? "Mesh connected" : "Mesh off");
 }}
 async function refreshMesh() {{
   try {{

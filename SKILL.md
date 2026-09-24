@@ -117,8 +117,10 @@ separate Software. Pairing is resolve-and-connect only.
   Rejoin appends a receipt and does not rewrite earlier ones. There is
   no network-wide cutoff. `trust` is a local view (chain age, witnessed
   heartbeats, hash matches, vouches, equivocation). It is not a public ranking.
-- The chrome opens black with white text. Day / Night flips immediately
-  and is remembered. Aziel mode is black, royal purple, and gold.
+- The first visit is night: black background, white text. A later choice
+  of day or Aziel mode is remembered on this machine. Aziel mode is black,
+  royal purple, and gold. The new-tab page is the sigil, one search box,
+  and quick links. Honest limits sit in Settings under About.
 - `slots` lists the four reserved hub mirrors and three user names.
   MirageGrid Cap-7 names are a separate layer and stay unchanged.
 - `design_mode` opens a local tab on the loopback shell. The hosted

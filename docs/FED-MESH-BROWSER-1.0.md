@@ -300,7 +300,7 @@ The loopback chrome and the Worker chrome share three looks:
 | Day | White background, black text. |
 | Aziel mode | Black base, royal purple bars and panels, gold on the active tab, the Go button, and the focus ring. |
 
-One control flips day and night immediately. Aziel mode is a separate control. The choice is stored on this machine as `azbrowser-appearance`. The first visit with nothing stored follows `prefers-color-scheme`. There is no lock icon and no identity-lock banner.
+The first visit is night: black background, white text. A later choice of day or Aziel mode is stored on this machine as `azbrowser-appearance`. The theme control offers night, day, and Aziel. There is no lock icon and no identity-lock banner. The new-tab page is the sigil, one search box, and quick links. Honest limits sit in Settings under About. The footer is one status line: mesh connected, mesh off, or island, plus node counts. Tool buttons stay in a panel that starts closed.
 
 `slots` returns four reserved hub mirrors (`AZ.AzielEliab.AZ`, `AZ.AzielCorpusLibrary.AZ`, `AZ.Godlock.AZ`, `AZ.HeDidntJump.AZ`). Those are not user-nameable. Three user slots show ledger claims whose `slot` is `1`, `2`, or `3` for that handle, plus the automatic `<handle>.aziel` name. A second digest for the same handle at the same sequence is still `equivocating_handle`. Slot display does not create a second chain. MirageGrid's global Cap-7 factory names (`azgrid.az`, `azcloak.az`, `azvault.az`, `azshift.az`, and the three cloak names) are a separate layer and are not edited by this display.
 
