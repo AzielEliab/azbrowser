@@ -37,7 +37,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:15px/
 .node button{background:transparent;color:var(--text);border:1px solid var(--line);border-radius:8px;height:32px;padding:0 10px;cursor:pointer}
 .start{min-height:62vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding:48px 20px 32px}
 .start h1{font-size:1.35rem;font-weight:500;margin:0}
-.start img{width:84px;height:84px}
+.start img{width:84px;height:84px;display:block}
 #startBox{width:min(560px,92vw);background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:999px;padding:12px 18px;font:16px/1.3 inherit}
 .quick{display:flex;flex-wrap:wrap;gap:6px 8px;justify-content:center;max-width:640px}
 .quick button{background:transparent;color:var(--muted);border:0;border-radius:8px;padding:6px 10px;cursor:pointer;font:14px/1.3 inherit}
@@ -69,6 +69,8 @@ h2{color:var(--muted);font-size:12px;letter-spacing:.06em;text-transform:upperca
 .banner,.refusal{border:1px solid var(--line);background:var(--banner);color:var(--text);padding:16px 18px;border-radius:12px;margin-bottom:16px}
 .refusal{max-width:40rem}
 .refusal h1,.policy-page h1,.design-page h1{font-size:1.7rem;font-weight:560;margin:0 0 8px}
+.policy-page details{margin-top:16px}
+.policy-page summary{cursor:pointer}
 .card{border:1px solid var(--line);background:var(--banner);padding:12px;border-radius:10px;margin:0 0 10px}
 .card a{color:var(--gold)}
 .cite{font-size:11px;color:var(--muted)}

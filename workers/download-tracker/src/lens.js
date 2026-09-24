@@ -30,7 +30,7 @@ const REASONS = {
   ],
   handle_isolated: [
     "This handle is isolated from the mesh. Its pages are not shown.",
-    "Use another handle. A signed appeal can ask for a re-check. This browser does not decide that appeal, and it does not delete local data.",
+    "Go back, or open a different site. If this is your handle, you can file a signed appeal to ask for a re-check. This browser does not decide that appeal, and it does not delete local data.",
   ],
   design_mode_local_only: [
     "Design mode opens only on the machine that holds the handle key.",

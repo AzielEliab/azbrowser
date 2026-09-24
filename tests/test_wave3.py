@@ -53,11 +53,17 @@ def test_isolated_handle_gets_a_policy_page_and_no_peer_bytes():
     assert out["code"] == "FG-GATE-REFUSE"
     assert out["reason"] == "handle_isolated"
     assert out["policy_page"] is True
-    assert "This handle is isolated" in out["html"]
-    assert "appeal" in out["html"].lower()
-    assert "NCMEC" in out["html"]
-    assert "false-positive" in out["html"]
-    assert "Library" not in out["html"]
+    html = out["html"]
+    assert "This handle is isolated" in html
+    assert "What you can do next: go back, or open a different site. If this is your handle, you can file a signed appeal to ask for a re-check." in html
+    assert "use another handle" not in html.lower()
+    assert html.index("What you can do next") < html.index("<details>")
+    assert "<summary>Details</summary>" in html
+    assert html.index("<details>") < html.index("NCMEC")
+    assert html.index("<details>") < html.index("false-positive")
+    assert "Library" not in html
+    assert "another handle" not in out["clarity"]["next"].lower()
+    assert "different site" in out["clarity"]["next"]
     assert out["isolation"]["content_stored"] is False
     assert out["isolation"]["deletes_local_data"] is False
     assert out["scripts_executed"] is False

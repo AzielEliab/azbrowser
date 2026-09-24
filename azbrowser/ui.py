@@ -4,14 +4,21 @@ from __future__ import annotations
 
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 from .door import classify_v1_path, door_target_url
 from .engine import OPS, Engine
-from .meta import HOST, LIMITATION, SIGIL, __version__
+from .meta import HOST, LIMITATION, __version__
 from .receipts import Ledger
+
+_SIGIL_PATH = Path(__file__).resolve().parents[1] / "workers" / "download-tracker" / "public" / "sigil.png"
+
+
+def sigil_png() -> bytes:
+    return _SIGIL_PATH.read_bytes()
 
 PORT = 8878
 ENGINE = Engine(Ledger("./azbrowser_receipts.jsonl"))
@@ -58,6 +65,8 @@ h2 {{ color:var(--muted); font-size:12px; letter-spacing:.06em; text-transform:u
 .banner, .refusal {{ border:1px solid var(--line); background:var(--banner); color:var(--text); padding:16px 18px; border-radius:12px; margin-bottom:16px; }}
 .refusal {{ max-width:40rem; }}
 .refusal h1, .policy-page h1, .design-page h1 {{ font-size:1.7rem; font-weight:560; margin:0 0 8px; }}
+.policy-page details {{ margin-top:16px; }}
+.policy-page summary {{ cursor:pointer; }}
 pre {{ white-space:pre-wrap; word-break:break-word; font-size:12px; color:var(--muted); }}
 .receipt {{ font-family:ui-monospace,monospace; font-size:11px; border-bottom:1px solid var(--line); padding:6px 0; }}
 .status {{ border-top:1px solid var(--line); padding:8px 12px; font-size:12px; color:var(--muted); }}
@@ -68,7 +77,7 @@ pre {{ white-space:pre-wrap; word-break:break-word; font-size:12px; color:var(--
 a {{ color:inherit; }}
 .start {{ min-height:62vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; text-align:center; padding:48px 20px 32px; }}
 .start h1 {{ font-size:1.35rem; font-weight:500; margin:0; letter-spacing:0; }}
-.start img {{ width:84px; height:84px; }}
+.start img {{ width:84px; height:84px; display:block; }}
 #startBox {{ width:min(560px, 92vw); background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:999px; padding:12px 18px; font:16px/1.3 inherit; }}
 .quick {{ display:flex; flex-wrap:wrap; gap:6px 8px; justify-content:center; max-width:640px; }}
 .quick button {{ background:transparent; color:var(--muted); border:0; border-radius:8px; padding:6px 10px; cursor:pointer; font:14px/1.3 inherit; }}
@@ -107,7 +116,7 @@ html[data-panel="open"] main {{ grid-template-columns: 1fr 280px; }}
     <button id="back" title="Back" type="button">◀</button>
     <button id="fwd" title="Forward" type="button">▶</button>
     <button id="reload" title="Reload" type="button">↻</button>
-    <button id="home" title="Home" type="button"><img alt="Home" src="{SIGIL}"></button>
+    <button id="home" title="Home" type="button"><img class="brandmark" alt="" src="/sigil.png"></button>
     <input id="omnibox" placeholder="Search or enter a .aziel name or web address" spellcheck="false" aria-label="Address">
     <span id="handleChip"></span>
     <button id="go" type="button" title="Go">Go</button>
@@ -162,7 +171,7 @@ html[data-panel="open"] main {{ grid-template-columns: 1fr 280px; }}
   </div>
 </div>
 <script>
-const SIGIL = {json.dumps(SIGIL)};
+const SIGIL = "/sigil.png";
 async function op(name, payload) {{
   const r = await fetch('/v1/' + name, {{ method:'POST', headers:{{'content-type':'application/json','user-agent':'Mozilla/5.0'}}, body: JSON.stringify(payload||{{}}) }});
   return r.json();
@@ -577,6 +586,9 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path.rstrip("/") or "/"
         if path == "/":
             self._send(200, _chrome().encode("utf-8"), "text/html; charset=utf-8")
+            return
+        if path == "/sigil.png":
+            self._send(200, sigil_png(), "image/png")
             return
         classified = classify_v1_path(path)
         if classified["kind"] == "door":

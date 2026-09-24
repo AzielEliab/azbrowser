@@ -460,18 +460,21 @@ function policyPage(handle, isolation) {
   const evidence = String(row.evidence_hash || "");
   return `<article class="policy-page">
 <h1>This handle is isolated</h1>
+<p>Handle <strong>${esc(handle)}</strong> is isolated from the mesh. Its pages are not shown. This browser will not resolve its names or show its objects.</p>
+<p>What you can do next: go back, or open a different site. If this is your handle, you can file a signed appeal to ask for a re-check.</p>
+<p>Isolation does not delete data on this machine. This browser does not store or forward the reported content, and it does not decide the appeal.</p>
+<details>
+<summary>Details</summary>
 <p>FG-GATE-REFUSE · handle_isolated</p>
-<p>Handle <strong>${esc(handle)}</strong> is isolated from the mesh. This browser will not resolve its names or show its objects.</p>
 <dl>
 <dt>Reason code</dt><dd>${esc(reason)}</dd>
 <dt>Check</dt><dd>${esc(check)}</dd>
 <dt>Evidence</dt><dd>${esc(evidence) || "none recorded"}</dd>
 </dl>
-<p>The evidence field is a hash only. This browser does not store the content and does not forward it.</p>
-<p>Isolation does not delete data on the person's own machine. The local runtime can keep running. Relays that follow the policy refuse to relay or witness this handle.</p>
-<p>What you can do next: use another handle. A signed appeal record can ask for a re-check. This shell does not grant or deny that appeal. Isolation does not delete local data.</p>
+<p>The evidence field is a hash only. Relays that follow the policy refuse to relay or witness this handle. The local runtime can keep running.</p>
 <p>Name checks, and the hosting node's local image and text checks, can miss and can false-positive. This page does not claim those checks catch everything. If a classifier is absent on the hosting node, publish stays blocked there. This browser does not run those classifiers.</p>
 <p>Operators must follow the law in their jurisdiction, including US reporting of child sexual abuse material to NCMEC where that duty applies. This browser does not keep that material as evidence.</p>
+</details>
 </article>`;
 }
 

@@ -57,9 +57,15 @@ assert.equal(refused.code, "FG-GATE-REFUSE");
 assert.equal(refused.reason, "handle_isolated");
 assert.equal(refused.policy_page, true);
 assert.match(refused.html, /This handle is isolated/);
-assert.match(refused.html, /appeal/i);
-assert.match(refused.html, /NCMEC/);
+assert.match(refused.html, /What you can do next: go back, or open a different site\. If this is your handle, you can file a signed appeal to ask for a re-check\./);
+assert.doesNotMatch(refused.html, /use another handle/i);
+assert.ok(refused.html.indexOf("What you can do next") < refused.html.indexOf("<details>"));
+assert.match(refused.html, /<summary>Details<\/summary>/);
+assert.ok(refused.html.indexOf("<details>") < refused.html.indexOf("NCMEC"));
+assert.ok(refused.html.indexOf("<details>") < refused.html.indexOf("false-positive"));
 assert.doesNotMatch(refused.html, /Library/);
+assert.doesNotMatch(refused.clarity.next, /another handle/i);
+assert.match(refused.clarity.next, /different site/);
 assert.equal(refused.isolation.content_stored, false);
 assert.equal(refused.scripts_executed, false);
 

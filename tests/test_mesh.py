@@ -119,6 +119,12 @@ def test_local_chrome_has_live_nodes_strip():
     assert 'id="node-gate"' not in html
     assert "/v1/mesh" in html
     assert HOST in html
+    assert 'class="brandmark"' in html
+    assert 'src="/sigil.png"' in html
+    assert 'const SIGIL = "/sigil.png"' in html
+    assert "azielcorpuslibrary.net/sigil" not in html
+    from azbrowser.ui import sigil_png
+    assert sigil_png()[:8] == b"\x89PNG\r\n\x1a\n"
 
 
 def test_engine_refuses_mesh_slash_status_as_op():
