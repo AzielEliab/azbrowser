@@ -62,7 +62,8 @@ main {{ flex:1; display:grid; grid-template-columns: 1fr; min-height:0; }}
 #stage {{ overflow:auto; padding:28px 32px; }}
 aside {{ border-left:1px solid var(--line); overflow:auto; padding:16px; background:var(--panel); }}
 h2 {{ color:var(--muted); font-size:12px; letter-spacing:.06em; text-transform:uppercase; margin:16px 0 8px; }}
-.banner, .refusal {{ border:1px solid var(--line); background:var(--banner); color:var(--text); padding:16px 18px; border-radius:12px; margin-bottom:16px; }}
+.banner, .refusal, .card {{ border:1px solid var(--line); background:var(--banner); color:var(--text); padding:16px 18px; border-radius:12px; margin-bottom:16px; }}
+.card a {{ color: var(--gold); }}
 .refusal {{ max-width:40rem; }}
 .refusal h1, .policy-page h1, .design-page h1 {{ font-size:1.7rem; font-weight:560; margin:0 0 8px; }}
 .policy-page details {{ margin-top:16px; }}
@@ -96,8 +97,38 @@ html[data-panel="open"] main {{ grid-template-columns: 1fr 280px; }}
 .iconbtn {{ font-size:16px; }}
 #chrome, .bar, .tabs, aside, #stage {{ transition: background-color .12s ease, color .12s ease; }}
 @media (max-width: 860px) {{
-  html[data-panel="open"] main {{ grid-template-columns: 1fr; }}
-  html[data-panel="open"] #sidePanel {{ border-left: 0; border-top: 1px solid var(--line); }}
+  html[data-panel="open"] main {{ grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }}
+  html[data-panel="open"] #sidePanel {{ order: -1; max-height: 52vh; border-left: 0; border-bottom: 1px solid var(--line); }}
+}}
+:root, html[data-theme="night"] {{ --focus: #f0d060; }}
+html[data-theme="day"] {{ --focus: #7a5c00; }}
+html[data-theme="aziel"] {{ --focus: #f0d060; }}
+html, body {{ overflow-x: clip; max-width: 100%; }}
+#chrome, main, #stage, .bar, .tabs, #meshStrip, #sidePanel {{ min-width: 0; max-width: 100%; }}
+.tabs {{ overflow-x: auto; }}
+.tab {{ flex: 0 0 auto; }}
+#omnibox, #handleChip {{ min-width: 0; }}
+#omnibox {{ flex: 1 1 180px; }}
+#handleChip {{ white-space: normal; }}
+#meshStrip {{ flex-wrap: wrap; row-gap: 6px; }}
+#sidePanel .hint {{ color: var(--muted); font-size: 13px; margin: 0 0 8px; }}
+#sidePanel h2 {{ margin-top: 0; }}
+#sidePanel details {{ border-top: 1px solid var(--line); padding: 2px 0 8px; }}
+#sidePanel summary {{ cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 600; }}
+#sidePanel .node {{ display: flex; flex-direction: column; align-items: stretch; gap: 8px; }}
+#sidePanel .node button {{ min-height: 44px; width: 100%; text-align: left; padding: 0 12px; }}
+#sidePanel details.raw {{ border-top: 0; margin-top: 8px; padding-top: 0; }}
+#sidePanel details.raw summary {{ font-weight: 500; color: var(--muted); }}
+summary:focus-visible, .plus:focus-visible, #sidePanel button:focus-visible, .bar button:focus-visible, #omnibox:focus-visible, #startBox:focus-visible, .quick button:focus-visible {{
+  outline: 2px solid var(--focus); outline-offset: 2px;
+}}
+@media (max-width: 480px) {{
+  .bar {{ gap: 4px; padding: 8px; }}
+  .bar button, .plus {{ min-width: 44px; min-height: 44px; }}
+  #go, #omnibox, #startBox {{ min-height: 44px; }}
+  #omnibox {{ flex: 1 1 calc(100% - 72px); }}
+  .quick button {{ min-height: 44px; padding: 10px 12px; }}
+  .tab {{ min-height: 44px; }}
 }}
 </style>
 <script>
@@ -129,8 +160,7 @@ html[data-panel="open"] main {{ grid-template-columns: 1fr 280px; }}
       </div>
     </div>
     <button id="settingsBtn" class="iconbtn" type="button" title="Settings" aria-label="Settings">⚙</button>
-    <button id="designBtn" class="iconbtn" type="button" title="Design mode" aria-label="Design mode">✎</button>
-    <button id="panelToggle" class="iconbtn" type="button" title="Tools" aria-label="Tools" aria-expanded="false">☰</button>
+    <button id="panelToggle" class="iconbtn" type="button" title="Tools" aria-label="Tools" aria-controls="sidePanel" aria-expanded="false">☰</button>
   </div>
   <div id="bookmarks" hidden>
     <span>Bookmarks</span>
@@ -140,28 +170,53 @@ html[data-panel="open"] main {{ grid-template-columns: 1fr 280px; }}
   <div id="ownerLine"></div>
   <main>
     <section id="stage"></section>
-    <aside id="sidePanel" hidden>
+    <aside id="sidePanel" hidden aria-label="Tools">
       <h2>Tools</h2>
-      <div class="node">
-        <button id="airlockBtn" type="button" title="Check the current address in the airlock">Airlock</button>
-        <button id="promoteBtn" type="button" title="Show a quarantined page on this machine">Promote</button>
-        <button id="islandBtn" type="button" title="Leave mesh peers. Local apps and the web stay open">Island</button>
-        <button id="blockBtn" type="button" title="Block the current handle on this machine">Block peer</button>
-        <button id="trustBtn" type="button" title="Local trust for the current handle">Trust</button>
-        <button id="slotsBtn" type="button" title="Reserved hub mirrors and your three sites">Slots</button>
-      </div>
-      <h2>Mesh</h2>
-      <div class="node">
-        <button id="meshEnable" type="button" title="Turn mesh presence on">Turn on</button>
-        <button id="meshDisable" type="button" title="Turn mesh presence off">Turn off</button>
-        <button id="meshJoin" type="button" title="Join this browser to the mesh">Join</button>
-        <button id="meshLeave" type="button" title="Leave the mesh">Leave</button>
-      </div>
-      <p class="cite" hidden>live <b id="qnmLive">0</b> locked <b id="qnmLocked">0</b> isolated <b id="qnmIsolated">0</b></p>
-      <h2>Airlock</h2>
-      <div id="airlockPanel"></div>
-      <h2>Receipts</h2>
-      <div id="receipts"></div>
+      <p class="hint">Search and open from the address bar. These are optional.</p>
+      <details open>
+        <summary>This page</summary>
+        <p class="hint">Check the address before it opens. A held page stays here until you show it.</p>
+        <div class="node">
+          <button id="airlockBtn" type="button" title="Run download, scan, clean, check, and store on the address in the bar">Check this address</button>
+          <button id="promoteBtn" type="button" title="Show a held page on this machine. Scripts still do not run">Show held page</button>
+        </div>
+      </details>
+      <details>
+        <summary>This machine</summary>
+        <p class="hint">These choices stay on this machine.</p>
+        <div class="node">
+          <button id="islandBtn" type="button" title="Leave mesh peers. Local apps and the web stay open">This machine only</button>
+          <button id="blockBtn" type="button" title="Block the current handle on this machine">Block this handle</button>
+          <button id="trustBtn" type="button" title="Local trust for the current handle">Trust this handle</button>
+          <button id="slotsBtn" type="button" title="Reserved hub mirrors and your three sites">Your sites</button>
+          <button id="designBtn" type="button" title="Design mode stays on the machine that holds the handle key">Design on this machine</button>
+        </div>
+      </details>
+      <details>
+        <summary>Mesh</summary>
+        <p class="hint" id="meshPlain">Mesh is off. Counts stay at zero until presence is on.</p>
+        <div class="node">
+          <button id="meshEnable" type="button" title="Turn suite mesh presence on">Turn presence on</button>
+          <button id="meshDisable" type="button" title="Turn suite mesh presence off">Turn presence off</button>
+          <button id="meshJoin" type="button" title="List this browser on the mesh">Join this browser</button>
+          <button id="meshLeave" type="button" title="Remove this browser from the mesh">Leave</button>
+        </div>
+        <details class="raw">
+          <summary>Count detail</summary>
+          <p class="cite">Reachable <b id="qnmLive">0</b> · Locked <b id="qnmLocked">0</b> · Isolated <b id="qnmIsolated">0</b></p>
+          <p class="cite">Raw names: live, locked, isolated.</p>
+        </details>
+      </details>
+      <details>
+        <summary>Check record</summary>
+        <p class="hint" id="airlockStatus">No check yet.</p>
+        <div id="airlockPanel"></div>
+      </details>
+      <details>
+        <summary>Receipts</summary>
+        <p class="hint">Each action keeps a short hash here.</p>
+        <div id="receipts"></div>
+      </details>
     </aside>
   </main>
   <div id="meshStrip" class="statusline" aria-label="Mesh status">
@@ -185,57 +240,67 @@ function paintOwner(obj) {{
   if (chip) chip.textContent = '';
   if (obj && obj.owner_handle) lastHandle = obj.owner_handle;
   if (obj && obj.name_status === 'PENDING') {{
-    line.textContent = 'Pending · ' + (obj.name || obj.display_url || '') + ' · not a verified site';
+    line.textContent = 'Pending. ' + (obj.name || obj.display_url || '') + ' is not a verified site.';
     if (chip) chip.textContent = 'Pending';
     return;
   }}
   if (obj && obj.display && obj.display.title === 'Island mode') {{
     islandOn = obj.island_mode === true;
-    line.textContent = islandOn
-      ? 'Island mode · this node only · local runtime stays up'
-      : 'Island mode off · this node rejoined';
+    line.textContent = (obj.display && obj.display.summary) || (islandOn ? 'This machine only.' : 'This machine is no longer set aside.');
     return;
   }}
   if (obj && obj.display && obj.display.title === 'Local trust') {{
-    line.textContent = 'Local trust · ' + (obj.handle || '')
-      + ' · chain age ' + obj.chain_age_seconds
-      + ' · heartbeats ' + obj.heartbeats_witnessed
-      + ' · hash matches ' + obj.hash_matches
-      + ' · vouches ' + ((obj.vouches || []).join(',') || 'none')
-      + ' · equivocation ' + obj.equivocating;
+    line.textContent = (obj.display && obj.display.summary) || ('Local trust for ' + (obj.handle || '') + '.');
     return;
   }}
   if (obj && obj.code === 'FG-GATE-REFUSE') {{
-    const plain = (obj.clarity && obj.clarity.plain) || ('Blocked · FG-GATE-REFUSE · ' + (obj.reason || ''));
+    const plain = (obj.clarity && obj.clarity.plain) || ('Blocked. ' + (obj.reason || ''));
     line.textContent = plain;
     if (chip && obj.reason === 'handle_isolated') chip.textContent = 'Isolated';
     else if (chip && obj.reason === 'name_pending') chip.textContent = 'Pending';
     return;
   }}
   if (obj && obj.verified_owner && obj.owner_handle && obj.quarantine) {{
-    line.textContent = 'Verified owner handle · ' + obj.owner_handle + ' · quarantined · scanner absent';
+    line.textContent = 'Verified handle ' + obj.owner_handle + '. The page is held. This shell has no scanner.';
     if (chip) chip.textContent = obj.owner_handle;
     if (obj.display_url) document.getElementById('omnibox').value = obj.display_url;
     return;
   }}
   if (obj && obj.verified_owner && obj.owner_handle) {{
-    line.textContent = 'Verified owner handle · ' + obj.owner_handle;
+    line.textContent = 'Verified handle ' + obj.owner_handle + '.';
     if (chip) chip.textContent = obj.owner_handle;
     if (obj.display_url) document.getElementById('omnibox').value = obj.display_url;
     return;
   }}
   if (obj && obj.plane === 'local' && obj.origin) {{
-    line.textContent = 'Local app · ' + obj.origin + ' · data stays on this machine';
+    line.textContent = 'Local app. ' + obj.origin + '. Data stays on this machine.';
     return;
   }}
   line.textContent = '';
 }}
+const ACTION_PLAIN = {{
+  tab_list: 'Listed tabs', tab_new: 'Opened a tab', tab_close: 'Closed a tab', tab_switch: 'Switched tab',
+  home: 'Home', navigate: 'Opened an address', ethical_search: 'Searched', lamb_lens_search: 'Searched',
+  airlock: 'Checked an address', back: 'Back', forward: 'Forward', reload: 'Reloaded',
+  island_mode: 'This machine only', peer_block: 'Blocked a handle', trust: 'Local trust',
+  slots: 'Your sites', design_mode: 'Design', resolve: 'Resolved a name', gate_refuse: 'Blocked',
+  name_pending: 'Pending name', airlock_hold: 'Held a page'
+}};
 function noteReceipt(obj) {{
   if (!obj || !obj.receipt) return;
   const rec = document.getElementById('receipts');
   const el = document.createElement('div');
   el.className = 'receipt';
-  el.textContent = obj.receipt.seq + ' ' + obj.receipt.action + ' ' + obj.receipt.hash;
+  const action = String(obj.receipt.action || '');
+  const hash = String(obj.receipt.hash || '');
+  const name = document.createElement('span');
+  name.textContent = ACTION_PLAIN[action] || action || 'Action';
+  const code = document.createElement('span');
+  code.className = 'cite';
+  code.textContent = hash ? ' ' + hash.slice(0, 12) : '';
+  code.title = (action ? action + ' ' : '') + hash;
+  el.appendChild(name);
+  el.appendChild(code);
   rec.prepend(el);
 }}
 function escText(value) {{
@@ -271,17 +336,40 @@ function show(obj) {{
     bindStart();
     return;
   }}
-  let body = '<div class="banner">' + summary + '</div>';
-  if (obj.name_status === 'PENDING') {{
-    body += '<p>Pending · not a verified site</p>';
-  }} else if (obj.quarantine && !obj.promoted) {{
-    body += '<p>Quarantine · scanner absent · not promoted · not run</p>';
-  }} else if (obj.html) {{
-    body += '<iframe sandbox="" style="width:100%;min-height:240px;background:#fff;border:1px solid #8a7219" srcdoc="' + String(obj.html).replace(/"/g,'&quot;') + '"></iframe>';
+  if (obj && obj.results) {{
+    stage.innerHTML = '<div class="banner">' + escText(obj.label || summary || 'Lamb Lens') + ' — advisory. Cite sources.</div>'
+      + obj.results.map(h => '<div class="card"><a href="#" data-url="' + escText(h.url) + '">' + escText(h.title) + '</a><div class="cite">' + escText(h.source) + ' · ' + escText(h.url) + '</div><p>' + escText(h.blurb) + '</p></div>').join('');
+    stage.querySelectorAll('a[data-url]').forEach(a => a.onclick = (e) => {{
+      e.preventDefault();
+      document.getElementById('omnibox').value = a.getAttribute('data-url');
+      document.getElementById('go').click();
+    }});
+    return;
   }}
-  stage.innerHTML = body + '<pre>' + JSON.stringify(obj,null,2) + '</pre>';
+  const title = obj.display && obj.display.title ? '<h1>' + escText(obj.display.title) + '</h1>' : '';
+  let body = '<section class="refusal">' + title + '<p>' + escText(summary || 'Done') + '</p>';
+  if (obj.name_status === 'PENDING') {{
+    body += '<p>Pending. ' + escText(obj.name || '') + ' is not a verified site.</p>';
+  }} else if (obj.quarantine && !obj.promoted) {{
+    body += '<p>This page is held. This shell has no malware scanner, so it stays here until you choose Show held page. Scripts do not run.</p>';
+  }} else if (obj.html) {{
+    body += '<p>Preview. Scripts do not run.</p><iframe sandbox="" style="width:100%;min-height:240px;background:#fff;border:1px solid var(--line)" srcdoc="' + String(obj.html).replace(/"/g,'&quot;') + '"></iframe>';
+  }}
+  stage.innerHTML = body + '<details><summary>Record</summary><pre>' + escText(JSON.stringify(obj,null,2)) + '</pre></details></section>';
   if (obj.stages) {{
-    document.getElementById('airlockPanel').innerHTML = obj.stages.map(s => s.stage + ' · ' + (s.hash||'').slice(0,16)).join('<br>');
+    const labels = {{ download: 'Downloaded', scan: 'Scanned', scrub: 'Cleaned', verify: 'Checked', vault: 'Stored' }};
+    const status = document.getElementById('airlockStatus');
+    document.getElementById('airlockPanel').innerHTML = obj.stages.map(s => {{
+      const raw = String(s.stage || '');
+      const label = labels[raw] || raw || 'Step';
+      const hash = String(s.hash || '');
+      const state = s.ok === false ? 'Needs attention' : 'Recorded';
+      return '<div class="stage-row"><span>' + escText(label) + '</span><span class="cite" title="' + escText(raw + ' ' + hash) + '">' + escText(state + (hash ? ' · ' + hash.slice(0, 12) : '')) + '</span></div>';
+    }}).join('');
+    if (status) {{
+      const failed = obj.stages.some(s => s.ok === false);
+      status.textContent = failed ? 'The check stopped on a step. Short codes are beside each step.' : 'Check finished. ' + obj.stages.length + (obj.stages.length === 1 ? ' step recorded.' : ' steps recorded.');
+    }}
   }}
 }}
 async function paintTabs() {{
@@ -342,9 +430,9 @@ document.getElementById('slotsBtn').onclick = async () => {{
   const obj = await op('slots', {{handle: handle}});
   show(obj);
   const stage = document.getElementById('stage');
-  const reserved = (obj.reserved || []).map(row => '<li>' + row.label + ' · ' + row.host + ' · not user-nameable</li>').join('');
-  const user = (obj.user || []).map(row => '<li>' + row.id + ' · ' + (row.name || 'empty') + ' · ' + row.status + '</li>').join('');
-  stage.innerHTML = '<section class="refusal"><h1>Domain slots</h1><p>Automatic name: ' + (obj.automatic_name || 'unset') + '</p><h2>Reserved</h2><ul>' + reserved + '</ul><h2>User</h2><ul>' + user + '</ul><p>' + (obj.note || '') + '</p></section>';
+  const reserved = (obj.reserved || []).map(row => '<li>' + escText(row.label) + ' · ' + escText(row.host) + ' · reserved</li>').join('');
+  const user = (obj.user || []).map(row => '<li>' + escText(row.id) + ' · ' + escText(row.name || 'empty') + ' · ' + escText(row.status) + '</li>').join('');
+  stage.innerHTML = '<section class="refusal"><h1>Your sites</h1><p>Automatic name: ' + escText(obj.automatic_name || 'unset') + '</p><h2>Reserved mirrors</h2><ul>' + reserved + '</ul><h2>Your names</h2><ul>' + user + '</ul><p>' + escText(obj.note || '') + '</p></section>';
 }};
 const APPEAR_KEY = 'azbrowser-appearance';
 function readAppearance() {{
@@ -430,13 +518,13 @@ function settingsPage() {{
     + '<h2>Appearance</h2><p>Night is the first look: black background, white text. Day is white with black text. Aziel is gold, black, and royal purple. The choice is remembered on this machine.</p>'
     + '<div class="node"><button type="button" data-theme-choice="night">Night</button><button type="button" data-theme-choice="day">Day</button><button type="button" data-theme-choice="aziel">Aziel</button></div>'
     + '<label><input id="bookmarkPref" type="checkbox"' + on + '> Show bookmarks bar</label>'
-    + '<h2>Tools</h2><p>The tools icon opens Airlock, Promote, Island, Block peer, Trust, and Slots. The pencil opens design mode on this machine. Mesh on, off, join, and leave are in that same panel.</p>'
+    + '<h2>Tools</h2><p>The tools icon opens checks for this page, choices for this machine, and mesh presence. Design stays on this machine.</p>'
     + '<h2>About</h2>'
     + '<p>AZBrowser is a research shell for search, tabs, and mesh names. Version {__version__}. Author Aziel Eliab.</p>'
     + '<p>A search, a .aziel name, or a web address goes in one step. Local apps open here. Web addresses keep working.</p>'
     + '<p>A verified handle is named beside the address. A pending name is marked Pending and is not opened. An isolated handle explains what happened and what you can do next.</p>'
-    + '<p>Mesh pages stay in quarantine until you choose Promote. This shell has no malware scanner, and it does not run page scripts. Handle keys stay on this machine.</p>'
-    + '<p>Island and Block peer apply on this machine. Each action keeps a receipt here.</p>'
+    + '<p>Mesh pages stay held until you choose Show held page. This shell has no malware scanner, and it does not run page scripts. Handle keys stay on this machine.</p>'
+    + '<p>This machine only and Block this handle apply on this machine. Each action keeps a receipt here.</p>'
     + '<p>There are no ads, no tracking, and no telemetry.</p>'
     + '<p>AZMail and AZNet are separate programs. This node has four reserved hub mirrors and three user sites. MirageGrid decoy names stay on their own list.</p>'
     + '<p>The public copy is at {HOST}.</p>'
@@ -503,20 +591,33 @@ function unwrapMesh(j) {{
   if (j.mesh && typeof j.mesh === "object") return Object.assign({{}}, j, j.mesh);
   return j;
 }}
+function meshWords(on, unavailable) {{
+  if (unavailable) return {{ line: "Mesh status unavailable", plain: "Mesh status could not be read. Counts stay hidden until it can." }};
+  if (islandOn) return {{ line: "This machine only", plain: "This machine only. Local apps and the web stay open." }};
+  if (!on) return {{ line: "Mesh off", plain: "Mesh is off. Counts stay at zero until presence is on." }};
+  let joined = false;
+  try {{ joined = !!sessionStorage.getItem("azbrowser_mesh_node"); }} catch (e) {{}}
+  if (joined) return {{ line: "This browser is listed", plain: "Mesh is on. This browser is listed." }};
+  return {{ line: "Mesh on", plain: "Mesh is on. This browser has not joined." }};
+}}
 function paintMesh(raw) {{
   const j = unwrapMesh(raw);
-  const on = j.enabled === true || String(j.status || "").toLowerCase() === "on";
+  const unavailable = !raw || j.ok === false || String(j.status || "") === "unavailable";
+  const on = !unavailable && (j.enabled === true || String(j.status || "").toLowerCase() === "on");
   const r = (j.rollup && typeof j.rollup === "object") ? j.rollup : {{}};
   const live = on ? meshNum(r.live, j.live_nodes, j.live) : 0;
   const locked = on ? meshNum(r.locked, j.locked_nodes, j.locked) : 0;
   const isolated = on ? meshNum(r.isolated, j.isolated_nodes, j.isolated) : 0;
-  const nodes = live + locked + isolated;
-  document.getElementById("meshLiveCount").textContent = String(live);
-  document.getElementById("meshNodeCount").textContent = String(nodes);
-  document.getElementById("qnmLive").textContent = String(live);
-  document.getElementById("qnmLocked").textContent = String(locked);
-  document.getElementById("qnmIsolated").textContent = String(isolated);
-  document.getElementById("meshLine").textContent = islandOn ? "Island" : (on ? "Mesh connected" : "Mesh off");
+  const words = meshWords(on, unavailable);
+  const dash = unavailable ? "—" : null;
+  document.getElementById("meshLiveCount").textContent = dash || String(live);
+  document.getElementById("meshNodeCount").textContent = dash || String(live + locked + isolated);
+  document.getElementById("qnmLive").textContent = dash || String(live);
+  document.getElementById("qnmLocked").textContent = dash || String(locked);
+  document.getElementById("qnmIsolated").textContent = dash || String(isolated);
+  document.getElementById("meshLine").textContent = words.line;
+  const plain = document.getElementById("meshPlain");
+  if (plain) plain.textContent = words.plain;
 }}
 async function refreshMesh() {{
   try {{

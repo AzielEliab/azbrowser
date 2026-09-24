@@ -92,6 +92,46 @@ iframe.preview{width:100%;min-height:420px;border:1px solid var(--trim);backgrou
 .node{display:flex;flex-wrap:wrap;gap:6px}
 .node button{background:transparent;color:var(--text);border:1px solid var(--line);border-radius:8px;height:32px;padding:0 10px;cursor:pointer}
 </style>
+<style id="shell-chrome">
+:root,html[data-theme="night"]{--focus:#f0d060}
+html[data-theme="day"]{--focus:#7a5c00}
+html[data-theme="aziel"]{--focus:#f0d060}
+html,body{overflow-x:clip;max-width:100%}
+#win,#body,#stage,#toolbar,#tabs,#meshStrip,#sidePanel{min-width:0;max-width:100%}
+#tabs{overflow-x:auto}
+.tab{flex:0 0 auto}
+#omnibox,#handleChip{min-width:0}
+#omnibox{flex:1 1 180px}
+#handleChip{white-space:normal}
+#meshStrip{flex-wrap:wrap;row-gap:6px}
+#sidePanel{border-left:1px solid var(--line);overflow:auto;padding:16px 16px 24px;background:var(--panel)}
+#sidePanel .hint{color:var(--muted);font-size:13px;margin:0 0 8px}
+#sidePanel h2{margin-top:0}
+#sidePanel details{border-top:1px solid var(--line);padding:2px 0 8px}
+#sidePanel summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600}
+#sidePanel .node{display:flex;flex-direction:column;align-items:stretch;gap:8px}
+#sidePanel .node button{min-height:44px;width:100%;text-align:left;padding:0 12px}
+#sidePanel details.raw{border-top:0;margin-top:8px;padding-top:0}
+#sidePanel details.raw summary{font-weight:500;color:var(--muted)}
+summary:focus-visible,#newtab:focus-visible,.tab button:focus-visible,#sidePanel button:focus-visible,#toolbar button:focus-visible,#omnibox:focus-visible,#startBox:focus-visible,.quick button:focus-visible{
+  outline:2px solid var(--focus);outline-offset:2px
+}
+.stage-row{font-family:inherit;font-size:13px;align-items:baseline}
+.receipt{font-family:inherit;font-size:13px}
+@media(max-width:860px){
+  html[data-panel="open"] #body{grid-template-rows:auto minmax(0,1fr)}
+  html[data-panel="open"] #sidePanel{order:-1;max-height:52vh;border-left:0;border-bottom:1px solid var(--line)}
+}
+@media(max-width:480px){
+  #toolbar{gap:4px;padding:8px}
+  #toolbar button,#newtab,.tab .x{min-width:44px;min-height:44px}
+  #toolbar #btnGo{min-height:44px}
+  #omnibox,#startBox{min-height:44px}
+  #omnibox{flex:1 1 calc(100% - 72px)}
+  .quick button{min-height:44px;padding:10px 12px}
+  .tab{min-height:44px}
+}
+</style>
 <script>
 (function() {
   var saved = null;
@@ -106,10 +146,10 @@ iframe.preview{width:100%;min-height:420px;border:1px solid var(--trim);backgrou
 <div id="win">
   <div id="tabs"></div>
   <div id="toolbar">
-    <button id="btnBack" type="button" title="Back">◀</button>
-    <button id="btnFwd" type="button" title="Forward">▶</button>
-    <button id="btnReload" type="button" title="Reload">↻</button>
-    <button id="btnHome" type="button" title="Home"><span id="homeBtn"><img class="brandmark" alt="" src="${SIGIL}"></span></button>
+    <button id="btnBack" type="button" title="Back" aria-label="Back">◀</button>
+    <button id="btnFwd" type="button" title="Forward" aria-label="Forward">▶</button>
+    <button id="btnReload" type="button" title="Reload" aria-label="Reload">↻</button>
+    <button id="btnHome" type="button" title="Home" aria-label="Home"><span id="homeBtn"><img class="brandmark" alt="" src="${SIGIL}"></span></button>
     <input id="omnibox" placeholder="Search or enter a .aziel name or web address" spellcheck="false" autocomplete="off" aria-label="Address">
     <span id="handleChip"></span>
     <button id="btnGo" type="button" title="Go / ethical search">Go</button>
@@ -122,8 +162,7 @@ iframe.preview{width:100%;min-height:420px;border:1px solid var(--trim);backgrou
       </div>
     </div>
     <button id="settingsBtn" class="iconbtn" type="button" title="Settings" aria-label="Settings">⚙</button>
-    <button id="designBtn" class="iconbtn" type="button" title="Design mode" aria-label="Design mode">✎</button>
-    <button id="panelToggle" class="iconbtn" type="button" title="Tools" aria-label="Tools" aria-expanded="false">☰</button>
+    <button id="panelToggle" class="iconbtn" type="button" title="Tools" aria-label="Tools" aria-controls="sidePanel" aria-expanded="false">☰</button>
   </div>
   <div id="bookmarks" hidden>
     <span>Bookmarks</span>
@@ -133,29 +172,54 @@ iframe.preview{width:100%;min-height:420px;border:1px solid var(--trim);backgrou
   <div id="ownerLine"></div>
   <div id="body">
     <section id="stage"></section>
-    <aside id="sidePanel" hidden>
+    <aside id="sidePanel" hidden aria-label="Tools">
       <p class="cite">Views <strong id="views">${views}</strong> · Downloads <strong id="downloads">${downloads}</strong></p>
       <h2>Tools</h2>
-      <div class="node">
-        <button id="btnAirlock" type="button" title="Check the current address in the airlock">Airlock</button>
-        <button id="btnPromote" type="button" title="Show a quarantined page on this machine">Promote</button>
-        <button id="btnIsland" type="button" title="Leave mesh peers. Local apps and the web stay open">Island</button>
-        <button id="btnBlock" type="button" title="Block the current handle on this machine">Block peer</button>
-        <button id="btnTrust" type="button" title="Local trust for the current handle">Trust</button>
-        <button id="slotsBtn" type="button" title="Reserved hub mirrors and your three sites">Slots</button>
-      </div>
-      <h2>Mesh</h2>
-      <div class="node">
-        <button id="meshEnable" type="button" title="Turn mesh presence on">Turn on</button>
-        <button id="meshDisable" type="button" title="Turn mesh presence off">Turn off</button>
-        <button id="meshJoin" type="button" title="Join this browser to the mesh">Join</button>
-        <button id="meshLeave" type="button" title="Leave the mesh">Leave</button>
-      </div>
-      <p hidden>live <b id="qnmLive">0</b> locked <b id="qnmLocked">0</b> isolated <b id="qnmIsolated">0</b></p>
-      <h2>Airlock</h2>
-      <div id="airlockPanel"></div>
-      <h2>Receipts</h2>
-      <div id="receipts"></div>
+      <p class="hint">Search and open from the address bar. These are optional.</p>
+      <details open>
+        <summary>This page</summary>
+        <p class="hint">Check the address before it opens. A held page stays here until you show it.</p>
+        <div class="node">
+          <button id="btnAirlock" type="button" title="Run download, scan, clean, check, and store on the address in the bar">Check this address</button>
+          <button id="btnPromote" type="button" title="Show a held page on this machine. Scripts still do not run">Show held page</button>
+        </div>
+      </details>
+      <details>
+        <summary>This machine</summary>
+        <p class="hint">These choices stay on this machine.</p>
+        <div class="node">
+          <button id="btnIsland" type="button" title="Leave mesh peers. Local apps and the web stay open">This machine only</button>
+          <button id="btnBlock" type="button" title="Block the current handle on this machine">Block this handle</button>
+          <button id="btnTrust" type="button" title="Local trust for the current handle">Trust this handle</button>
+          <button id="slotsBtn" type="button" title="Reserved hub mirrors and your three sites">Your sites</button>
+          <button id="designBtn" type="button" title="Design mode stays on the machine that holds the handle key">Design on this machine</button>
+        </div>
+      </details>
+      <details>
+        <summary>Mesh</summary>
+        <p class="hint" id="meshPlain">Mesh is off. Counts stay at zero until presence is on.</p>
+        <div class="node">
+          <button id="meshEnable" type="button" title="Turn suite mesh presence on">Turn presence on</button>
+          <button id="meshDisable" type="button" title="Turn suite mesh presence off">Turn presence off</button>
+          <button id="meshJoin" type="button" title="List this browser on the mesh">Join this browser</button>
+          <button id="meshLeave" type="button" title="Remove this browser from the mesh">Leave</button>
+        </div>
+        <details class="raw">
+          <summary>Count detail</summary>
+          <p class="cite">Reachable <b id="qnmLive">0</b> · Locked <b id="qnmLocked">0</b> · Isolated <b id="qnmIsolated">0</b></p>
+          <p class="cite">Raw names: live, locked, isolated.</p>
+        </details>
+      </details>
+      <details>
+        <summary>Check record</summary>
+        <p class="hint" id="airlockStatus">No check yet.</p>
+        <div id="airlockPanel"></div>
+      </details>
+      <details>
+        <summary>Receipts</summary>
+        <p class="hint">Each action keeps a short hash here.</p>
+        <div id="receipts"></div>
+      </details>
     </aside>
   </div>
   <div id="meshStrip" class="statusline" aria-label="Mesh status">
@@ -168,19 +232,68 @@ iframe.preview{width:100%;min-height:420px;border:1px solid var(--trim);backgrou
 const SIGIL = ${JSON.stringify(SIGIL)};
 let sessionId = "";
 const clientTabs = [];
+const ACTION_PLAIN = {
+  tab_list: "Listed tabs",
+  tab_new: "Opened a tab",
+  tab_close: "Closed a tab",
+  tab_switch: "Switched tab",
+  home: "Home",
+  navigate: "Opened an address",
+  ethical_search: "Searched",
+  lamb_lens_search: "Searched",
+  airlock: "Checked an address",
+  airlock_status: "Checked status",
+  back: "Back",
+  forward: "Forward",
+  reload: "Reloaded",
+  island_mode: "This machine only",
+  peer_block: "Blocked a handle",
+  peer_unblock: "Unblocked a handle",
+  trust: "Local trust",
+  slots: "Your sites",
+  design_mode: "Design",
+  resolve: "Resolved a name",
+  gate_refuse: "Blocked",
+  name_pending: "Pending name",
+  airlock_hold: "Held a page"
+};
+function actionPlain(action) {
+  const key = String(action || "");
+  return ACTION_PLAIN[key] || key || "Action";
+}
 function addReceipt(rec) {
   if (!rec) return;
   const box = document.getElementById("receipts");
   const el = document.createElement("div");
   el.className = "receipt";
-  el.textContent = (rec.seq||"") + " " + rec.action + " " + rec.hash;
+  const name = document.createElement("span");
+  name.textContent = actionPlain(rec.action);
+  const code = document.createElement("span");
+  code.className = "cite";
+  const hash = String(rec.hash || "");
+  code.textContent = hash ? " " + hash.slice(0, 12) : "";
+  code.title = (rec.action ? rec.action + " " : "") + hash;
+  el.appendChild(name);
+  el.appendChild(code);
   box.prepend(el);
 }
+const STAGE_PLAIN = { download: "Downloaded", scan: "Scanned", scrub: "Cleaned", verify: "Checked", vault: "Stored" };
 function paintAirlock(stages) {
   if (!stages) return;
-  document.getElementById("airlockPanel").innerHTML = stages.map(s =>
-    '<div class="stage-row"><span>'+s.stage+'</span><span>'+String(s.hash||"").slice(0,16)+'</span></div>'
-  ).join("");
+  const box = document.getElementById("airlockPanel");
+  const status = document.getElementById("airlockStatus");
+  box.innerHTML = stages.map((s) => {
+    const raw = String(s.stage || "");
+    const label = STAGE_PLAIN[raw] || raw || "Step";
+    const hash = String(s.hash || "");
+    const short = hash.slice(0, 12);
+    const state = s.ok === false ? "Needs attention" : "Recorded";
+    return '<div class="stage-row"><span>' + escText(label) + '</span><span class="cite" title="' + escText(raw + " " + hash) + '">' + escText(state + (short ? " · " + short : "")) + "</span></div>";
+  }).join("");
+  if (status) {
+    const failed = stages.some((s) => s.ok === false);
+    status.textContent = failed ? "The check stopped on a step. Short codes are beside each step." : "Check finished. " + stages.length + (stages.length === 1 ? " step recorded." : " steps recorded.");
+  }
 }
 async function callOp(op, payload) {
   const body = Object.assign({ session_id: sessionId }, payload||{});
@@ -233,45 +346,38 @@ function paintOwner(j) {
   if (chip) chip.textContent = "";
   if (j && j.owner_handle) lastHandle = j.owner_handle;
   if (j && j.name_status === "PENDING") {
-    line.textContent = "Pending · " + (j.name || j.display_url || "") + " · not a verified site";
+    line.textContent = "Pending. " + (j.name || j.display_url || "") + " is not a verified site.";
     if (chip) chip.textContent = "Pending";
     return;
   }
   if (j && j.display && j.display.title === "Island mode") {
     islandOn = j.island_mode === true;
-    line.textContent = islandOn
-      ? "Island mode · this node only · local runtime stays up"
-      : "Island mode off · this node rejoined";
+    line.textContent = (j.display && j.display.summary) || (islandOn ? "This machine only." : "This machine is no longer set aside.");
     return;
   }
   if (j && j.display && j.display.title === "Local trust") {
-    line.textContent = "Local trust · " + (j.handle || "")
-      + " · chain age " + j.chain_age_seconds
-      + " · heartbeats " + j.heartbeats_witnessed
-      + " · hash matches " + j.hash_matches
-      + " · vouches " + ((j.vouches || []).join(",") || "none")
-      + " · equivocation " + j.equivocating;
+    line.textContent = (j.display && j.display.summary) || ("Local trust for " + (j.handle || "") + ".");
     return;
   }
   if (j && j.code === "FG-GATE-REFUSE") {
-    line.textContent = (j.clarity && j.clarity.plain) || ("Blocked · FG-GATE-REFUSE · " + (j.reason || ""));
+    line.textContent = (j.clarity && j.clarity.plain) || ("Blocked. " + (j.reason || ""));
     if (chip && j.reason === "handle_isolated") chip.textContent = "Isolated";
     return;
   }
   if (j && j.verified_owner && j.owner_handle && j.quarantine) {
-    line.textContent = "Verified owner handle · " + j.owner_handle + " · quarantined · scanner absent";
+    line.textContent = "Verified handle " + j.owner_handle + ". The page is held. This shell has no scanner.";
     if (chip) chip.textContent = j.owner_handle;
     if (j.display_url) document.getElementById("omnibox").value = j.display_url;
     return;
   }
   if (j && j.verified_owner && j.owner_handle) {
-    line.textContent = "Verified owner handle · " + j.owner_handle;
+    line.textContent = "Verified handle " + j.owner_handle + ".";
     if (chip) chip.textContent = j.owner_handle;
     if (j.display_url) document.getElementById("omnibox").value = j.display_url;
     return;
   }
   if (j && j.plane === "local" && j.origin) {
-    line.textContent = "Local app · " + j.origin + " · data stays on this machine";
+    line.textContent = "Local app. " + j.origin + ". Data stays on this machine.";
     return;
   }
   line.textContent = "";
@@ -281,10 +387,11 @@ function escText(value) {
 }
 function refusalHtml(j) {
   const c = (j && j.clarity) || {};
-  const plain = c.plain || (j && j.reason) || "";
+  const reasons = j && j.ethics && j.ethics.reasons ? j.ethics.reasons.join(", ") : "";
+  const plain = c.plain || (j && j.reason) || reasons || "";
   const next = c.next || "";
-  const code = (j && j.code) || "FG-GATE-REFUSE";
-  return '<section class="refusal"><h1>Blocked</h1><p>' + escText(plain) + '</p><p>' + escText(next) + '</p><p class="cite">' + escText(code) + " · " + escText((j && j.reason) || "") + "</p></section>";
+  const code = (j && j.code) || (j && j.ethics && j.ethics.refuse ? "ETHICS_REFUSE" : "FG-GATE-REFUSE");
+  return '<section class="refusal"><h1>Blocked</h1><p>' + escText(plain) + '</p><p>' + escText(next) + '</p><p class="cite">' + escText(code) + " · " + escText((j && j.reason) || reasons) + "</p></section>";
 }
 function renderResult(j) {
   const stage = document.getElementById("stage");
@@ -298,11 +405,13 @@ function renderResult(j) {
     return;
   }
   if (j && j.name_status === "PENDING") {
-    stage.innerHTML = '<div class="banner">Pending · ' + (j.name || "") + ' · not a verified site</div>';
+    stage.innerHTML = '<div class="banner">Pending. ' + escText(j.name || "") + ' is not a verified site.</div>';
     return;
   }
   if (j && j.quarantine && !j.promoted) {
-    stage.innerHTML = '<div class="banner">Quarantine · scanner absent · not promoted · not run</div><p class="cite">' + (j.display && j.display.summary ? j.display.summary : "") + '</p>';
+    const extra = j.display && j.display.summary ? j.display.summary : "";
+    stage.innerHTML = '<div class="banner"><p>This page is held. This shell has no malware scanner, so it stays here until you choose Show held page. Scripts do not run.</p></div>'
+      + (extra ? '<p class="cite">' + escText(extra) + "</p>" : "");
     return;
   }
   if (j.action === "home" || (j.tab && j.tab.kind === "newtab" && !j.results && !j.html)) {
@@ -311,7 +420,7 @@ function renderResult(j) {
     return;
   }
   if (j.code === "ETHICS_REFUSE" || (j.ethics && j.ethics.refuse && j.ok === false)) {
-    stage.innerHTML = '<div class="banner">Lamb Lens refused. '+(j.ethics&&j.ethics.reasons?j.ethics.reasons.join(", "):"")+'</div><p>Advisory ethical gate. Not a guaranteed block.</p>';
+    stage.innerHTML = refusalHtml(j);
     return;
   }
   if (j.results) {
@@ -321,20 +430,22 @@ function renderResult(j) {
     return;
   }
   if (j.html) {
-    const who = j.verified_owner && j.owner_handle ? ("Verified owner handle " + j.owner_handle + ". ") : "";
-    stage.innerHTML = '<div class="banner">' + who + 'Sandbox preview (iframe, no scripts). Not Chromium. '+(j.title||"")+'</div>'
+    const who = j.verified_owner && j.owner_handle ? ("Verified handle " + j.owner_handle + ". ") : "";
+    stage.innerHTML = '<div class="banner">' + escText(who + "Preview. Scripts do not run." + (j.title ? " " + j.title : "")) + '</div>'
       + '<iframe class="preview" sandbox="" srcdoc="'+String(j.html).replace(/"/g,"&quot;")+'"></iframe>'
-      + '<p class="cite">'+(j.excerpt||"")+'</p>';
+      + '<p class="cite">'+escText(j.excerpt||"")+'</p>';
     return;
   }
   if (j.url && j.ok) {
-    stage.innerHTML = '<div class="banner">Preview receipted. Fetch not run (metadata). Host: '+(j.host||"")+'</div>'
-      + '<div class="card"><p>'+(j.note||"")+'</p><p class="cite">'+j.url+'</p><button type="button" id="fetchNow">Fetch sandbox preview</button></div>';
+    stage.innerHTML = '<div class="banner">The address is noted. The page has not been fetched yet. Host: '+escText(j.host||"")+'</div>'
+      + '<div class="card"><p>'+escText(j.note||"")+'</p><p class="cite">'+escText(j.url)+'</p><button type="button" id="fetchNow">Fetch preview</button></div>';
     const b = document.getElementById("fetchNow");
     if (b) b.onclick = async () => renderResult(await callOp("navigate", { url: j.url, fetch: true }));
     return;
   }
-  stage.innerHTML = '<div class="banner">'+(j.display?j.display.summary:(j.note||j.error||"ok"))+'</div><pre style="white-space:pre-wrap">'+JSON.stringify(j,null,2)+'</pre>';
+  const title = j && j.display && j.display.title ? "<h1>" + escText(j.display.title) + "</h1>" : "";
+  const summary = (j && j.display && j.display.summary) || (j && (j.note || j.error)) || "Done";
+  stage.innerHTML = '<section class="refusal">' + title + "<p>" + escText(summary) + '</p><details><summary>Record</summary><pre>' + escText(JSON.stringify(j, null, 2)) + "</pre></details></section>";
 }
 async function paintTabs() {
   const t = await callOp("tab_list", {});
@@ -399,9 +510,9 @@ document.getElementById("designBtn").onclick = async () => {
 document.getElementById("slotsBtn").onclick = async () => {
   const handle = lastHandle || (document.getElementById("omnibox").value.trim().split(".")[0] || "");
   const obj = await callOp("slots", { handle });
-  const reserved = (obj.reserved || []).map((row) => "<li>" + row.label + " · " + row.host + " · not user-nameable</li>").join("");
-  const user = (obj.user || []).map((row) => "<li>" + row.id + " · " + (row.name || "empty") + " · " + row.status + "</li>").join("");
-  document.getElementById("stage").innerHTML = '<section class="refusal"><h1>Domain slots</h1><p>Automatic name: ' + (obj.automatic_name || "unset") + '</p><h2>Reserved</h2><ul>' + reserved + '</ul><h2>User</h2><ul>' + user + '</ul><p>' + (obj.note || "") + '</p></section>';
+  const reserved = (obj.reserved || []).map((row) => "<li>" + escText(row.label) + " · " + escText(row.host) + " · reserved</li>").join("");
+  const user = (obj.user || []).map((row) => "<li>" + escText(row.id) + " · " + escText(row.name || "empty") + " · " + escText(row.status) + "</li>").join("");
+  document.getElementById("stage").innerHTML = '<section class="refusal"><h1>Your sites</h1><p>Automatic name: ' + escText(obj.automatic_name || "unset") + '</p><h2>Reserved mirrors</h2><ul>' + reserved + '</ul><h2>Your names</h2><ul>' + user + '</ul><p>' + escText(obj.note || "") + "</p></section>";
 };
 const APPEAR_KEY = "azbrowser-appearance";
 function readAppearance() {
@@ -473,13 +584,13 @@ document.getElementById("settingsBtn").onclick = () => {
     + '<h2>Appearance</h2><p>Night is the first look: black background, white text. Day is white with black text. Aziel is gold, black, and royal purple. The choice is remembered on this machine.</p>'
     + '<div class="node"><button type="button" data-theme-choice="night">Night</button><button type="button" data-theme-choice="day">Day</button><button type="button" data-theme-choice="aziel">Aziel</button></div>'
     + '<label><input id="bookmarkPref" type="checkbox"' + on + '> Show bookmarks bar</label>'
-    + '<h2>Tools</h2><p>The tools icon opens Airlock, Promote, Island, Block peer, Trust, and Slots. Design mode on this hosted page stays on the machine that holds the handle key.</p>'
+    + '<h2>Tools</h2><p>The tools icon opens checks for this page, choices for this machine, and mesh presence. Design on this hosted page stays on the machine that holds the handle key.</p>'
     + '<h2>About</h2>'
     + '<p>AZBrowser is a research shell for search, tabs, and mesh names. Version ${VERSION}. Author Aziel Eliab.</p>'
     + '<p>A search, a .aziel name, or a web address goes in one step. Local apps open on the machine that hosts them. Web addresses keep working.</p>'
     + '<p>A verified handle is named beside the address. A pending name is marked Pending and is not opened. An isolated handle explains what happened and what you can do next.</p>'
-    + '<p>Mesh pages stay in quarantine until you choose Promote. This shell has no malware scanner, and it does not run page scripts. Handle keys stay on the local machine.</p>'
-    + '<p>Island and Block peer apply on this machine. Each action keeps a receipt.</p>'
+    + '<p>Mesh pages stay held until you choose Show held page. This shell has no malware scanner, and it does not run page scripts. Handle keys stay on the local machine.</p>'
+    + '<p>This machine only and Block this handle apply on this machine. Each action keeps a receipt.</p>'
     + '<p>There are no ads, no tracking, and no telemetry.</p>'
     + '<p>AZMail and AZNet are separate programs. This node has four reserved hub mirrors and three user sites. MirageGrid decoy names stay on their own list.</p>'
     + '</section>';
@@ -512,22 +623,39 @@ function unwrapMesh(j) {
   if (j.mesh && typeof j.mesh === "object") return Object.assign({}, j, j.mesh);
   return j;
 }
+function meshWords(on, unavailable) {
+  if (unavailable) return { line: "Mesh status unavailable", plain: "Mesh status could not be read. Counts stay hidden until it can." };
+  if (islandOn) return { line: "This machine only", plain: "This machine only. Local apps and the web stay open." };
+  if (!on) return { line: "Mesh off", plain: "Mesh is off. Counts stay at zero until presence is on." };
+  let joined = false;
+  try { joined = !!sessionStorage.getItem("azbrowser_mesh_node"); } catch (e) {}
+  if (joined) return { line: "This browser is listed", plain: "Mesh is on. This browser is listed." };
+  return { line: "Mesh on", plain: "Mesh is on. This browser has not joined." };
+}
+function paintCount(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}
 function paintMesh(raw) {
   const j = unwrapMesh(raw);
-  const on = j.enabled === true || j.enabled === 1 || String(j.status || "").toLowerCase() === "on";
+  const unavailable = !raw || j.ok === false || String(j.status || "") === "unavailable" || j.error === "mesh_unavailable";
+  const on = !unavailable && (j.enabled === true || j.enabled === 1 || String(j.status || "").toLowerCase() === "on");
   const r = (j.rollup && typeof j.rollup === "object") ? j.rollup : {};
   const live = on ? meshNum(r.live, j.live_nodes, j.live) : 0;
   const locked = on ? meshNum(r.locked, j.locked_nodes, j.locked) : 0;
   const isolated = on ? meshNum(r.isolated, j.isolated_nodes, j.isolated) : 0;
-  const nodes = live + locked + isolated;
-  document.getElementById("meshLiveCount").textContent = String(live);
-  const nodeCount = document.getElementById("meshNodeCount");
-  if (nodeCount) nodeCount.textContent = String(nodes);
-  document.getElementById("qnmLive").textContent = String(live);
-  document.getElementById("qnmLocked").textContent = String(locked);
-  document.getElementById("qnmIsolated").textContent = String(isolated);
+  const words = meshWords(on, unavailable);
+  const shown = unavailable ? "—" : String(live);
+  const shownNodes = unavailable ? "—" : String(live + locked + isolated);
+  paintCount("meshLiveCount", shown);
+  paintCount("meshNodeCount", shownNodes);
+  paintCount("qnmLive", unavailable ? "—" : String(live));
+  paintCount("qnmLocked", unavailable ? "—" : String(locked));
+  paintCount("qnmIsolated", unavailable ? "—" : String(isolated));
   const line = document.getElementById("meshLine");
-  line.textContent = islandOn ? "Island" : (on ? "Mesh connected" : "Mesh off");
+  if (line) line.textContent = words.line;
+  const plain = document.getElementById("meshPlain");
+  if (plain) plain.textContent = words.plain;
 }
 async function meshGet(path) {
   const r = await fetch(path, { headers: { "user-agent": "Mozilla/5.0", accept: "application/json" } });

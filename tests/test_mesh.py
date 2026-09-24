@@ -113,6 +113,13 @@ def test_local_chrome_has_live_nodes_strip():
     assert "Mesh off" in html
     assert 'id="sidePanel" hidden' in html
     assert "Search or enter a .aziel name or web address" in html
+    assert "Check this address" in html
+    assert "Show held page" in html
+    assert "Turn presence on" in html
+    assert "id=\"meshPlain\"" in html
+    assert "Mesh connected" not in html
+    assert "--focus: #f0d060" in html
+    assert "--focus: #7a5c00" in html
     assert "THIS IS NOT" not in html
     assert "QNM-BUILD-1.0" not in html
     assert "QNS-CD-1.0" not in html

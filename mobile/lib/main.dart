@@ -30,8 +30,8 @@ class ResearchShellPage extends StatefulWidget {
 class _ResearchShellPageState extends State<ResearchShellPage> {
   final _omnibox = TextEditingController();
   final _receipts = <String>[];
-  String _panel = 'AZNet new tab. Phase 1 research shell — not Chromium.';
-  String _airlock = 'download → scan → scrub → verify → vault';
+  String _panel = 'Search or enter a .aziel name or web address.';
+  String _airlock = 'No check yet.';
 
   @override
   void dispose() {
@@ -59,30 +59,30 @@ class _ResearchShellPageState extends State<ResearchShellPage> {
         low.contains('steal password') ||
         low.contains('how to hack')) {
       setState(() {
-        _panel = 'AZNet / Lamb Lens refused (advisory).';
+        _panel = 'Lamb Lens refused this search. It is advisory.';
       });
       _receipt('ethics_refuse');
       return;
     }
     setState(() {
       _panel = q.contains('.') && !q.contains(' ')
-          ? 'Sandbox preview receipted for $q (not Chromium).'
-          : 'AZNet ethical search for "$q". Cite sources. Advisory.';
+          ? 'Preview noted for $q. Scripts do not run on this device.'
+          : 'Lamb Lens search for "$q". Cite sources. Advisory.';
     });
     _receipt(q.contains('.') ? 'navigate' : 'ethical_search');
   }
 
   void _home() {
     _omnibox.clear();
-    setState(() => _panel = 'Home — everblooming sigil. AZNet new tab.');
+    setState(() => _panel = 'Search or enter a .aziel name or web address.');
     _receipt('home');
   }
 
   void _airlockGo() {
     setState(() {
       _airlock =
-          'download · scan · scrub · verify · vault — metadata only on device.';
-      _panel = 'Airlock ran. No receipt = no action.';
+          'Downloaded, scanned, cleaned, checked, and stored. Metadata only on this device.';
+      _panel = 'Check finished.';
     });
     _receipt('airlock');
   }
@@ -94,47 +94,73 @@ class _ResearchShellPageState extends State<ResearchShellPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text(
-            'No receipt = no action.',
-            style: TextStyle(color: kGold, fontStyle: FontStyle.italic, fontSize: 16),
-          ),
+          const Text('AZBrowser'),
           const SizedBox(height: 8),
           const Text(
-            'On-device Phase 1 research shell. AZNet / Lamb Lens. '
-            'Not Chromium. AZMail is a sibling product, not this app.',
+            'On-device research shell. Search, then open. Lamb Lens is advisory.',
           ),
           const SizedBox(height: 16),
           Row(
             children: [
-              IconButton(onPressed: () => _receipt('back'), icon: const Icon(Icons.arrow_back)),
-              IconButton(onPressed: () => _receipt('forward'), icon: const Icon(Icons.arrow_forward)),
-              IconButton(onPressed: () => _receipt('reload'), icon: const Icon(Icons.refresh)),
-              IconButton(onPressed: _home, icon: const Icon(Icons.home)),
+              IconButton(onPressed: () => _receipt('back'), icon: const Icon(Icons.arrow_back), tooltip: 'Back'),
+              IconButton(onPressed: () => _receipt('forward'), icon: const Icon(Icons.arrow_forward), tooltip: 'Forward'),
+              IconButton(onPressed: () => _receipt('reload'), icon: const Icon(Icons.refresh), tooltip: 'Reload'),
+              IconButton(onPressed: _home, icon: const Icon(Icons.home), tooltip: 'Home'),
             ],
           ),
           TextField(
             controller: _omnibox,
-            decoration: const InputDecoration(labelText: 'AZNet search or URL'),
+            decoration: const InputDecoration(
+              labelText: 'Search or enter a .aziel name or web address',
+            ),
             onSubmitted: (_) => _go(),
           ),
           const SizedBox(height: 12),
-          FilledButton(onPressed: _go, child: const Text('Go')),
-          const SizedBox(height: 8),
-          OutlinedButton(onPressed: _airlockGo, child: const Text('Airlock')),
+          FilledButton(
+            onPressed: _go,
+            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+            child: const Text('Go'),
+          ),
           const SizedBox(height: 12),
-          Text(_panel, style: const TextStyle(color: kGold)),
+          Text(_panel),
           const SizedBox(height: 8),
-          Text(_airlock),
-          const SizedBox(height: 16),
-          const Text('Receipts', style: TextStyle(color: kGold)),
-          for (final r in _receipts.take(12))
-            Card(
-              margin: const EdgeInsets.only(top: 8),
-              child: Padding(
-                padding: const EdgeInsets.all(10),
-                child: SelectableText(r, style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
+          ExpansionTile(
+            title: const Text('Tools'),
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton(
+                  onPressed: _airlockGo,
+                  style: OutlinedButton.styleFrom(minimumSize: const Size(64, 48)),
+                  child: const Text('Check this address'),
+                ),
               ),
-            ),
+              const SizedBox(height: 8),
+              Align(alignment: Alignment.centerLeft, child: Text(_airlock)),
+              const SizedBox(height: 8),
+            ],
+          ),
+          ExpansionTile(
+            title: const Text('Receipts'),
+            children: [
+              for (final r in _receipts.take(12))
+                Card(
+                  margin: const EdgeInsets.only(top: 8),
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: SelectableText(r),
+                  ),
+                ),
+              if (_receipts.isEmpty)
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: EdgeInsets.only(bottom: 12),
+                    child: Text('No actions yet.'),
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
     );
