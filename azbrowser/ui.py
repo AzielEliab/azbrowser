@@ -12,7 +12,8 @@ from urllib.request import Request, urlopen
 
 from .door import classify_v1_path, door_target_url
 from .engine import Engine
-from .meta import HOST, __version__
+from .meta import AZNET, HOST, __version__
+from .peer import aznet_report
 from .receipts import Ledger
 
 _SIGIL_PATH = Path(__file__).resolve().parents[1] / "workers" / "download-tracker" / "public" / "sigil.png"
@@ -98,6 +99,8 @@ a {{ color:inherit; }}
 .fields dd {{ margin:0; }}
 details.more {{ margin-top:18px; }}
 #themeToggle {{ min-width:4.5rem; }}
+#aznetRecover p {{ margin:0 0 8px; }}
+#aznetInstall {{ display:inline-flex; align-items:center; min-height:34px; padding:6px 10px; border:1px solid var(--line); border-radius:8px; text-decoration:none; }}
 .theme {{ position:relative; }}
 #themeMenu {{ position:absolute; right:0; top:40px; z-index:4; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:6px; display:flex; flex-direction:column; min-width:132px; }}
 #themeMenu[hidden] {{ display:none; }}
@@ -166,6 +169,13 @@ html[data-panel="open"] main {{ grid-template-columns: 1fr 280px; }}
     <section id="stage"></section>
     <aside id="sidePanel" hidden>
       <h2>Advanced</h2>
+      <div id="aznetRecover" hidden>
+        <p>AZNet is not running on :8771. Install it, then check again.</p>
+        <div class="node">
+          <a id="aznetInstall" href="{AZNET}">Install AZNet</a>
+          <button id="aznetCheck" type="button">Check again</button>
+        </div>
+      </div>
       <div class="node">
         <button id="airlockBtn" type="button" title="Check the current address in the airlock">Airlock</button>
         <button id="promoteBtn" type="button" title="Show a quarantined page on this machine">Promote</button>
@@ -193,6 +203,7 @@ html[data-panel="open"] main {{ grid-template-columns: 1fr 280px; }}
     <span id="meshLine">Mesh off</span>
     <span>Nodes <b id="meshNodeCount">0</b></span>
     <span>Live Nodes <b id="meshLiveCount">0</b></span>
+    <span id="aznetLine"></span>
   </div>
 </div>
 <script>
@@ -498,7 +509,7 @@ function settingsPage() {{
     + '<h2>Appearance</h2><p>Night is the first look: black background, white text. Day is white with black text. Aziel is gold, black, and royal purple. The choice is remembered on this machine.</p>'
     + '<div class="node"><button type="button" data-theme-choice="night">Night</button><button type="button" data-theme-choice="day">Day</button><button type="button" data-theme-choice="aziel">Aziel</button></div>'
     + '<label><input id="bookmarkPref" type="checkbox"' + on + '> Show bookmarks bar</label>'
-    + '<h2>Advanced</h2><p>Advanced holds Airlock, Promote, Island, Block peer, Trust, Slots, and Design. Mesh on, off, join, and leave are in that same panel. Design mode stays on this machine.</p>'
+    + '<h2>Advanced</h2><p>Advanced holds Airlock, Promote, Island, Block peer, Trust, Slots, and Design. Mesh on, off, join, and leave are in that same panel. Design mode stays on this machine. If AZNet is not answering on this machine, Check again is there too.</p>'
     + '<h2>About</h2>'
     + '<p>AZBrowser is a research shell for search, tabs, and mesh names. Version {__version__}. Author Aziel Eliab.</p>'
     + '<p>A search, a .aziel name, or a web address goes in one step. Local apps open here. Web addresses keep working.</p>'
@@ -586,6 +597,21 @@ function paintMesh(raw) {{
   document.getElementById("qnmIsolated").textContent = String(isolated);
   document.getElementById("meshLine").textContent = islandOn ? "Island" : (on ? "Mesh connected" : "Mesh off");
 }}
+function paintAznet(j) {{
+  const line = document.getElementById("aznetLine");
+  const recover = document.getElementById("aznetRecover");
+  const seen = !!(j && j.seen === true);
+  if (line) line.textContent = (j && j.line) || (seen ? "AZNet seen on this machine" : "AZNet not running on :8771");
+  if (recover) recover.hidden = seen;
+}}
+async function refreshAznet() {{
+  try {{
+    paintAznet(await (await fetch("/local/aznet", {{ headers: {{ "user-agent": "Mozilla/5.0" }} }})).json());
+  }} catch (e) {{
+    paintAznet({{ seen: false, line: "AZNet not running on :8771" }});
+  }}
+}}
+document.getElementById("aznetCheck").onclick = () => refreshAznet();
 async function refreshMesh() {{
   try {{
     paintMesh(await (await fetch("/v1/mesh", {{ headers: {{ "user-agent": "Mozilla/5.0" }} }})).json());
@@ -609,7 +635,9 @@ document.getElementById("meshLeave").onclick = async () => {{
   refreshMesh();
 }};
 refreshMesh();
+refreshAznet();
 setInterval(refreshMesh, 30000);
+setInterval(refreshAznet, 30000);
 paintTabs();
 </script>
 </html>
@@ -657,6 +685,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/sigil.png":
             self._send(200, sigil_png(), "image/png")
+            return
+        if path == "/local/aznet":
+            self._send(200, json.dumps(aznet_report(), indent=2).encode(), "application/json")
             return
         classified = classify_v1_path(path)
         if classified["kind"] == "door":

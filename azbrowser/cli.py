@@ -9,9 +9,10 @@ import re
 import sys
 from pathlib import Path
 
-from .meta import HOST, __version__
+from .meta import AZNET, HOST, __version__
 from .doctor import doctor
 from .engine import Engine
+from .peer import ABSENT_LINE, SEEN_LINE, aznet_answers
 from .receipts import Ledger
 
 HELP = f"""azbrowser — local research browser
@@ -113,9 +114,14 @@ def _plain_error(prog: str, message: str) -> str:
 
 
 def _welcome() -> str:
+    if aznet_answers():
+        peer = SEEN_LINE + "."
+    else:
+        peer = f"{ABSENT_LINE}. Install: {AZNET}"
     return (
         f"AZBrowser {__version__} is a local research browser for search, tabs, and .aziel names.\n"
         "Author: Aziel Eliab.\n"
+        f"{peer}\n"
         "\n"
         "Open the app:\n"
         "  azbrowser ui\n"

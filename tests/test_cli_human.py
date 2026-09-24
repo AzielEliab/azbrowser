@@ -10,7 +10,8 @@ import pytest
 
 from azbrowser.cli import main
 from azbrowser.engine import OPS
-from azbrowser.meta import HOST, LIMITATION, __version__
+from azbrowser.meta import AZNET, HOST, LIMITATION, __version__
+from azbrowser.peer import aznet_answers
 from azbrowser.ui import _chrome, bind_message
 
 
@@ -26,6 +27,62 @@ def test_bare_command_welcomes():
     assert "http://127.0.0.1:8878/" in text
     assert "THIS IS NOT" not in text
     assert not text.lstrip().startswith("{")
+    assert "azbrowser pair" not in text.lower()
+    assert "click pair" not in text.lower()
+    assert ("AZNet seen on this machine" in text) or ("AZNet not running on :8771" in text)
+    assert text.index("azbrowser ui") < text.index("azbrowser doctor")
+
+
+def test_welcome_status_is_not_a_pair_step(monkeypatch):
+    import azbrowser.cli as cli
+
+    monkeypatch.setattr(cli, "aznet_answers", lambda: False)
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        assert main([]) == 0
+    absent = buf.getvalue()
+    assert "AZNet not running on :8771" in absent
+    assert AZNET in absent
+    assert "Open the app:" in absent
+    assert "azbrowser pair" not in absent.lower()
+
+    monkeypatch.setattr(cli, "aznet_answers", lambda: True)
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        assert main([]) == 0
+    seen = buf.getvalue()
+    assert "AZNet seen on this machine" in seen
+    assert "Install:" not in seen
+    assert "azbrowser ui" in seen
+
+
+def test_aznet_answers_matches_the_port():
+    import socket
+    import threading
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    closed = socket.socket()
+    closed.bind(("127.0.0.1", 0))
+    closed_port = closed.getsockname()[1]
+    closed.close()
+    assert aznet_answers("127.0.0.1", closed_port, timeout=0.3) is False
+
+    class Ok(BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802
+            self.send_response(404)
+            self.end_headers()
+
+        def log_message(self, fmt: str, *args: object) -> None:
+            return
+
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), Ok)
+    port = httpd.server_address[1]
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    try:
+        assert aznet_answers("127.0.0.1", port, timeout=1) is True
+    finally:
+        httpd.shutdown()
 
 
 def test_help_is_short():
@@ -148,3 +205,10 @@ def test_bind_message_and_chrome():
     assert "THIS IS NOT" not in html
     assert "QNM-BUILD-1.0" not in html
     assert "QNS-CD-1.0" not in html
+    assert 'id="aznetLine"' in html
+    assert 'id="aznetRecover" hidden' in html
+    assert "Install AZNet" in html
+    assert AZNET in html
+    assert "Check again" in html
+    assert "Pair AZBrowser" not in html
+    assert "click Pair" not in html
