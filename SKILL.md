@@ -66,8 +66,42 @@ next input. No technical MCP UI is required for the human.
 | Ethics gate | `ethics_gate` |
 | HTML scrub | `scrub` |
 | Liveness / skill | `health` `skill` |
+| Mesh resolve | `resolve` |
+| Capability grant / check | `capability_grant` `capability_check` |
+| Local app tab | `local_app` |
 
 No receipt = no action. Every mutating op appends a hash-chained receipt.
+
+## Local-first edge mesh
+
+AZBrowser is the browser for the local-first edge mesh. AZNet stays a
+separate Software. Pairing is resolve-and-connect only.
+
+- `<handle>.aziel` resolves through the AZNet resolver adapter
+  (`POST http://127.0.0.1:8771/v1/resolve`) against the local mesh ledger,
+  then the local shell asks qnm-node (`POST http://127.0.0.1:8891/local/connect`)
+  for direct, LAN, or relay. `.aziel` is not an ICANN TLD. Ordinary browsers
+  do not resolve it.
+- `.az` is Azerbaijan's country domain and stays on normal DNS and standard
+  TLS, except the operator Cap-7 / AZ.* allowlist (`azgrid.az`, `azcloak.az`,
+  `azvault.az`, `azshift.az`, `AZ.AzielEliab.AZ`, `AZ.Godlock.AZ`,
+  `AZ.AzielCorpusLibrary.AZ`, `AZ.HeDidntJump.AZ`). Cloak names
+  `azbooth.az`, `azflag.az`, and `azstandby.az` are not on that list.
+- Mesh pages, scripts, and modules must match the handle key's signed
+  content hash. Mismatch, an unsigned module, or tampered bytes return
+  `FG-GATE-REFUSE` plus the reason. The address bar shows the verified
+  owner handle, or that refusal. There is no identity-lock chrome.
+- Mesh and local apps (qnm-node `127.0.0.1:8891`, local FragGate
+  `127.0.0.1:8787`) get no outside network, no cross-origin fetch, no
+  storage outside their origin, and no local files unless a capability
+  grant receipt allows that exact resource. This is default deny, not
+  tracker detection. The normal web keeps Lamb Lens plus the existing
+  HTML scrub. This shell does not execute scripts.
+- Handle keys never leave the local node. A payload that contains a
+  private key is refused.
+
+Lamb Lens order is Service, then Clarity, then Peace: refuse harm, say
+what the code does, then keep the default-deny sandbox.
 
 ## Human Worker (not a second agent brand)
 

@@ -22,6 +22,20 @@ here. AZMail is a **sibling product** already live
 ([github.com/AzielEliab/aznet](https://github.com/AzielEliab/aznet)) —
 separate app; this repo does not embed its protocol.
 
+## Local-first edge mesh
+
+The practical browser for the local-first edge mesh is this research
+shell, not a second Chromium. AZNet remains a separate Software. The
+shell resolves `<handle>.aziel` through an AZNet resolver adapter and
+asks local qnm-node to connect. Mesh bytes must match a handle-key
+signature and a SHA-256 content hash (`FG-GATE-REFUSE` on mismatch).
+Mesh and local apps are default-deny for network, cross-origin,
+foreign storage, and files. Grants are hash-chained receipts. `.aziel`
+is not registered with ICANN. Ordinary browsers do not resolve it.
+`.az` stays on normal DNS except the operator Cap-7 / AZ.* allowlist.
+The spec and the open alignment points are in
+[FED-MESH-BROWSER-1.0.md](FED-MESH-BROWSER-1.0.md).
+
 ## Honesty (read this)
 
 v0.1 **cannot** ship a full Chromium / WebKit / Gecko binary. The Worker

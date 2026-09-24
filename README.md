@@ -27,8 +27,14 @@ AZ-OS / Lumen / AZInterface are **not** this product.
 v0.1 is a **research shell**. It cannot ship a Chromium binary. The
 Worker looks like a real browser (tabs, omnibox, Back/Forward/Reload,
 Home brandmark) and sandboxes navigation via controlled
-fetch/proxy preview + receipted airlock + AZNet ethical search. It does
+fetch/proxy preview + receipted airlock + Lamb Lens ethical search. It does
 **not** replace the operator's OS browser.
+
+The mesh plane added here is the practical browser for the local-first
+edge mesh: name resolution, handle-key hash gates, a capability sandbox,
+and local-app tabs inside this shell. It is not a Chromium, Electron, or
+Tauri port. AZNet stays a separate Software. See
+[docs/FED-MESH-BROWSER-1.0.md](docs/FED-MESH-BROWSER-1.0.md).
 
 ## Dual surface (mandatory)
 
@@ -146,6 +152,9 @@ Every control calls a real `/v1` handler (same op agents call). No dead buttons.
 | FragGate list | `GET /v1/fraggate/list` | PROXY to aziel-runtime |
 | FragGate call | `POST /v1/fraggate/call` | PROXY to aziel-runtime |
 | Live Nodes strip | `GET /v1/mesh` · `GET /v1/mesh/nodes` | PROXY to aziel-runtime (default OFF; QNS-CD-1.0 cross-map in payload) |
+| Resolve | `POST /v1/resolve` | `resolve` |
+| Capability grant / check | `POST /v1/capability_grant` · `/v1/capability_check` | receipted sandbox |
+| Local app | `POST /v1/local_app` | `local_app` |
 | Mesh enable / disable / join / leave | `POST /v1/mesh/{op}` | PROXY; no auto-heal; no Node Gate |
 
 Prove locally (after `pip install -e ".[dev]"`):

@@ -9,8 +9,12 @@ from typing import Any
 
 from .airlock import STAGES, airlock
 from .ethics import classify_query
+from .meshledger import MeshDirectory, directory_from_env, open_mesh, resolve_query
+from .names import SPEC as MESH_SPEC
+from .names import classify_destination
 from .preview import preview_url, sanitize_url, scrub_html
 from .receipts import Ledger
+from .sandbox import CapabilitySandbox
 from .mesh import mesh_pointer
 from .meta import (
     AZMAIL,
@@ -50,6 +54,10 @@ OPS = (
     "receipt_verify",
     "scrub",
     "ethics_gate",
+    "resolve",
+    "capability_grant",
+    "capability_check",
+    "local_app",
 )
 
 ALIASES = {
@@ -61,6 +69,8 @@ ALIASES = {
     "tab_open": "tab_new",
     "receipt_list": "receipts",
     "verify": "receipt_verify",
+    "resolve_name": "resolve",
+    "local": "local_app",
 }
 
 
@@ -77,9 +87,11 @@ def display_of(title: str, summary: str, fields: list[tuple[str, Any]] | None = 
 class Engine:
     """In-process AZBrowser engine. Ephemeral tabs; optional JSONL receipts."""
 
-    def __init__(self, ledger: Ledger | None = None) -> None:
+    def __init__(self, ledger: Ledger | None = None, mesh: MeshDirectory | None = None) -> None:
         self.tabs = TabSession()
         self.ledger = ledger or Ledger()
+        self.mesh = mesh if mesh is not None else directory_from_env()
+        self.sandbox = CapabilitySandbox(self.ledger)
 
     def _receipt(self, action: str, payload: dict[str, Any]) -> dict[str, Any]:
         return self.ledger.append(action, payload, tab_id=self.tabs.active)
@@ -125,6 +137,18 @@ class Engine:
             "kv_increment": False,
             "stored": False,
             "chromium": False,
+            "mesh_browser": {
+                "spec": MESH_SPEC,
+                "aziel_tld_icann": False,
+                "regular_browsers_resolve_aziel": False,
+                "keys_leave_node": False,
+                "paired_with": "aznet",
+                "merged_with_aznet": False,
+                "qnm": "http://127.0.0.1:8891",
+                "aznet_resolver": "http://127.0.0.1:8771/v1/resolve",
+                "scripts_executed": False,
+                "tracker_detection": False,
+            },
             "limitation": LIMITATION,
             "display": display_of("AZBrowser health", "Phase 1 research shell. Dual surface.", [("version", __version__), ("ops", len(OPS))]),
         }
@@ -143,6 +167,13 @@ class Engine:
         refused = self._gate(url)
         if refused:
             return refused
+        classified = classify_destination(url)
+        if classified.get("plane") == "mesh":
+            return self._finish_mesh(classified)
+        if classified.get("plane") == "local":
+            return self._finish_local(classified, payload)
+        if classified.get("suggest_search"):
+            return self.ethical_search({"q": url})
         safe = sanitize_url(url)
         if safe.get("suggest_search"):
             return self.ethical_search({"q": url})
@@ -153,8 +184,16 @@ class Engine:
             preview["display"] = display_of("Navigate refused", "Ethics gate.", [("url", url)])
             return preview
         tab = self.tabs.push(preview.get("url") or url, preview.get("title") or url, "preview")
-        rec = self._receipt("navigate", {"url": preview.get("url") or url, "ok": preview.get("ok"), "hash": preview.get("content_hash") or ""})
-        preview.update({"tab": tab, "receipt": rec, "limitation": LIMITATION})
+        rec = self._receipt("navigate", {"url": preview.get("url") or url, "ok": preview.get("ok"), "hash": preview.get("content_hash") or "", "plane": "dns"})
+        preview.update({
+            "tab": tab,
+            "receipt": rec,
+            "limitation": LIMITATION,
+            "plane": "dns",
+            "dns": True,
+            "tls": "standard",
+            "icann": True,
+        })
         preview["display"] = display_of(
             preview.get("title") or "Preview",
             "Sandbox preview (not Chromium).",
@@ -162,10 +201,93 @@ class Engine:
         )
         return preview
 
+    def _finish_mesh(self, classified: dict[str, Any]) -> dict[str, Any]:
+        opened = open_mesh(self.mesh, classified)
+        rec = self._receipt(
+            "navigate" if opened.get("ok") else "gate_refuse",
+            {
+                "plane": "mesh",
+                "ok": bool(opened.get("ok")),
+                "code": opened.get("code") or "",
+                "reason": opened.get("reason") or "",
+                "name": opened.get("name") or classified.get("name") or "",
+                "handle": opened.get("owner_handle") or "",
+                "hash": opened.get("content_hash") or "",
+                "keys_leave_node": False,
+            },
+        )
+        opened["receipt"] = rec
+        opened["limitation"] = LIMITATION
+        if opened.get("ok"):
+            tab = self.tabs.push(
+                str(opened.get("url") or classified.get("url") or ""),
+                str(opened.get("owner_handle") or opened.get("name") or "mesh"),
+                "mesh",
+            )
+            tab["owner_handle"] = opened.get("owner_handle")
+            opened["tab"] = tab
+            opened["display"] = display_of(
+                f"Owner {opened.get('owner_handle')}",
+                f"Verified owner handle {opened.get('owner_handle')}.",
+                [("handle", opened.get("owner_handle")), ("name", opened.get("name")), ("receipt", rec["hash"][:16])],
+            )
+        else:
+            opened["display"] = display_of(
+                "Blocked",
+                f"FG-GATE-REFUSE — {opened.get('reason')}",
+                [("code", "FG-GATE-REFUSE"), ("reason", opened.get("reason")), ("handle", opened.get("owner_handle") or "")],
+            )
+        return opened
+
+    def _finish_local(self, classified: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+        content = payload.get("content")
+        html = scrub_html(str(content))["html"] if content is not None else ""
+        origin = str(classified.get("origin") or "")
+        rec = self._receipt(
+            "local_app",
+            {
+                "origin": origin,
+                "slug": classified.get("slug"),
+                "source": classified.get("source"),
+                "uploaded": False,
+                "data_stays_local": True,
+            },
+        )
+        tab = self.tabs.push(str(classified.get("url") or origin), str(classified.get("slug") or "local"), "local-app")
+        return {
+            "ok": True,
+            "action": "navigate",
+            "plane": "local",
+            "kind": "local-app",
+            "origin": origin,
+            "url": classified.get("url"),
+            "display_url": classified.get("display_url"),
+            "slug": classified.get("slug"),
+            "source": classified.get("source"),
+            "data_stays_local": True,
+            "uploaded": False,
+            "sandbox": self.sandbox.policy(),
+            "scripts_executed": False,
+            "html": html,
+            "title": classified.get("slug"),
+            "host": "127.0.0.1",
+            "tab": tab,
+            "receipt": rec,
+            "keys_leave_node": False,
+            "icann": False,
+            "note": "Local app tab. Same capability sandbox as mesh apps. Data stays on this machine. This shell does not upload it and does not execute scripts.",
+            "display": display_of(
+                "Local app",
+                f"Local app {classified.get('slug')}. Data stays on this machine.",
+                [("origin", origin), ("receipt", rec["hash"][:16])],
+            ),
+            "limitation": LIMITATION,
+        }
+
     def reload(self, payload: dict[str, Any]) -> dict[str, Any]:
         tab = self.tabs.current()
         url = str(payload.get("url") or tab.get("url") or "")
-        if url.startswith("azbrowser://"):
+        if url.startswith("azbrowser://newtab"):
             rec = self._receipt("reload", {"url": url})
             return {"ok": True, "action": "reload", "tab": tab, "receipt": rec, "display": display_of("Reload", "Home shell reloaded.", [("receipt", rec["hash"][:16])])}
         return self.navigate({"url": url, "fetch": payload.get("fetch")})
@@ -303,6 +425,90 @@ class Engine:
         out.update({"ok": True, "receipt": rec, "limitation": LIMITATION})
         out["display"] = display_of("Scrub", "Scripts/embeds stripped.", [("kinds", ",".join(out.get("stripped_kinds") or []))])
         return out
+
+    def resolve(self, payload: dict[str, Any]) -> dict[str, Any]:
+        out = resolve_query(self.mesh, payload)
+        rec = self._receipt(
+            "resolve" if out.get("ok") else "gate_refuse",
+            {
+                "ok": bool(out.get("ok")),
+                "plane": out.get("plane") or "",
+                "reason": out.get("reason") or "",
+                "name": out.get("name") or out.get("url") or "",
+                "handle": out.get("owner_handle") or payload.get("handle") or "",
+                "keys_leave_node": False,
+            },
+        )
+        out["receipt"] = rec
+        out["limitation"] = LIMITATION
+        if out.get("ok") and out.get("owner_handle"):
+            out["display"] = display_of(
+                f"Owner {out.get('owner_handle')}",
+                f"Resolved {out.get('name')}. Verified owner handle {out.get('owner_handle')}.",
+                [("handle", out.get("owner_handle")), ("receipt", rec["hash"][:16])],
+            )
+        elif out.get("code") == "FG-GATE-REFUSE":
+            out["display"] = display_of(
+                "Blocked",
+                f"FG-GATE-REFUSE — {out.get('reason')}",
+                [("code", "FG-GATE-REFUSE"), ("reason", out.get("reason"))],
+            )
+        else:
+            out["display"] = display_of(
+                "Resolve",
+                out.get("note") or ("Normal DNS." if out.get("plane") == "dns" else "Resolved."),
+                [("plane", out.get("plane")), ("url", out.get("url")), ("receipt", rec["hash"][:16])],
+            )
+        return out
+
+    def capability_grant(self, payload: dict[str, Any]) -> dict[str, Any]:
+        out = self.sandbox.grant(
+            str(payload.get("origin") or ""),
+            str(payload.get("capability") or payload.get("kind") or ""),
+            str(payload.get("resource") or payload.get("target") or ""),
+            tab_id=self.tabs.active,
+        )
+        out["limitation"] = LIMITATION
+        out["keys_leave_node"] = False
+        if out.get("ok"):
+            out["display"] = display_of(
+                "Capability grant",
+                "Grant recorded as a hash-chained receipt. The handle key stays on the local node.",
+                [("capability", (out.get("grant") or {}).get("capability")), ("receipt", out["receipt"]["hash"][:16])],
+            )
+        else:
+            out["display"] = display_of("Blocked", f"FG-GATE-REFUSE — {out.get('reason')}", [("reason", out.get("reason"))])
+        return out
+
+    def capability_check(self, payload: dict[str, Any]) -> dict[str, Any]:
+        out = self.sandbox.check(
+            str(payload.get("origin") or ""),
+            str(payload.get("kind") or payload.get("capability") or ""),
+            str(payload.get("target") or payload.get("resource") or ""),
+            tab_id=self.tabs.active,
+        )
+        out["limitation"] = LIMITATION
+        if out.get("ok"):
+            out["display"] = display_of(
+                "Capability allowed",
+                "Request allowed under a receipted grant or the origin's own storage.",
+                [("kind", out.get("kind")), ("receipt", (out.get("receipt") or {}).get("hash", "")[:16])],
+            )
+        else:
+            out["display"] = display_of(
+                "Blocked",
+                f"FG-GATE-REFUSE — {out.get('reason')}",
+                [("code", "FG-GATE-REFUSE"), ("reason", out.get("reason"))],
+            )
+        return out
+
+    def local_app(self, payload: dict[str, Any]) -> dict[str, Any]:
+        slug = str(payload.get("slug") or payload.get("app") or "app")
+        source = str(payload.get("source") or "qnm")
+        classified = classify_destination(f"azbrowser://local/{slug}")
+        if source in {"qnm", "fraggate", "azbrowser"}:
+            classified["source"] = source
+        return self._finish_local(classified, payload)
 
     def ethics_gate(self, payload: dict[str, Any]) -> dict[str, Any]:
         q = str(payload.get("q") or payload.get("text") or payload.get("url") or "")

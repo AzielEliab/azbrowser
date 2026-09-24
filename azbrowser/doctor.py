@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from .meta import LIMITATION, SPEC, __version__
 from .engine import Engine, OPS
+from .names import classify_destination
 from .receipts import Ledger
 
 
@@ -27,6 +28,13 @@ def doctor() -> int:
 
     nav = eng.navigate({"url": "https://www.azieleliab.com/"})
     checks.append(("navigate_receipt", bool(nav.get("receipt"))))
+    checks.append(("normal_web_dns", nav.get("plane") == "dns" and nav.get("code") != "FG-GATE-REFUSE"))
+    aziel = classify_destination("library.aziel")
+    checks.append(("aziel_is_mesh", aziel.get("plane") == "mesh" and aziel.get("icann") is False))
+    az_dns = classify_destination("example.az")
+    checks.append(("az_dns_fallthrough", az_dns.get("plane") == "dns" and az_dns.get("url", "").startswith("https://example.az/")))
+    az_list = classify_destination("AZ.AzielEliab.AZ")
+    checks.append(("az_allowlist", az_list.get("plane") == "mesh" and az_list.get("allowlisted") is True))
 
     home = eng.home({})
     checks.append(("home_sigil", "sigil.png" in str(home.get("sigil"))))

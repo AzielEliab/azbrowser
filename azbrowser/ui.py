@@ -38,6 +38,7 @@ html,body {{ margin:0; height:100%; background:var(--bg); color:var(--text); fon
 .bar button:hover {{ background:#241c0d; color:var(--gold); }}
 #home img {{ width:22px; height:22px; vertical-align:middle; }}
 #omnibox {{ flex:1; background:#0b0b0b; color:var(--text); border:1px solid var(--gold); border-radius:16px; padding:8px 14px; }}
+#ownerLine {{ padding:4px 12px; min-height:1.4em; color:var(--gold); background:#0e0e0e; }}
 .mode {{ color:var(--gold); font-size:12px; letter-spacing:.06em; }}
 main {{ flex:1; display:grid; grid-template-columns: 1fr 320px; min-height:0; }}
 #stage {{ overflow:auto; padding:16px; }}
@@ -59,11 +60,12 @@ a {{ color:var(--gold); }}
     <button id="fwd" title="Forward" type="button">▶</button>
     <button id="reload" title="Reload" type="button">↻</button>
     <button id="home" title="Home" type="button"><img alt="Home" src="{SIGIL}"></button>
-    <input id="omnibox" placeholder="Search AZNet or enter a URL" spellcheck="false">
+    <input id="omnibox" placeholder="Search Lamb Lens, a URL, or a .aziel name" spellcheck="false">
     <button id="go" type="button">Go</button>
-    <span class="mode">AZNet</span>
+    <span class="mode">Lamb Lens</span>
     <button id="airlockBtn" type="button">Airlock</button>
   </div>
+  <div id="ownerLine"></div>
   <main>
     <section id="stage"></section>
     <aside>
@@ -94,10 +96,36 @@ async function op(name, payload) {{
   const r = await fetch('/v1/' + name, {{ method:'POST', headers:{{'content-type':'application/json','user-agent':'Mozilla/5.0'}}, body: JSON.stringify(payload||{{}}) }});
   return r.json();
 }}
+function paintOwner(obj) {{
+  const line = document.getElementById('ownerLine');
+  if (!line) return;
+  if (obj && obj.code === 'FG-GATE-REFUSE') {{
+    line.textContent = 'Blocked · FG-GATE-REFUSE · ' + (obj.reason || '');
+    return;
+  }}
+  if (obj && obj.verified_owner && obj.owner_handle) {{
+    line.textContent = 'Verified owner handle · ' + obj.owner_handle;
+    if (obj.display_url) document.getElementById('omnibox').value = obj.display_url;
+    return;
+  }}
+  if (obj && obj.plane === 'local' && obj.origin) {{
+    line.textContent = 'Local app · ' + obj.origin + ' · data stays on this machine';
+    return;
+  }}
+  line.textContent = '';
+}}
 function show(obj) {{
   const stage = document.getElementById('stage');
   const rec = document.getElementById('receipts');
-  stage.innerHTML = '<div class="banner">' + (obj.display ? obj.display.summary : (obj.note||'')) + '</div><pre>' + JSON.stringify(obj,null,2) + '</pre>';
+  paintOwner(obj);
+  const summary = (obj.display && obj.display.summary) || obj.note || '';
+  let body = '<div class="banner">' + summary + '</div>';
+  if (obj.code === 'FG-GATE-REFUSE') {{
+    body += '<p>FG-GATE-REFUSE · ' + (obj.reason || '') + '</p>';
+  }} else if (obj.html) {{
+    body += '<iframe sandbox="" style="width:100%;min-height:240px;background:#fff;border:1px solid #8a7219" srcdoc="' + String(obj.html).replace(/"/g,'&quot;') + '"></iframe>';
+  }}
+  stage.innerHTML = body + '<pre>' + JSON.stringify(obj,null,2) + '</pre>';
   if (obj.receipt) {{
     const el = document.createElement('div');
     el.className = 'receipt';

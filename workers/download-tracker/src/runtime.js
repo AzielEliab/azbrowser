@@ -72,6 +72,10 @@ function toolDefs() {
     receipt_verify: "Walk the hash chain.",
     scrub: "Strip scripts/embeds from HTML.",
     ethics_gate: "Classify a query without searching.",
+    resolve: "Resolve a .aziel name or handle through the mesh ledger. .az outside the Cap-7 / AZ.* allowlist stays on normal DNS.",
+    capability_grant: "Grant one mesh or local-app capability. Recorded as a hash-chained receipt. Keys stay on the local node.",
+    capability_check: "Check a network, fetch, storage, or file request against the capability sandbox.",
+    local_app: "Open a local qnm-node or local FragGate app tab. Data stays on this machine.",
   };
   return OPS.map((name) => ({
     name: "azbrowser_" + name,

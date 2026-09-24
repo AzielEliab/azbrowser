@@ -78,6 +78,7 @@ def classify_query(text: str) -> dict[str, Any]:
         "refuse": refuse,
         "reasons": reasons,
         "advisory": True,
+        "lens": ["service", "clarity", "peace"],
         "label": "AZNet / Lamb Lens — advisory ethical gate",
         "limitation": LIMITATION,
         "query_len": len(blob),

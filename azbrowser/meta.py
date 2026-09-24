@@ -11,7 +11,10 @@ LIMITATION = (
     "Chromium binary. AZMail is a sibling "
     "(https://github.com/AzielEliab/azmail). AZNet is a sibling functional "
     "pair (https://github.com/AzielEliab/aznet) — separate app, not this "
-    "protocol. No receipt = no action. Advisory only. Author: Aziel Eliab only."
+    "protocol. Mesh names (.aziel) resolve on this shell through the AZNet "
+    "resolver adapter and local qnm-node. .aziel is not an ICANN registration; "
+    "ordinary browsers do not resolve it. Handle keys stay on the local node. "
+    "No receipt = no action. Advisory only. Author: Aziel Eliab only."
 )
 RUNTIME = "https://aziel-runtime.vibelock.workers.dev"
 FRAGGATE = "https://github.com/AzielEliab/fraggate"

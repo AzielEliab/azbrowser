@@ -35,6 +35,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:13px/
 #homeBtn img{width:20px;height:20px;vertical-align:middle}
 #omnibox{flex:1;background:#0b0b0b;color:var(--text);border:1px solid var(--gold);border-radius:18px;padding:8px 16px;font:14px/1.3 inherit}
 #omnibox:focus{outline:2px solid var(--gold)}
+#ownerLine{padding:4px 12px;min-height:1.4em;color:var(--gold);background:#0e0e0e}
 .lens{color:var(--gold);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
 #body{flex:1;display:grid;grid-template-columns:1fr 340px;min-height:0}
 @media(max-width:860px){#body{grid-template-columns:1fr}}
@@ -70,11 +71,12 @@ iframe.preview{width:100%;min-height:420px;border:1px solid var(--trim);backgrou
     <button id="btnFwd" type="button" title="Forward">▶</button>
     <button id="btnReload" type="button" title="Reload">↻</button>
     <button id="btnHome" type="button" title="Home"><span id="homeBtn"><img class="brandmark" alt="" src="${SIGIL}"></span></button>
-    <input id="omnibox" placeholder="Search Lamb Lens ethically or enter a URL" spellcheck="false" autocomplete="off">
+    <input id="omnibox" placeholder="Search Lamb Lens, a URL, or a .aziel name" spellcheck="false" autocomplete="off">
     <button id="btnGo" type="button" title="Go / ethical search">Go</button>
     <span class="lens">Lamb Lens</span>
     <button id="btnAirlock" type="button" title="Airlock current URL">Airlock</button>
   </div>
+  <div id="ownerLine"></div>
   <div id="body">
     <section id="stage"></section>
     <aside id="side">
@@ -153,8 +155,31 @@ function homePanel() {
     + '<div class="card"><p>New-tab search is Lamb Lens: cite sources, refuse doxxing / credential harvest / malware lure. Advisory. AZNet is a separate product/engine; pairing order/token only — not shared Phase-1 UI.</p>'
     + '<p>Type a query or HTTPS URL in the address bar. Home returns to the new-tab panel.</p></div>';
 }
+function paintOwner(j) {
+  const line = document.getElementById("ownerLine");
+  if (!line) return;
+  if (j && j.code === "FG-GATE-REFUSE") {
+    line.textContent = "Blocked · FG-GATE-REFUSE · " + (j.reason || "");
+    return;
+  }
+  if (j && j.verified_owner && j.owner_handle) {
+    line.textContent = "Verified owner handle · " + j.owner_handle;
+    if (j.display_url) document.getElementById("omnibox").value = j.display_url;
+    return;
+  }
+  if (j && j.plane === "local" && j.origin) {
+    line.textContent = "Local app · " + j.origin + " · data stays on this machine";
+    return;
+  }
+  line.textContent = "";
+}
 function renderResult(j) {
   const stage = document.getElementById("stage");
+  paintOwner(j);
+  if (j && j.code === "FG-GATE-REFUSE") {
+    stage.innerHTML = '<div class="banner">Blocked. FG-GATE-REFUSE. ' + (j.reason || "") + '</div><p class="cite">' + (j.display && j.display.summary ? j.display.summary : "") + '</p>';
+    return;
+  }
   if (j.action === "home" || (j.tab && j.tab.kind === "newtab" && !j.results && !j.html)) {
     stage.innerHTML = homePanel();
     return;
@@ -170,7 +195,8 @@ function renderResult(j) {
     return;
   }
   if (j.html) {
-    stage.innerHTML = '<div class="banner">Sandbox preview (iframe, no scripts). Not Chromium. '+(j.title||"")+'</div>'
+    const who = j.verified_owner && j.owner_handle ? ("Verified owner handle " + j.owner_handle + ". ") : "";
+    stage.innerHTML = '<div class="banner">' + who + 'Sandbox preview (iframe, no scripts). Not Chromium. '+(j.title||"")+'</div>'
       + '<iframe class="preview" sandbox="" srcdoc="'+String(j.html).replace(/"/g,"&quot;")+'"></iframe>'
       + '<p class="cite">'+(j.excerpt||"")+'</p>';
     return;
