@@ -9,6 +9,7 @@ from typing import Any
 
 from .airlock import STAGES, airlock
 from .ethics import classify_query
+from .lens import clarify, ethics_clarity, lens_status
 from .meshguard import NAME_MIN_AGE_SECONDS, NAME_MIN_WITNESSES, local_trust
 from .meshledger import MeshDirectory, directory_from_env, open_mesh, resolve_query
 from .policy import design_page, design_remote_page
@@ -174,6 +175,7 @@ class Engine:
                 "design_mode": "local-tab",
                 "themes": ["night", "day", "aziel"],
             },
+            "lamb_lens": lens_status(),
             "limitation": LIMITATION,
             "display": display_of("AZBrowser health", "Phase 1 research shell. Dual surface.", [("version", __version__), ("ops", len(OPS))]),
         }
@@ -870,3 +872,52 @@ def default_engine() -> Engine:
 
 def dispatch(op: str, payload: dict[str, Any] | None = None, engine: Engine | None = None) -> dict[str, Any]:
     return (engine or default_engine()).call(op, payload)
+
+
+def _stamp(out: Any) -> Any:
+    """Plain reason and next step on every refusal. Success payloads stay as they are."""
+    if not isinstance(out, dict):
+        return out
+    code = str(out.get("code") or "")
+    if code == "ETHICS_REFUSE":
+        ethics = out.get("ethics") if isinstance(out.get("ethics"), dict) else {}
+        clarity = ethics_clarity(list(ethics.get("reasons") or []))
+        out["clarity"] = clarity
+        out["display"] = display_of(
+            "Refused",
+            str(clarity["plain"]),
+            [("code", "ETHICS_REFUSE"), ("next", clarity["next"])],
+        )
+        return out
+    if code == "FG-GATE-REFUSE":
+        reason = str(out.get("reason") or "")
+        clarity = clarify(reason)
+        out["clarity"] = clarity
+        display = out.get("display") if isinstance(out.get("display"), dict) else None
+        summary = str((display or {}).get("summary") or "")
+        title = str((display or {}).get("title") or "")
+        if display is None or title == "Blocked" or "FG-GATE-REFUSE" in summary:
+            out["display"] = display_of(
+                "Blocked",
+                str(clarity["plain"]),
+                [("code", "FG-GATE-REFUSE"), ("reason", reason), ("next", clarity["next"])],
+            )
+        return out
+    return out
+
+
+def _bind_lens(fn):
+    def inner(self, payload=None, *args, **kwargs):
+        body = {} if payload is None else payload
+        out = fn(self, body, *args, **kwargs)
+        return _stamp(out)
+
+    inner.__name__ = getattr(fn, "__name__", "op")
+    inner.__doc__ = getattr(fn, "__doc__", None)
+    return inner
+
+
+for _op in OPS:
+    _current = getattr(Engine, _op, None)
+    if callable(_current):
+        setattr(Engine, _op, _bind_lens(_current))

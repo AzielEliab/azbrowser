@@ -333,13 +333,36 @@ site certificate.
 
 ## Lamb Lens
 
-Service, then Clarity, then Peace.
+Operator lock. AZBrowser follows Lamb Lens under all conditions, in this
+order: Service, then Clarity, then Peace. A feature that sacrifices one
+of the three fails review.
 
-- Service: the existing ethics gate still refuses doxxing, credential
-  harvest, and malware-lure queries before resolution.
-- Clarity: responses say what happened (DNS, mesh, ledger-only, socket
-  or not, scripts not executed).
-- Peace: mesh and local apps stay default-deny until a receipted grant.
+- Service: do what the person asked, in one request. `navigate` opens an
+  ordinary web address. `local_app` and `azbrowser://local/<slug>` open
+  a local app. A mesh name resolves in that same request. Quarantine is
+  a status on that result, not a second product. The ordinary web keeps
+  working when the mesh is islanded or a handle is blocked.
+- Clarity: verified handles, pending names, and isolated handles are
+  different states. A verified handle is named in the address line. A
+  pending name says it is not a verified site and returns no page bytes.
+  An isolated handle shows the policy page and the address chip
+  `Isolated`. Every `FG-GATE-REFUSE`, ethics refusal, and blocked
+  capability carries `clarity.plain` (what happened) and `clarity.next`
+  (what to do next). Settings lists Day/Night, Aziel mode, bookmarks,
+  and the side-panel mesh tools. There is no hidden switch and no dark
+  pattern.
+- Peace: no ads, no tracking, no telemetry, and no notification spam.
+  There is no telemetry channel to opt into. Capability grants stay
+  receipted and rare: own-origin storage does not ask, and a denial
+  names the resource instead of raising a prompt. The chrome stays on
+  the three themes above. Mesh and local apps stay default-deny until
+  a grant.
+
+Health reports this lock as `lamb_lens`. `miragegrid_decoys` is
+`separate`: the live MirageGrid global Cap-7 decoys (`azbooth.az`,
+`azflag.az`, `azstandby.az`) are not the per-node slots. Those slots
+remain four reserved hub mirrors plus three user domains, plus the
+automatic `<handle>.aziel` name.
 
 ## Open alignment points
 

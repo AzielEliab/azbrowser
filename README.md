@@ -36,11 +36,32 @@ and local-app tabs inside this shell. It is not a Chromium, Electron, or
 Tauri port. AZNet stays a separate Software. See
 [docs/FED-MESH-BROWSER-1.0.md](docs/FED-MESH-BROWSER-1.0.md).
 
+## Lamb Lens
+
+AZBrowser follows Lamb Lens under all conditions, in this order:
+**Service, then Clarity, then Peace.** A feature that sacrifices one of
+the three fails review.
+
+- **Service.** Do what the person asked, in one request. Local apps and
+  mesh names open from that request, and ordinary web addresses keep
+  working.
+- **Clarity.** Verified handles, pending names, and isolated handles
+  look different. Every refusal (`FG-GATE-REFUSE`, an ethics refusal, a
+  blocked capability) says what happened and what to do next. Settings
+  are on the page. There is no hidden switch.
+- **Peace.** No ads, no tracking, no telemetry, and no notification
+  spam. Capability grants are rare, receipted, and specific.
+
+The live MirageGrid global Cap-7 decoys (`azbooth.az`, `azflag.az`,
+`azstandby.az`) stay a separate layer from the per-node slots: four
+reserved hub mirrors plus three user domains.
+
 ## Dual surface (mandatory)
 
 1. **Human UI** — Worker homepage is complete software: browser chrome,
    AZNet / Lamb Lens panel, airlock stages + hashes, append-only
-   receipts, counted download. Black / gold / white. Humans stay here.
+   receipts, counted download. Night (black / white), day, and Aziel
+   mode (gold, black, royal purple). Humans stay here.
 2. **Agent / MCP — FragGate only.** There is no separate AZBrowser MCP
    outside the door. Catalog door:
 

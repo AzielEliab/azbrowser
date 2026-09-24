@@ -193,7 +193,8 @@ def test_hash_mismatch_is_fg_gate_refuse():
     assert out["reason"] == "hash_mismatch"
     assert out["html"] == ""
     assert "tampered" not in str(out)
-    assert out["display"]["summary"].startswith("FG-GATE-REFUSE")
+    assert out["display"]["summary"] == "The page bytes do not match the signed hash."
+    assert "hash matches" in out["clarity"]["next"]
 
 
 def test_unsigned_module_refuses():

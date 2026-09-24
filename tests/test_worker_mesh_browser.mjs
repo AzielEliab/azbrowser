@@ -123,7 +123,9 @@ assert.equal(mismatch.ok, false);
 assert.equal(mismatch.code, "FG-GATE-REFUSE");
 assert.equal(mismatch.reason, "hash_mismatch");
 assert.equal(mismatch.html, "");
-assert.match(mismatch.display.summary, /FG-GATE-REFUSE/);
+assert.match(mismatch.display.summary, /do not match the signed hash/i);
+assert.equal(mismatch.clarity.code, "FG-GATE-REFUSE");
+assert.match(mismatch.clarity.next, /hash matches/);
 
 const unsigned = await signedRecord('<p>ok</p><script src="/app.js"></script>');
 setMeshLedger([unsigned]);

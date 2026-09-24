@@ -222,7 +222,8 @@ function paintOwner(j) {
     return;
   }
   if (j && j.code === "FG-GATE-REFUSE") {
-    line.textContent = "Blocked · FG-GATE-REFUSE · " + (j.reason || "");
+    line.textContent = (j.clarity && j.clarity.plain) || ("Blocked · FG-GATE-REFUSE · " + (j.reason || ""));
+    if (chip && j.reason === "handle_isolated") chip.textContent = "Isolated";
     return;
   }
   if (j && j.verified_owner && j.owner_handle && j.quarantine) {
@@ -243,6 +244,16 @@ function paintOwner(j) {
   }
   line.textContent = "";
 }
+function escText(value) {
+  return String(value == null ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function refusalHtml(j) {
+  const c = (j && j.clarity) || {};
+  const plain = c.plain || (j && j.reason) || "";
+  const next = c.next || "";
+  const code = (j && j.code) || "FG-GATE-REFUSE";
+  return '<section class="refusal"><h1>Blocked</h1><p>' + escText(plain) + '</p><p>' + escText(next) + '</p><p class="cite">' + escText(code) + " · " + escText((j && j.reason) || "") + "</p></section>";
+}
 function renderResult(j) {
   const stage = document.getElementById("stage");
   paintOwner(j);
@@ -250,9 +261,8 @@ function renderResult(j) {
     stage.innerHTML = j.html;
     return;
   }
-  if (j && j.code === "FG-GATE-REFUSE") {
-    const summary = j.display && j.display.summary ? j.display.summary : "";
-    stage.innerHTML = '<section class="refusal"><h1>Blocked</h1><p>FG-GATE-REFUSE</p><p>' + (j.reason || "") + '</p><p>' + summary + '</p></section>';
+  if (j && (j.code === "FG-GATE-REFUSE" || j.code === "ETHICS_REFUSE")) {
+    stage.innerHTML = refusalHtml(j);
     return;
   }
   if (j && j.name_status === "PENDING") {
@@ -396,7 +406,7 @@ document.getElementById("bookmarkAdd").onclick = () => {
 };
 document.getElementById("settingsBtn").onclick = () => {
   const on = appearance.bookmarks ? " checked" : "";
-  document.getElementById("stage").innerHTML = '<section class="refusal"><h1>Settings</h1><p>Day and night flip immediately. Aziel mode uses gold, black, and royal purple. The choice is remembered on this machine.</p><label><input id="bookmarkPref" type="checkbox"' + on + '> Show bookmarks bar</label><p>Design mode on this hosted chrome is refused. It opens only on the local node.</p></section>';
+  document.getElementById("stage").innerHTML = '<section class="refusal"><h1>Settings</h1><p>Day and Night, Aziel mode, and the bookmarks bar are the appearance controls. They are remembered on this machine. Mesh tools stay in the side panel. Nothing on this page is hidden.</p><label><input id="bookmarkPref" type="checkbox"' + on + '> Show bookmarks bar</label><p>This shell has no ads, no tracking, and no telemetry. Design mode on this hosted chrome is refused. It opens only on the local node.</p></section>';
   document.getElementById("bookmarkPref").onchange = (e) => {
     appearance.bookmarks = e.target.checked;
     paintAppearance(appearance);

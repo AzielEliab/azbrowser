@@ -6,6 +6,8 @@
  * Author: Aziel Eliab only.
  */
 
+import { clarify } from "./lens.js";
+
 export const MESH_SPEC = "FED-MESH-BROWSER-1.0";
 export const REFUSE = "FG-GATE-REFUSE";
 export const NAME_MIN_AGE_SECONDS = 72 * 3600;
@@ -467,7 +469,7 @@ function policyPage(handle, isolation) {
 </dl>
 <p>The evidence field is a hash only. This browser does not store the content and does not forward it.</p>
 <p>Isolation does not delete data on the person's own machine. The local runtime can keep running. Relays that follow the policy refuse to relay or witness this handle.</p>
-<p>A signed appeal record can ask for a re-check. This shell does not grant or deny that appeal.</p>
+<p>What you can do next: use another handle. A signed appeal record can ask for a re-check. This shell does not grant or deny that appeal. Isolation does not delete local data.</p>
 <p>Name checks, and the hosting node's local image and text checks, can miss and can false-positive. This page does not claim those checks catch everything. If a classifier is absent on the hosting node, publish stays blocked there. This browser does not run those classifiers.</p>
 <p>Operators must follow the law in their jurisdiction, including US reporting of child sexual abuse material to NCMEC where that duty applies. This browser does not keep that material as evidence.</p>
 </article>`;
@@ -478,6 +480,7 @@ export function designRemotePage() {
 <h1>Design mode stays on the hosting node</h1>
 <p>FG-GATE-REFUSE · design_mode_local_only</p>
 <p>This chrome is not the hosting node. Design mode is bound to localhost on the machine that holds the handle key. Remote access is refused. Nothing was published.</p>
+<p>What you can do next: open AZBrowser on that machine. This page does not publish.</p>
 </article>`;
 }
 
@@ -605,6 +608,7 @@ export async function gateBytes(record, pageBytes, objects) {
 
 function blocked(reason, classified) {
   return {
+    clarity: clarify(reason),
     ok: false,
     code: REFUSE,
     reason,
@@ -772,6 +776,7 @@ export async function openMesh(classified, guard = {}) {
       renderer: "mesh-quarantine",
       bytes_from: "quarantine",
       reason,
+      clarity: clarify(reason),
       note: "FINAL name. Handle key and content hash matched. Bytes are in non-executable quarantine. Malware scanner is absent (no ClamAV, no YARA). They are not shown and not run until an explicit operator override. This Worker does not dial the local node.",
     };
   }

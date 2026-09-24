@@ -171,7 +171,10 @@ function paintOwner(obj) {{
     return;
   }}
   if (obj && obj.code === 'FG-GATE-REFUSE') {{
-    line.textContent = 'Blocked · FG-GATE-REFUSE · ' + (obj.reason || '');
+    const plain = (obj.clarity && obj.clarity.plain) || ('Blocked · FG-GATE-REFUSE · ' + (obj.reason || ''));
+    line.textContent = plain;
+    if (chip && obj.reason === 'handle_isolated') chip.textContent = 'Isolated';
+    else if (chip && obj.reason === 'name_pending') chip.textContent = 'Pending';
     return;
   }}
   if (obj && obj.verified_owner && obj.owner_handle && obj.quarantine) {{
@@ -200,6 +203,16 @@ function noteReceipt(obj) {{
   el.textContent = obj.receipt.seq + ' ' + obj.receipt.action + ' ' + obj.receipt.hash;
   rec.prepend(el);
 }}
+function escText(value) {{
+  return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}}
+function refusalHtml(obj, summary) {{
+  const c = (obj && obj.clarity) || {{}};
+  const plain = c.plain || summary || obj.reason || '';
+  const next = c.next || '';
+  const code = obj.code || 'FG-GATE-REFUSE';
+  return '<section class="refusal"><h1>Blocked</h1><p>' + escText(plain) + '</p><p>' + escText(next) + '</p><p>' + escText(code) + ' · ' + escText(obj.reason || '') + '</p></section>';
+}}
 function show(obj) {{
   const stage = document.getElementById('stage');
   const rec = document.getElementById('receipts');
@@ -211,7 +224,11 @@ function show(obj) {{
     return;
   }}
   if (obj && obj.code === 'FG-GATE-REFUSE') {{
-    stage.innerHTML = '<section class="refusal"><h1>Blocked</h1><p>FG-GATE-REFUSE</p><p>' + (obj.reason || '') + '</p><p>' + summary + '</p></section>';
+    stage.innerHTML = refusalHtml(obj, summary);
+    return;
+  }}
+  if (obj && obj.code === 'ETHICS_REFUSE') {{
+    stage.innerHTML = refusalHtml(obj, summary);
     return;
   }}
   let body = '<div class="banner">' + summary + '</div>';
@@ -339,7 +356,7 @@ document.getElementById('bookmarkAdd').onclick = () => {{
 }};
 document.getElementById('settingsBtn').onclick = () => {{
   const on = appearance.bookmarks ? ' checked' : '';
-  document.getElementById('stage').innerHTML = '<section class="refusal"><h1>Settings</h1><p>Day and night flip immediately. Aziel mode uses gold, black, and royal purple. The choice is remembered on this machine.</p><label><input id="bookmarkPref" type="checkbox"' + on + '> Show bookmarks bar</label><p>Design mode opens as a local tab. Domain slots are four reserved hub mirrors and three user names.</p></section>';
+  document.getElementById('stage').innerHTML = '<section class="refusal"><h1>Settings</h1><p>Day and Night, Aziel mode, and the bookmarks bar are the appearance controls. They are remembered on this machine. Mesh tools stay in the side panel: Airlock, Promote, Island, Block peer, Trust, and Slots. Nothing on this page is hidden.</p><label><input id="bookmarkPref" type="checkbox"' + on + '> Show bookmarks bar</label><p>This shell has no ads, no tracking, and no telemetry. Design mode opens as a local tab. Domain slots are four reserved hub mirrors and three user names. MirageGrid decoys are a separate layer.</p></section>';
   document.getElementById('bookmarkPref').onchange = (e) => {{
     appearance.bookmarks = e.target.checked;
     paintAppearance(appearance);

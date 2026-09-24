@@ -127,8 +127,14 @@ separate Software. Pairing is resolve-and-connect only.
 - An isolated handle returns `FG-GATE-REFUSE` and a policy page. Peer
   bytes are not loaded. Isolation does not delete local data.
 
-Lamb Lens order is Service, then Clarity, then Peace: refuse harm, say
-what the code does, then keep the default-deny sandbox.
+Lamb Lens order is Service, then Clarity, then Peace. A feature that
+sacrifices one of the three fails review. Service is one request for a
+local app, a mesh name, or an ordinary web address. Clarity puts a
+plain reason and a next step on every refusal, and keeps verified,
+pending, and isolated handles distinct. Peace means no ads, no
+tracking, no telemetry, and no notification spam. Capability grants
+stay rare. MirageGrid Cap-7 decoys stay separate from the four reserved
+hub mirrors and three user slots.
 
 ## Human Worker (not a second agent brand)
 

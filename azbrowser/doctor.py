@@ -53,6 +53,14 @@ def doctor() -> int:
     checks.append(("domain_slots", slots.get("reserved_count") == 4 and slots.get("user_count") == 3 and (slots.get("miragegrid") or {}).get("changed") is False))
     design = eng.design_mode({})
     checks.append(("design_local", design.get("ok") is True and design.get("publish") is False and design.get("origin") == "azbrowser://local/design"))
+    lens = h.get("lamb_lens") or {}
+    checks.append(("lamb_lens", lens.get("order") == ["Service", "Clarity", "Peace"] and lens.get("telemetry") == "off" and lens.get("ads") is False and lens.get("miragegrid_decoys") == "separate"))
+    missing = eng.navigate({"url": "missing-name.aziel"})
+    clarity = missing.get("clarity") or {}
+    checks.append(("clarity_next", missing.get("code") == "FG-GATE-REFUSE" and bool(clarity.get("plain")) and bool(clarity.get("next"))))
+    web = eng.navigate({"url": "https://example.com/library"})
+    local = eng.local_app({"slug": "notes", "content": "<p>notes</p>"})
+    checks.append(("service_one_step", web.get("plane") == "dns" and web.get("code") != "FG-GATE-REFUSE" and local.get("ok") is True and local.get("plane") == "local"))
 
     ok = all(p for _, p in checks)
     print(f"AZBrowser doctor {__version__} spec={SPEC}")

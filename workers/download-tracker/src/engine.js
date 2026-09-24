@@ -3,6 +3,7 @@
  * Dual surface: Worker UI and agents call these verbs. Not Chromium.
  */
 
+import { clarify, ethicsClarity, lensStatus, stampRefusal } from "./lens.js";
 import {
   MESH_SPEC,
   NAME_MIN_AGE_SECONDS,
@@ -596,7 +597,7 @@ async function finishLocal(session, classified, payload) {
   };
 }
 
-export async function dispatch(op, payload, sessionId) {
+async function dispatchInner(op, payload, sessionId) {
   const name = ALIASES[op] || op;
   const session = getSession(sessionId || (payload && payload.session_id));
   if (!OPS.includes(name) && !OPS.includes(op)) {
@@ -676,6 +677,7 @@ export async function dispatch(op, payload, sessionId) {
         design_mode: "local-only-refused-here",
         themes: ["night", "day", "aziel"],
       },
+      lamb_lens: lensStatus(),
       session_id: session.id,
       limitation: LIMITATION,
       mesh: {
@@ -1076,6 +1078,28 @@ export async function dispatch(op, payload, sessionId) {
   return { ok: false, error: "unhandled", op: name, session_id: session.id };
 }
 
+export async function dispatch(op, payload, sessionId) {
+  const out = await dispatchInner(op, payload, sessionId);
+  if (!out || typeof out !== "object") return out;
+  if (out.code === "ETHICS_REFUSE") {
+    const reasons = out.ethics && out.ethics.reasons ? out.ethics.reasons : [];
+    const clarity = ethicsClarity(reasons);
+    out.clarity = clarity;
+    out.display = displayOf("Refused", clarity.plain, [["code", "ETHICS_REFUSE"], ["next", clarity.next]]);
+    return out;
+  }
+  if (out.code === "FG-GATE-REFUSE") {
+    const clarity = out.clarity || clarify(out.reason || "");
+    out.clarity = clarity;
+    const summary = out.display && out.display.summary ? String(out.display.summary) : "";
+    const title = out.display && out.display.title ? String(out.display.title) : "";
+    if (!out.display || title === "Blocked" || summary.includes("FG-GATE-REFUSE")) {
+      out.display = displayOf("Blocked", clarity.plain, [["code", "FG-GATE-REFUSE"], ["reason", out.reason || ""], ["next", clarity.next]]);
+    }
+  }
+  return stampRefusal(out);
+}
+
 export const SKILL_MD = `---
 name: AZBrowser
 description: >-
@@ -1173,6 +1197,8 @@ curl -s -A 'Mozilla/5.0' -X POST https://azbrowser-download-tracker.vibelock.wor
   -H 'content-type: application/json' \\
   -d '{"slug":"azbrowser","op":"health","payload":{}}'
 \`\`\`
+
+Lamb Lens order is Service, then Clarity, then Peace. A feature that sacrifices one of the three fails review. Every refusal includes a plain reason and a next step. MirageGrid Cap-7 decoys stay separate from the four reserved hub mirrors and three user slots.
 
 Apache-2.0. Forks are welcome and always allowed.
 `;

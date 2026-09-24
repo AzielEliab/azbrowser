@@ -28,6 +28,7 @@ from urllib.request import Request, urlopen
 from .hashgate import contains_secret, gate_bytes, verify_record
 from .meshguard import evaluate_name, promote_objects
 from .names import REFUSE, SPEC, classify_destination
+from .lens import clarify
 from .policy import policy_page
 from .preview import scrub_html
 
@@ -333,6 +334,7 @@ def _refuse(reason: str, classified: dict[str, Any], **extra: Any) -> dict[str, 
         "spec": SPEC,
         "html": "",
         "scripts_executed": False,
+        "clarity": clarify(reason),
     }
     out.update(extra)
     return out
@@ -473,6 +475,7 @@ def open_mesh(
             "renderer": "mesh-quarantine",
             "bytes_from": "quarantine",
             "reason": reason,
+            "clarity": clarify(reason),
             "note": (
                 "FINAL name. Handle key and content hash matched. Bytes are in non-executable quarantine. "
                 "Malware scanner is absent (no ClamAV, no YARA). They are not shown and not run until an "
