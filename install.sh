@@ -27,6 +27,7 @@ python -m pip install -e .
 
 echo
 echo "Installed AZBrowser."
-echo "Run: azbrowser ui"
-echo "Then open http://127.0.0.1:8878 (loopback only)"
-echo "Phase 1 research shell — not Chromium. Author: Aziel Eliab."
+echo "Open the app:"
+echo "  azbrowser ui"
+echo "Then go to http://127.0.0.1:8878/"
+echo "Author: Aziel Eliab."

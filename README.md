@@ -1,40 +1,43 @@
 # AZBrowser
 
-Open-source **secure research browser / AZNet ethical search** — Phase 1.
-Browser-chrome UX, receipted kernel, ingestion airlock. Not Chromium.
+A local research browser for search, tabs, and `.aziel` names.
 
 **Author:** Aziel Eliab only
-**Date:** September 2026 · v0.1.0
+**Version:** 0.1.0
 **License:** [Apache-2.0](LICENSE)
 
-> No receipt = no action.
+Forks are welcome and always allowed.
 
-See the spec: [docs/whitepaper.md](docs/whitepaper.md).
+## Quick start
+
+```bash
+python -m venv .venv && source .venv/bin/activate && pip install -e .
+azbrowser ui
+```
+
+Open http://127.0.0.1:8878/
+
+Type a search, a `.aziel` name, or a web address, then press Go.
+Airlock, mesh, slots, and design mode are under Advanced.
+
+## One-click install
+
+```bash
+curl -fsSL https://azbrowser-download-tracker.vibelock.workers.dev/install.sh | bash
+```
+
+Then run `azbrowser ui` and open http://127.0.0.1:8878/
+
+## Notes
+
+Version 0.1.0 is a research shell: tabs, an address bar, a sandboxed preview, a receipted airlock, and Lamb Lens search. The local app listens on 127.0.0.1. It does not ship a Chromium binary.
+
+`.aziel` names resolve in this shell. `.aziel` is not an ICANN registration. Handle keys stay on this machine. AZMail and AZNet are separate programs: https://github.com/AzielEliab/azmail and https://github.com/AzielEliab/aznet
+
+See [docs/FED-MESH-BROWSER-1.0.md](docs/FED-MESH-BROWSER-1.0.md) and [docs/whitepaper.md](docs/whitepaper.md).
 How to contribute: [CONTRIBUTING.md](CONTRIBUTING.md).
 
-**Forks are welcome and always allowed.**
-
-AZMail is a **sibling** product already live — optional deep-link only.
-Do not rebuild it here: https://github.com/AzielEliab/azmail
-
-AZNet is a **sibling functional pair** — a separate app.
-Do not embed its protocol here: https://github.com/AzielEliab/aznet
-
-AZ-OS / Lumen / AZInterface are **not** this product.
-
-## Honest scope (read this)
-
-v0.1 is a **research shell**. It cannot ship a Chromium binary. The
-Worker looks like a real browser (tabs, omnibox, Back/Forward/Reload,
-Home brandmark) and sandboxes navigation via controlled
-fetch/proxy preview + receipted airlock + Lamb Lens ethical search. It does
-**not** replace the operator's OS browser.
-
-The mesh plane added here is the practical browser for the local-first
-edge mesh: name resolution, handle-key hash gates, a capability sandbox,
-and local-app tabs inside this shell. It is not a Chromium, Electron, or
-Tauri port. AZNet stays a separate Software. See
-[docs/FED-MESH-BROWSER-1.0.md](docs/FED-MESH-BROWSER-1.0.md).
+No receipt = no action.
 
 ## Lamb Lens
 
@@ -97,22 +100,6 @@ Works with ChatGPT (GPT Actions / OpenAI), Grok (xAI), Venice, Claude
 Bing, Google Gemini / Vertex, Mistral, Meta AI, Apple Intelligence
 surfaces, Amazon Q tooling, DuckAssist, You.com, Cohere, and other
 MCP/OpenAPI-capable assistants.
-
-## Quick start
-
-```bash
-python -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
-azbrowser doctor
-azbrowser ui
-```
-
-Open http://127.0.0.1:8878 (loopback only).
-
-## One-click install
-
-```bash
-curl -fsSL https://azbrowser-download-tracker.vibelock.workers.dev/install.sh | bash
-```
 
 ## Counted download (Cloudflare Worker)
 
@@ -198,16 +185,19 @@ azbrowser verify
 
 ## CLI
 
+People get short text. Add `--json` for the same machine payload.
+
 ```bash
-azbrowser version
-azbrowser ui                 # 127.0.0.1:8878
+azbrowser                     # welcome and the next step
+azbrowser --help
+azbrowser ui                  # prints: Open http://127.0.0.1:8878/
 azbrowser doctor
-azbrowser search 'library'
+azbrowser search library
 azbrowser navigate https://www.azieleliab.com/
-azbrowser airlock --content '<script>x</script>'
-azbrowser receipts
-azbrowser verify
+azbrowser --json health
 ```
+
+Advanced commands stay available: `back`, `forward`, `reload`, `lamb-lens`, `airlock`, `receipts`, `verify`, `ethics`, `ops`, `version`, and `call`.
 
 ## Tests
 
