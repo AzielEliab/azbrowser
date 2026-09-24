@@ -33,11 +33,11 @@ html,body {{ margin:0; height:100%; background:var(--bg); color:var(--text); fon
 .tab {{ padding:6px 12px; border:1px solid var(--trim); border-bottom:none; border-radius:8px 8px 0 0; background:#1a1a1a; color:var(--text); cursor:pointer; }}
 .tab.active {{ background:#0b0b0b; color:var(--gold); }}
 .plus {{ color:var(--gold); cursor:pointer; padding:6px 10px; }}
-.bar {{ display:flex; align-items:center; gap:6px; padding:8px; background:#111; border-bottom:1px solid var(--gold); }}
+.bar {{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:8px; background:#111; border-bottom:1px solid var(--gold); }}
 .bar button {{ background:#161616; color:var(--text); border:1px solid var(--gold); border-radius:6px; min-width:36px; height:32px; cursor:pointer; }}
 .bar button:hover {{ background:#241c0d; color:var(--gold); }}
 #home img {{ width:22px; height:22px; vertical-align:middle; }}
-#omnibox {{ flex:1; background:#0b0b0b; color:var(--text); border:1px solid var(--gold); border-radius:16px; padding:8px 14px; }}
+#omnibox {{ flex:1; min-width:180px; background:#0b0b0b; color:var(--text); border:1px solid var(--gold); border-radius:16px; padding:8px 14px; }}
 #ownerLine {{ padding:4px 12px; min-height:1.4em; color:var(--gold); background:#0e0e0e; }}
 .mode {{ color:var(--gold); font-size:12px; letter-spacing:.06em; }}
 main {{ flex:1; display:grid; grid-template-columns: 1fr 320px; min-height:0; }}
@@ -64,6 +64,10 @@ a {{ color:var(--gold); }}
     <button id="go" type="button">Go</button>
     <span class="mode">Lamb Lens</span>
     <button id="airlockBtn" type="button">Airlock</button>
+    <button id="promoteBtn" type="button" title="Operator override. Promotes quarantined mesh bytes on this node.">Promote</button>
+    <button id="islandBtn" type="button" title="Drop this node's mesh peers. Local runtime stays up.">Island</button>
+    <button id="blockBtn" type="button" title="Block the current mesh handle on this node only.">Block peer</button>
+    <button id="trustBtn" type="button" title="Local trust for the current handle.">Trust</button>
   </div>
   <div id="ownerLine"></div>
   <main>
@@ -96,11 +100,39 @@ async function op(name, payload) {{
   const r = await fetch('/v1/' + name, {{ method:'POST', headers:{{'content-type':'application/json','user-agent':'Mozilla/5.0'}}, body: JSON.stringify(payload||{{}}) }});
   return r.json();
 }}
+let lastHandle = '';
+let islandOn = false;
 function paintOwner(obj) {{
   const line = document.getElementById('ownerLine');
   if (!line) return;
+  if (obj && obj.owner_handle) lastHandle = obj.owner_handle;
+  if (obj && obj.name_status === 'PENDING') {{
+    line.textContent = 'Pending · ' + (obj.name || obj.display_url || '') + ' · not a verified site';
+    return;
+  }}
+  if (obj && obj.display && obj.display.title === 'Island mode') {{
+    islandOn = obj.island_mode === true;
+    line.textContent = islandOn
+      ? 'Island mode · this node only · local runtime stays up'
+      : 'Island mode off · this node rejoined';
+    return;
+  }}
+  if (obj && obj.display && obj.display.title === 'Local trust') {{
+    line.textContent = 'Local trust · ' + (obj.handle || '')
+      + ' · chain age ' + obj.chain_age_seconds
+      + ' · heartbeats ' + obj.heartbeats_witnessed
+      + ' · hash matches ' + obj.hash_matches
+      + ' · vouches ' + ((obj.vouches || []).join(',') || 'none')
+      + ' · equivocation ' + obj.equivocating;
+    return;
+  }}
   if (obj && obj.code === 'FG-GATE-REFUSE') {{
     line.textContent = 'Blocked · FG-GATE-REFUSE · ' + (obj.reason || '');
+    return;
+  }}
+  if (obj && obj.verified_owner && obj.owner_handle && obj.quarantine) {{
+    line.textContent = 'Verified owner handle · ' + obj.owner_handle + ' · quarantined · scanner absent';
+    if (obj.display_url) document.getElementById('omnibox').value = obj.display_url;
     return;
   }}
   if (obj && obj.verified_owner && obj.owner_handle) {{
@@ -122,6 +154,10 @@ function show(obj) {{
   let body = '<div class="banner">' + summary + '</div>';
   if (obj.code === 'FG-GATE-REFUSE') {{
     body += '<p>FG-GATE-REFUSE · ' + (obj.reason || '') + '</p>';
+  }} else if (obj.name_status === 'PENDING') {{
+    body += '<p>Pending · not a verified site</p>';
+  }} else if (obj.quarantine && !obj.promoted) {{
+    body += '<p>Quarantine · scanner absent · not promoted · not run</p>';
   }} else if (obj.html) {{
     body += '<iframe sandbox="" style="width:100%;min-height:240px;background:#fff;border:1px solid #8a7219" srcdoc="' + String(obj.html).replace(/"/g,'&quot;') + '"></iframe>';
   }}
@@ -166,6 +202,22 @@ document.getElementById('omnibox').addEventListener('keydown', (e) => {{ if (e.k
 document.getElementById('airlockBtn').onclick = async () => {{
   const q = document.getElementById('omnibox').value.trim();
   show(await op('airlock', {{url:q}}));
+}};
+document.getElementById('promoteBtn').onclick = async () => {{
+  const q = document.getElementById('omnibox').value.trim();
+  show(await op('navigate', {{url:q, operator_override:true}}));
+}};
+document.getElementById('islandBtn').onclick = async () => {{
+  islandOn = !islandOn;
+  show(await op('island_mode', {{enabled: islandOn}}));
+}};
+document.getElementById('blockBtn').onclick = async () => {{
+  const handle = lastHandle || (document.getElementById('omnibox').value.trim().split('.')[0] || '');
+  show(await op('peer_block', {{handle: handle}}));
+}};
+document.getElementById('trustBtn').onclick = async () => {{
+  const handle = lastHandle || (document.getElementById('omnibox').value.trim().split('.')[0] || '');
+  show(await op('trust', {{handle: handle}}));
 }};
 document.getElementById('stage').innerHTML = '<div class="banner">{LIMITATION}</div><p>Local loopback UI. Counted Worker: <a href="{HOST}">{HOST}</a></p><p>Ops: {ops}</p><img alt="sigil" src="'+SIGIL+'" width="96" height="96">';
 function meshNum() {{

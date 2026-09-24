@@ -5,8 +5,14 @@
 
 import {
   MESH_SPEC,
+  NAME_MIN_AGE_SECONDS,
+  NAME_MIN_WITNESSES,
   capabilityDecision,
   classifyDestination,
+  localTrust,
+  lookupRecord,
+  meshEquivocating,
+  refreshMeshIndex,
   openMesh,
   originOf,
   setMeshLedger,
@@ -29,7 +35,7 @@ export const AZMAIL_WORKER = "https://azmail-download-tracker.vibelock.workers.d
 export const AZNET = "https://github.com/AzielEliab/aznet";
 export const AZNET_WORKER = "https://aznet-download-tracker.vibelock.workers.dev";
 export const LIMITATION =
-  "THIS IS: a Phase 1 research-browser shell (browser-chrome UX) with controlled fetch/proxy preview, receipted airlock, and Lamb Lens ethical search. THIS IS NOT: a Chromium/Firefox/Safari replacement, a full OS browser, a VPN, AZ-OS, Lumen, AZInterface, or AZNet. v0.1 cannot ship a Chromium binary. AZNet is a separate product/engine; pairing is order/token only — not a shared Phase-1 UI (https://github.com/AzielEliab/aznet). AZMail is a separate sibling repo (https://github.com/AzielEliab/azmail) — optional deep-link only. Mesh names (.aziel) resolve on the local shell through the AZNet resolver adapter and qnm-node. .aziel is not an ICANN registration; ordinary browsers do not resolve it. This Worker does not dial the local node. Handle keys stay on the local node. No receipt = no action. Advisory only. Author: Aziel Eliab only.";
+  "THIS IS: a Phase 1 research-browser shell (browser-chrome UX) with controlled fetch/proxy preview, receipted airlock, and Lamb Lens ethical search. THIS IS NOT: a Chromium/Firefox/Safari replacement, a full OS browser, a VPN, AZ-OS, Lumen, AZInterface, or AZNet. v0.1 cannot ship a Chromium binary. AZNet is a separate product/engine; pairing is order/token only — not a shared Phase-1 UI (https://github.com/AzielEliab/aznet). AZMail is a separate sibling repo (https://github.com/AzielEliab/azmail) — optional deep-link only. Mesh names (.aziel) resolve on the local shell through the AZNet resolver adapter and qnm-node. .aziel is not an ICANN registration; ordinary browsers do not resolve it. This Worker does not dial the local node. Handle keys stay on the local node. Mesh bytes stay quarantined when the malware scanner is absent unless the operator override is explicit. Island mode and peer block are this node only. No receipt = no action. Advisory only. Author: Aziel Eliab only.";
 
 export const OPS = [
   "health",
@@ -58,6 +64,10 @@ export const OPS = [
   "capability_grant",
   "capability_check",
   "local_app",
+  "peer_block",
+  "peer_unblock",
+  "island_mode",
+  "trust",
 ];
 
 export const ALIASES = {
@@ -71,6 +81,8 @@ export const ALIASES = {
   verify: "receipt_verify",
   resolve_name: "resolve",
   local: "local_app",
+  trust_view: "trust",
+  peer_quarantine: "peer_block",
 };
 
 export const STAGES = ["download", "scan", "scrub", "verify", "vault"];
@@ -214,6 +226,9 @@ export function createSession() {
     active: home.id,
     receipts: [],
     grants: [],
+    island_mode: false,
+    blocked_peers: [],
+    hash_matches: {},
   };
 }
 
@@ -463,9 +478,24 @@ function pushTab(session, url, title, kind) {
   return tab;
 }
 
-async function finishMesh(session, classified) {
-  const opened = await openMesh(classified);
-  const rec = await appendReceipt(session, opened.ok ? "navigate" : "gate_refuse", {
+function meshGuard(session, payload) {
+  return {
+    island: !!session.island_mode,
+    blocked: session.blocked_peers || [],
+    operator_override: !!(payload && payload.operator_override === true),
+  };
+}
+
+async function finishMesh(session, classified, payload) {
+  const opened = await openMesh(classified, meshGuard(session, payload));
+  if (opened.hash_ok && opened.owner_handle) {
+    session.hash_matches[opened.owner_handle] = (session.hash_matches[opened.owner_handle] || 0) + 1;
+  }
+  let action = "gate_refuse";
+  if (opened.name_status === "PENDING") action = "name_pending";
+  else if (opened.promoted) action = "navigate";
+  else if (opened.quarantine && opened.ok) action = "airlock_hold";
+  const rec = await appendReceipt(session, action, {
     plane: "mesh",
     ok: !!opened.ok,
     code: opened.code || "",
@@ -473,12 +503,17 @@ async function finishMesh(session, classified) {
     name: opened.name || classified.name || "",
     handle: opened.owner_handle || "",
     hash: opened.content_hash || "",
+    name_status: opened.name_status || "",
+    promoted: !!opened.promoted,
     keys_leave_node: false,
+    network_wide: false,
   });
   opened.receipt = rec;
   opened.session_id = session.id;
   opened.limitation = LIMITATION;
-  if (opened.ok) {
+  if (opened.name_status === "PENDING") {
+    opened.display = displayOf("Pending", "Pending name " + opened.name + ". Not a verified site.", [["name", opened.name], ["status", "PENDING"], ["receipt", rec.hash.slice(0, 16)]]);
+  } else if (opened.promoted) {
     const scrubbed = scrubHtml(opened.html || "");
     opened.html = scrubbed.html;
     opened.stripped_kinds = scrubbed.stripped_kinds;
@@ -486,6 +521,11 @@ async function finishMesh(session, classified) {
     tab.owner_handle = opened.owner_handle;
     opened.tab = tab;
     opened.display = displayOf("Owner " + opened.owner_handle, "Verified owner handle " + opened.owner_handle + ".", [["handle", opened.owner_handle], ["name", opened.name], ["receipt", rec.hash.slice(0, 16)]]);
+  } else if (opened.quarantine && opened.ok) {
+    const tab = pushTab(session, opened.url || classified.url, opened.owner_handle || opened.name || "quarantine", "mesh-quarantine");
+    tab.owner_handle = opened.owner_handle;
+    opened.tab = tab;
+    opened.display = displayOf("Quarantine", "Verified owner handle " + opened.owner_handle + ". Scanner absent. Bytes not promoted and not run.", [["handle", opened.owner_handle], ["scanner", "absent"], ["receipt", rec.hash.slice(0, 16)]]);
   } else {
     opened.display = displayOf("Blocked", "FG-GATE-REFUSE — " + opened.reason, [["code", "FG-GATE-REFUSE"], ["reason", opened.reason], ["handle", opened.owner_handle || ""]]);
   }
@@ -601,6 +641,11 @@ export async function dispatch(op, payload, sessionId) {
         tracker_detection: false,
         qnsd_public_proxy: false,
         worker_dials_local_node: false,
+        scanner: "absent",
+        network_wide_cutoff: false,
+        island_mode: !!session.island_mode,
+        name_min_age_seconds: NAME_MIN_AGE_SECONDS,
+        name_min_witnesses: NAME_MIN_WITNESSES,
       },
       session_id: session.id,
       limitation: LIMITATION,
@@ -644,7 +689,7 @@ export async function dispatch(op, payload, sessionId) {
     if (blocked) return blocked;
     if (payload && Array.isArray(payload.ledger)) setMeshLedger(payload.ledger);
     const classified = classifyDestination(url);
-    if (classified.plane === "mesh") return finishMesh(session, classified);
+    if (classified.plane === "mesh") return finishMesh(session, classified, payload);
     if (classified.plane === "local") return finishLocal(session, classified, payload);
     if (classified.suggest_search) return dispatch("ethical_search", { q: url, session_id: session.id }, session.id);
     const safe = sanitizeUrl(url);
@@ -677,7 +722,7 @@ export async function dispatch(op, payload, sessionId) {
       const rec = await appendReceipt(session, "reload", { url });
       return { ok: true, action: "reload", tab, receipt: rec, session_id: session.id, display: displayOf("Reload", "Home shell reloaded.", [["receipt", rec.hash.slice(0, 16)]]) };
     }
-    return dispatch("navigate", { url, fetch: payload && payload.fetch, session_id: session.id }, session.id);
+    return dispatch("navigate", { url, fetch: payload && payload.fetch, operator_override: payload && payload.operator_override === true, session_id: session.id }, session.id);
   }
 
   if (name === "back" || name === "forward") {
@@ -826,16 +871,23 @@ export async function dispatch(op, payload, sessionId) {
     if (payload && Array.isArray(payload.ledger)) setMeshLedger(payload.ledger);
     const classified = classifyDestination(query);
     let out;
-    if (classified.plane === "mesh") out = await openMesh(classified);
+    if (classified.plane === "mesh") out = await openMesh(classified, meshGuard(session, payload));
     else if (classified.plane === "dns") out = { ok: true, action: "resolve", plane: "dns", url: classified.url, host: classified.host, dns: true, tls: "standard", icann: true, allowlisted: false, note: classified.note || "Normal DNS and standard TLS.", regular_browsers_resolve_aziel: false };
     else if (classified.plane === "local") out = { ok: true, action: "resolve", plane: "local", spec: MESH_SPEC, origin: classified.origin, slug: classified.slug, source: classified.source, url: classified.url };
     else out = { ok: false, action: "resolve", error: classified.error || "not_a_url", suggest_search: classified.suggest_search };
-    out.action = out.action || "resolve";
-    const rec = await appendReceipt(session, out.ok ? "resolve" : "gate_refuse", { ok: !!out.ok, plane: out.plane || "", reason: out.reason || "", name: out.name || out.url || "", handle: out.owner_handle || handle, keys_leave_node: false });
+    if (out.hash_ok && out.owner_handle) session.hash_matches[out.owner_handle] = (session.hash_matches[out.owner_handle] || 0) + 1;
+    if (out.name_status !== "PENDING" && out.action !== "airlock_hold") out.action = out.action || "resolve";
+    let resolveAction = "gate_refuse";
+    if (out.name_status === "PENDING") resolveAction = "name_pending";
+    else if (out.quarantine && out.ok) resolveAction = "airlock_hold";
+    else if (out.ok) resolveAction = "resolve";
+    const rec = await appendReceipt(session, resolveAction, { ok: !!out.ok, plane: out.plane || "", reason: out.reason || "", name: out.name || out.url || "", handle: out.owner_handle || handle, keys_leave_node: false, network_wide: false });
     out.receipt = rec;
     out.session_id = session.id;
     out.limitation = LIMITATION;
-    if (out.ok && out.owner_handle) out.display = displayOf("Owner " + out.owner_handle, "Resolved " + out.name + ". Verified owner handle " + out.owner_handle + ".", [["handle", out.owner_handle], ["receipt", rec.hash.slice(0, 16)]]);
+    if (out.name_status === "PENDING") out.display = displayOf("Pending", "Pending name " + out.name + ". Not a verified site.", [["name", out.name], ["status", "PENDING"]]);
+    else if (out.ok && out.quarantine) out.display = displayOf("Quarantine", "Verified owner handle " + out.owner_handle + ". Scanner absent. Bytes not promoted and not run.", [["handle", out.owner_handle], ["scanner", "absent"]]);
+    else if (out.ok && out.owner_handle) out.display = displayOf("Owner " + out.owner_handle, "Resolved " + out.name + ". Verified owner handle " + out.owner_handle + ".", [["handle", out.owner_handle], ["receipt", rec.hash.slice(0, 16)]]);
     else if (out.code === "FG-GATE-REFUSE") out.display = displayOf("Blocked", "FG-GATE-REFUSE — " + out.reason, [["code", "FG-GATE-REFUSE"], ["reason", out.reason]]);
     else out.display = displayOf("Resolve", out.note || "Resolved.", [["plane", out.plane], ["url", out.url || ""], ["receipt", rec.hash.slice(0, 16)]]);
     return out;
@@ -869,6 +921,73 @@ export async function dispatch(op, payload, sessionId) {
     }
     const rec = await appendReceipt(session, "capability_check", { ok: true, origin: decision.origin, kind: decision.kind, default: "own-origin" });
     return { ...decision, receipt: rec, keys_leave_node: false, session_id: session.id, limitation: LIMITATION, display: displayOf("Capability allowed", "Own-origin request allowed.", [["kind", decision.kind], ["receipt", rec.hash.slice(0, 16)]]) };
+  }
+
+  if (name === "peer_block" || name === "peer_unblock") {
+    const handle = String((payload && payload.handle) || "").trim().toLowerCase();
+    const handleOk = /^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$/.test(handle);
+    if (!handleOk) {
+      const rec = await appendReceipt(session, name, { ok: false, reason: "bad_handle", network_wide: false });
+      return { ok: false, code: "FG-GATE-REFUSE", reason: "bad_handle", network_wide: false, receipt: rec, session_id: session.id, limitation: LIMITATION, display: displayOf("Blocked", "FG-GATE-REFUSE — bad_handle", [["reason", "bad_handle"]]) };
+    }
+    if (name === "peer_block") {
+      if (!session.blocked_peers.includes(handle)) session.blocked_peers.push(handle);
+    } else {
+      session.blocked_peers = session.blocked_peers.filter((item) => item !== handle);
+    }
+    const rec = await appendReceipt(session, name, { handle, scope: "this-node", network_wide: false });
+    const blockedNow = session.blocked_peers.includes(handle);
+    return {
+      ok: true,
+      handle,
+      peer_blocked: blockedNow,
+      scope: "this-node",
+      network_wide: false,
+      island_mode: !!session.island_mode,
+      receipt: rec,
+      session_id: session.id,
+      limitation: LIMITATION,
+      note: blockedNow ? "This handle is blocked on this node only. There is no network-wide cutoff." : "This handle can be opened on this node again.",
+      display: displayOf(blockedNow ? "Peer blocked" : "Peer unblocked", handle + (blockedNow ? " is blocked on this node only." : " can be opened on this node again."), [["handle", handle], ["scope", "this-node"], ["receipt", rec.hash.slice(0, 16)]]),
+    };
+  }
+
+  if (name === "island_mode") {
+    const enabled = payload && payload.enabled;
+    if (typeof enabled !== "boolean") {
+      const rec = await appendReceipt(session, "island_mode", { ok: false, reason: "bad_island", network_wide: false });
+      return { ok: false, code: "FG-GATE-REFUSE", reason: "bad_island", network_wide: false, receipt: rec, session_id: session.id, limitation: LIMITATION, display: displayOf("Blocked", "FG-GATE-REFUSE — bad_island", [["reason", "bad_island"]]) };
+    }
+    session.island_mode = enabled;
+    const rec = await appendReceipt(session, "island_mode", { enabled, scope: "this-node", network_wide: false });
+    const summary = enabled ? "This node left the mesh. Local apps and normal DNS still run." : "This node rejoined. Earlier receipts were not rewritten.";
+    return { ok: true, island_mode: enabled, local_runtime: true, scope: "this-node", network_wide: false, receipt: rec, session_id: session.id, limitation: LIMITATION, note: summary + " No other node was cut off.", display: displayOf("Island mode", summary, [["enabled", enabled], ["receipt", rec.hash.slice(0, 16)]]) };
+  }
+
+  if (name === "trust") {
+    const handle = String((payload && payload.handle) || "").trim().toLowerCase();
+    const handleOk = /^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$/.test(handle);
+    if (!handleOk) {
+      const rec = await appendReceipt(session, "trust", { ok: false, reason: "bad_handle" });
+      return { ok: false, code: "FG-GATE-REFUSE", reason: "bad_handle", receipt: rec, session_id: session.id, limitation: LIMITATION, display: displayOf("Blocked", "FG-GATE-REFUSE — bad_handle", [["reason", "bad_handle"]]) };
+    }
+    if (payload && Array.isArray(payload.ledger)) setMeshLedger(payload.ledger);
+    await refreshMeshIndex();
+    const record = lookupRecord(handle + ".aziel", "") || lookupRecord("", handle);
+    const out = await localTrust({
+      handle,
+      record,
+      equivocating: meshEquivocating(handle),
+      hashMatches: session.hash_matches[handle] || 0,
+      peerBlocked: (session.blocked_peers || []).includes(handle),
+      islandMode: !!session.island_mode,
+    });
+    const rec = await appendReceipt(session, "trust", { handle, local_only: true, public_ranking: false, equivocating: out.equivocating, hash_matches: out.hash_matches });
+    out.receipt = rec;
+    out.session_id = session.id;
+    out.limitation = LIMITATION;
+    out.display = displayOf("Local trust", "Local trust for " + handle + ". Chain age, witnessed heartbeats, hash matches, vouches, equivocation.", [["handle", handle], ["name_status", out.name_status], ["heartbeats_witnessed", out.heartbeats_witnessed], ["hash_matches", out.hash_matches], ["equivocating", out.equivocating]]);
+    return out;
   }
 
   if (name === "local_app") {
@@ -954,6 +1073,9 @@ Gate. No auto-heal. Not anonymity.
 | Mesh resolve | \`resolve\` |
 | Capability grant / check | \`capability_grant\` \`capability_check\` |
 | Local app tab | \`local_app\` |
+| Peer block / unblock | \`peer_block\` \`peer_unblock\` |
+| Island mode | \`island_mode\` |
+| Local trust | \`trust\` |
 
 No receipt = no action. Every mutating op appends a hash-chained receipt.
 

@@ -193,14 +193,119 @@ with `kind: local-app`. The same capability sandbox applies.
 `uploaded` is false. `data_stays_local` is true. The shell does not
 upload the body.
 
+## Mesh Security
+
+This section is the browser side of the operator brief dated 2026-09-24.
+aziel-runtime `main` (`bba1d3e`) still has no `docs/designs/FED-MESH-1.0.md`
+Mesh Security section. The constants below are the brief's example
+(`72h`, `K = 2`) so Python and the Worker agree. If the runtime spec
+lands with different names or numbers, change `azbrowser/meshguard.py`
+and `workers/download-tracker/src/mesh-browser.js` together.
+
+| Constant | Value |
+| --- | --- |
+| `NAME_MIN_AGE_SECONDS` | `259200` (72 hours) |
+| `NAME_MIN_WITNESSES` | `2` |
+
+A name record may add:
+
+```json
+{
+  "status": "PENDING",
+  "claimed_at": "2020-01-01T00:00:00Z",
+  "witnesses": [
+    {"handle": "relay-a", "public_key": "<64 hex>", "signature": "<128 hex>", "receipt": "<sha256 of the witness message>"}
+  ],
+  "vouches": [
+    {"handle": "elder", "public_key": "<64 hex>", "signature": "<128 hex>"}
+  ],
+  "heartbeats": [{"handle": "relay-a"}]
+}
+```
+
+The witness message is the canonical JSON of `claimed_at`,
+`engine_digest`, `handle`, `name`, `object`, `seq`, and `witness`.
+A vouch message is the canonical JSON of `handle` (the owner) and
+`vouch` (the vouching handle). Witnesses must be handles other than
+the owner. The browser does not invent witnesses.
+
+| State | What the address line does |
+| --- | --- |
+| `status` missing or `PENDING` | `Pending · <name> · not a verified site`. No page bytes. |
+| `FINAL` but the claim is younger than 72h or has fewer than 2 verified witnesses | `FG-GATE-REFUSE` / `name_not_final` |
+| `FINAL` and both rules pass | Verified owner handle. Bytes still sit in quarantine until promotion. |
+
+Two verified refs for the same handle at the same `seq` with different
+object bytes or `engine_digest` values are an equivocating handle:
+`FG-GATE-REFUSE` / `equivocating_handle`. No page bytes. Gossip of that
+proof is a relay's job. This browser only refuses what the local ledger
+already holds.
+
+`seq` 1 must use `prev` of 64 zero hex chars. A later `seq` must name
+the previous ref's `engine_digest`. A lower `seq` than the highest
+verified seq for that handle is `rollback`. A broken link is `bad_prev`.
+
+### Airlock before run
+
+Hash-checked mesh page and module bytes go through the existing airlock
+(download, scan, scrub, verify, vault) before they are shown. This
+process has no ClamAV and no YARA. The response says `scanner: "absent"`.
+The extension and magic flags are advisory only. Scanners, when a node
+has them, catch known malware. The capability sandbox is the main defense.
+
+Promotion requires `operator_override: true` on the op. That flag does
+not promote a quarantine verdict (`airlock_quarantine`), and it does not
+execute scripts. `scripts_executed` and `executed` stay false. Module
+bodies are not returned. A signed `.js` path is held, not treated as a
+malware hit, because the hash gate already required a signature and this
+shell does not run it.
+
+### This node only
+
+`peer_block` / `peer_unblock` record a local receipt and refuse that one
+handle on this engine. `island_mode` with `{"enabled": true}` drops mesh
+names on this engine (`island_mode`) while local apps and normal DNS keep
+working. `{"enabled": false}` rejoins by appending a receipt. Earlier
+receipt hashes are not rewritten. `receipt_verify` still walks the chain.
+
+There is no local op that cuts the mesh off for every node.
+`network_wide` is false on these results. `health.mesh_browser.network_wide_cutoff`
+is false. The suite strip's `/v1/mesh/*` proxy is a different plane and
+is not an edge-mesh cutoff.
+
+`trust` (alias `trust_view`) returns local signals only: chain age,
+heartbeats witnessed by other handles, hash-match count, vouches, and
+whether the handle is equivocating. `local_only` is true. `public_ranking`
+is false. The payload has no ranking field.
+
+### What this repository does not do
+
+Proof-of-work on claims, relay witness co-signing, equivocation gossip,
+end-to-end Noise or WireGuard, two-hop relay, a Tor bearer, per-peer
+relay rate limits, ClamAV, YARA, and airgap bundle import/export belong
+to aziel-runtime, qnm-node, and aznet. This shell consumes their fields
+when a ledger row carries them.
+
+This is not zero-knowledge. It is not a claim of protection against a
+state-level adversary. Keys do not leave the local node. The Worker
+still does not open a peer socket.
+
 ## Human chrome
 
 The address area shows:
 
-- `Verified owner handle · <handle>` when a mesh page verified
+- `Pending · <name> · not a verified site` for a pending or unstamped name
+- `Verified owner handle · <handle> · quarantined · scanner absent` when a FINAL name matched and bytes are not promoted
+- `Verified owner handle · <handle>` after an explicit operator override promotes scrubbed HTML
 - `Blocked · FG-GATE-REFUSE · <reason>` when the gate refuses
 - `Local app · azbrowser://local/<slug> · data stays on this machine`
   for a local app
+- `Island mode · this node only · local runtime stays up` when this node leaves the mesh
+- `Local trust · <handle> · …` for the local trust view
+
+Promote, Island, Block peer, and Trust call `navigate` (with
+`operator_override`), `island_mode`, `peer_block`, and `trust`. There
+is no control that disconnects every node.
 
 There is no lock icon and no identity-lock treatment of the author.
 The author line elsewhere on the page is the product signature, not a
@@ -224,10 +329,11 @@ the only place that should change when they do.
 
 1. `docs/designs/FED-MESH-1.0.md` is not on
    [aziel-runtime](https://github.com/AzielEliab/aziel-runtime) `main`
-   (tree `bba1d3e`). No branch in that listing was a FED-MESH spec.
+   (tree `bba1d3e`), and that tree has no Mesh Security section.
    This file is the browser contract until that spec names the fields.
-   If the runtime spec uses different JSON names, change
-   `azbrowser/meshledger.py` and
+   Name age and witness count use the brief's example (72 hours, K=2).
+   If the runtime spec uses different JSON names or constants, change
+   `azbrowser/meshguard.py`, `azbrowser/meshledger.py`, and
    `workers/download-tracker/src/mesh-browser.js` together.
 
 2. [aznet](https://github.com/AzielEliab/aznet) `main` (`0cb9993`) has

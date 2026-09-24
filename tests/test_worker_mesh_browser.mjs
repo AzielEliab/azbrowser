@@ -6,7 +6,8 @@
 import assert from "node:assert/strict";
 import { generateKeyPairSync, sign } from "node:crypto";
 import { dispatch, setMeshLedger } from "../workers/download-tracker/src/engine.js";
-import { canonical, classifyDestination, engineDigestFor, sha256Hex } from "../workers/download-tracker/src/mesh-browser.js";
+import { canonical, classifyDestination, engineDigestFor, sha256Hex, witnessMessage } from "../workers/download-tracker/src/mesh-browser.js";
+import { createHash } from "node:crypto";
 
 const PAGE = "<h1>Library</h1><p>Local-first shelf.</p>";
 
@@ -34,7 +35,32 @@ async function signedRecord(page = PAGE, { name = "library.aziel", handle = "lib
   };
   ref.engine_digest = await engineDigestFor(ref);
   const signature = sign(null, Buffer.from(canonical(ref)), privateKey).toString("hex");
-  return { name, handle, public_key: raw, ref, signature, connect: connect || { mode: "direct", peer: handle, relay: null }, objects };
+  const record = {
+    name,
+    handle,
+    public_key: raw,
+    status: "FINAL",
+    claimed_at: "2020-01-01T00:00:00Z",
+    ref,
+    signature,
+    connect: connect || { mode: "direct", peer: handle, relay: null },
+    objects,
+    witnesses: [],
+  };
+  for (const witnessHandle of ["relay-a", "relay-b"]) {
+    const witnessKeys = generateKeyPairSync("ed25519");
+    const wspki = witnessKeys.publicKey.export({ format: "der", type: "spki" });
+    const wraw = wspki.subarray(wspki.length - 32).toString("hex");
+    const message = canonical(witnessMessage(record, witnessHandle));
+    const signatureHex = sign(null, Buffer.from(message), witnessKeys.privateKey).toString("hex");
+    record.witnesses.push({
+      handle: witnessHandle,
+      public_key: wraw,
+      signature: signatureHex,
+      receipt: createHash("sha256").update(Buffer.from(message)).digest("hex"),
+    });
+  }
+  return record;
 }
 
 const record = await signedRecord();
@@ -49,10 +75,22 @@ assert.equal(aziel.icann, false);
 assert.equal(aziel.regular_browsers_resolve_aziel, false);
 assert.equal(aziel.keys_leave_node, false);
 assert.equal(aziel.ca, false);
-assert.equal(aziel.connect.socket, false);
-assert.equal(aziel.connect.qnsd_public_proxy, false);
-assert.equal(aziel.tab.kind, "mesh");
+assert.equal(aziel.name_status, "FINAL");
+assert.equal(aziel.quarantine, true);
+assert.equal(aziel.promoted, false);
+assert.equal(aziel.airlock.scanner, "absent");
+assert.equal(aziel.html, "");
+assert.equal(aziel.scripts_executed, false);
+assert.equal(aziel.tab.kind, "mesh-quarantine");
+assert.equal(aziel.network_wide, false);
 assert.match(aziel.display.summary, /library/);
+const shown = await dispatch("navigate", { url: "library.aziel/shelf", operator_override: true }, aziel.session_id);
+assert.equal(shown.promoted, true);
+assert.equal(shown.tab.kind, "mesh");
+assert.equal(shown.scripts_executed, false);
+assert.match(shown.html, /Library/);
+assert.equal(shown.connect.socket, false);
+assert.equal(shown.connect.qnsd_public_proxy, false);
 
 const handle = await dispatch("resolve", { handle: "library" }, aziel.session_id);
 assert.equal(handle.ok, true);
@@ -123,5 +161,56 @@ assert.equal(web.plane, "dns");
 assert.notEqual(web.code, "FG-GATE-REFUSE");
 assert.match(web.url, /azieleliab\.com/);
 assert.equal(web.tls, "standard");
+
+const pending = await signedRecord();
+pending.status = "PENDING";
+pending.witnesses = [];
+setMeshLedger([pending]);
+const pendingOut = await dispatch("navigate", { url: "library.aziel" }, "pending-sess");
+assert.equal(pendingOut.ok, true);
+assert.equal(pendingOut.name_status, "PENDING");
+assert.equal(pendingOut.verified_owner, false);
+assert.equal(pendingOut.html, "");
+assert.notEqual(pendingOut.code, "FG-GATE-REFUSE");
+assert.match(pendingOut.display.summary, /not a verified site/i);
+
+const conflictA = await signedRecord("<p>one</p>");
+const conflictB = await signedRecord("<p>two</p>");
+setMeshLedger([conflictA, conflictB]);
+const equiv = await dispatch("navigate", { url: "library.aziel" }, "equiv-sess");
+assert.equal(equiv.code, "FG-GATE-REFUSE");
+assert.equal(equiv.reason, "equivocating_handle");
+assert.equal(equiv.html, "");
+
+setMeshLedger([record]);
+const peer = await dispatch("peer_block", { handle: "library" }, "peer-sess");
+assert.equal(peer.ok, true);
+assert.equal(peer.network_wide, false);
+assert.equal(peer.scope, "this-node");
+const peerNav = await dispatch("navigate", { url: "library.aziel", operator_override: true }, peer.session_id);
+assert.equal(peerNav.reason, "peer_blocked");
+const island = await dispatch("island_mode", { enabled: true }, peer.session_id);
+assert.equal(island.island_mode, true);
+assert.equal(island.network_wide, false);
+const before = (await dispatch("receipts", {}, island.session_id)).receipts.map((row) => row.hash);
+const local = await dispatch("local_app", { slug: "notes", content: "<p>stays</p>" }, island.session_id);
+assert.equal(local.ok, true);
+assert.match(local.html, /stays/);
+const dnsStill = await dispatch("navigate", { url: "https://example.com/docs" }, island.session_id);
+assert.equal(dnsStill.plane, "dns");
+const rejoined = await dispatch("island_mode", { enabled: false }, island.session_id);
+assert.equal(rejoined.island_mode, false);
+const after = (await dispatch("receipts", {}, island.session_id)).receipts.map((row) => row.hash);
+assert.deepEqual(after.slice(0, before.length), before);
+const verified = await dispatch("receipt_verify", {}, island.session_id);
+assert.equal(verified.ok, true);
+const trust = await dispatch("trust", { handle: "library" }, "trust-sess");
+assert.equal(trust.local_only, true);
+assert.equal(trust.public_ranking, false);
+assert.equal(trust.network_wide, false);
+assert.equal(JSON.stringify(trust).includes('"score"'), false);
+const health = await dispatch("health", {}, "trust-sess");
+assert.equal(health.mesh_browser.network_wide_cutoff, false);
+assert.equal(health.mesh_browser.scanner, "absent");
 
 console.log("worker mesh browser ok");

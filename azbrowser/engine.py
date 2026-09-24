@@ -9,8 +9,10 @@ from typing import Any
 
 from .airlock import STAGES, airlock
 from .ethics import classify_query
+from .meshguard import NAME_MIN_AGE_SECONDS, NAME_MIN_WITNESSES, local_trust
 from .meshledger import MeshDirectory, directory_from_env, open_mesh, resolve_query
 from .names import SPEC as MESH_SPEC
+from .names import _handle_ok
 from .names import classify_destination
 from .preview import preview_url, sanitize_url, scrub_html
 from .receipts import Ledger
@@ -58,6 +60,10 @@ OPS = (
     "capability_grant",
     "capability_check",
     "local_app",
+    "peer_block",
+    "peer_unblock",
+    "island_mode",
+    "trust",
 )
 
 ALIASES = {
@@ -71,6 +77,8 @@ ALIASES = {
     "verify": "receipt_verify",
     "resolve_name": "resolve",
     "local": "local_app",
+    "trust_view": "trust",
+    "peer_quarantine": "peer_block",
 }
 
 
@@ -92,6 +100,9 @@ class Engine:
         self.ledger = ledger or Ledger()
         self.mesh = mesh if mesh is not None else directory_from_env()
         self.sandbox = CapabilitySandbox(self.ledger)
+        self.island = False
+        self.blocked: set[str] = set()
+        self.hash_matches: dict[str, int] = {}
 
     def _receipt(self, action: str, payload: dict[str, Any]) -> dict[str, Any]:
         return self.ledger.append(action, payload, tab_id=self.tabs.active)
@@ -148,6 +159,11 @@ class Engine:
                 "aznet_resolver": "http://127.0.0.1:8771/v1/resolve",
                 "scripts_executed": False,
                 "tracker_detection": False,
+                "scanner": "absent",
+                "network_wide_cutoff": False,
+                "island_mode": self.island,
+                "name_min_age_seconds": NAME_MIN_AGE_SECONDS,
+                "name_min_witnesses": NAME_MIN_WITNESSES,
             },
             "limitation": LIMITATION,
             "display": display_of("AZBrowser health", "Phase 1 research shell. Dual surface.", [("version", __version__), ("ops", len(OPS))]),
@@ -169,7 +185,7 @@ class Engine:
             return refused
         classified = classify_destination(url)
         if classified.get("plane") == "mesh":
-            return self._finish_mesh(classified)
+            return self._finish_mesh(classified, payload)
         if classified.get("plane") == "local":
             return self._finish_local(classified, payload)
         if classified.get("suggest_search"):
@@ -201,10 +217,28 @@ class Engine:
         )
         return preview
 
-    def _finish_mesh(self, classified: dict[str, Any]) -> dict[str, Any]:
-        opened = open_mesh(self.mesh, classified)
+    def _guard(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "island": self.island,
+            "blocked": set(self.blocked),
+            "operator_override": payload.get("operator_override") is True,
+        }
+
+    def _finish_mesh(self, classified: dict[str, Any], payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        opened = open_mesh(self.mesh, classified, **self._guard(payload or {}))
+        if opened.get("hash_ok") and opened.get("owner_handle"):
+            who = str(opened["owner_handle"])
+            self.hash_matches[who] = self.hash_matches.get(who, 0) + 1
+        if opened.get("name_status") == "PENDING":
+            action = "name_pending"
+        elif opened.get("promoted"):
+            action = "navigate"
+        elif opened.get("quarantine") and opened.get("ok"):
+            action = "airlock_hold"
+        else:
+            action = "gate_refuse"
         rec = self._receipt(
-            "navigate" if opened.get("ok") else "gate_refuse",
+            action,
             {
                 "plane": "mesh",
                 "ok": bool(opened.get("ok")),
@@ -213,12 +247,21 @@ class Engine:
                 "name": opened.get("name") or classified.get("name") or "",
                 "handle": opened.get("owner_handle") or "",
                 "hash": opened.get("content_hash") or "",
+                "name_status": opened.get("name_status") or "",
+                "promoted": bool(opened.get("promoted")),
                 "keys_leave_node": False,
+                "network_wide": False,
             },
         )
         opened["receipt"] = rec
         opened["limitation"] = LIMITATION
-        if opened.get("ok"):
+        if opened.get("name_status") == "PENDING":
+            opened["display"] = display_of(
+                "Pending",
+                f"Pending name {opened.get('name')}. Not a verified site.",
+                [("name", opened.get("name")), ("status", "PENDING"), ("receipt", rec["hash"][:16])],
+            )
+        elif opened.get("promoted"):
             tab = self.tabs.push(
                 str(opened.get("url") or classified.get("url") or ""),
                 str(opened.get("owner_handle") or opened.get("name") or "mesh"),
@@ -230,6 +273,19 @@ class Engine:
                 f"Owner {opened.get('owner_handle')}",
                 f"Verified owner handle {opened.get('owner_handle')}.",
                 [("handle", opened.get("owner_handle")), ("name", opened.get("name")), ("receipt", rec["hash"][:16])],
+            )
+        elif opened.get("quarantine") and opened.get("ok"):
+            tab = self.tabs.push(
+                str(opened.get("url") or classified.get("url") or ""),
+                str(opened.get("owner_handle") or opened.get("name") or "quarantine"),
+                "mesh-quarantine",
+            )
+            tab["owner_handle"] = opened.get("owner_handle")
+            opened["tab"] = tab
+            opened["display"] = display_of(
+                "Quarantine",
+                f"Verified owner handle {opened.get('owner_handle')}. Scanner absent. Bytes not promoted and not run.",
+                [("handle", opened.get("owner_handle")), ("scanner", "absent"), ("receipt", rec["hash"][:16])],
             )
         else:
             opened["display"] = display_of(
@@ -290,7 +346,7 @@ class Engine:
         if url.startswith("azbrowser://newtab"):
             rec = self._receipt("reload", {"url": url})
             return {"ok": True, "action": "reload", "tab": tab, "receipt": rec, "display": display_of("Reload", "Home shell reloaded.", [("receipt", rec["hash"][:16])])}
-        return self.navigate({"url": url, "fetch": payload.get("fetch")})
+        return self.navigate({"url": url, "fetch": payload.get("fetch"), "operator_override": payload.get("operator_override") is True})
 
     def back(self, _payload: dict[str, Any]) -> dict[str, Any]:
         moved = self.tabs.back()
@@ -427,9 +483,20 @@ class Engine:
         return out
 
     def resolve(self, payload: dict[str, Any]) -> dict[str, Any]:
-        out = resolve_query(self.mesh, payload)
+        out = resolve_query(self.mesh, payload, **self._guard(payload))
+        if out.get("hash_ok") and out.get("owner_handle"):
+            who = str(out["owner_handle"])
+            self.hash_matches[who] = self.hash_matches.get(who, 0) + 1
+        if out.get("name_status") == "PENDING":
+            resolve_action = "name_pending"
+        elif out.get("quarantine") and out.get("ok"):
+            resolve_action = "airlock_hold"
+        elif out.get("ok"):
+            resolve_action = "resolve"
+        else:
+            resolve_action = "gate_refuse"
         rec = self._receipt(
-            "resolve" if out.get("ok") else "gate_refuse",
+            resolve_action,
             {
                 "ok": bool(out.get("ok")),
                 "plane": out.get("plane") or "",
@@ -441,7 +508,19 @@ class Engine:
         )
         out["receipt"] = rec
         out["limitation"] = LIMITATION
-        if out.get("ok") and out.get("owner_handle"):
+        if out.get("name_status") == "PENDING":
+            out["display"] = display_of(
+                "Pending",
+                f"Pending name {out.get('name')}. Not a verified site.",
+                [("name", out.get("name")), ("status", "PENDING")],
+            )
+        elif out.get("ok") and out.get("quarantine"):
+            out["display"] = display_of(
+                "Quarantine",
+                f"Verified owner handle {out.get('owner_handle')}. Scanner absent. Bytes not promoted and not run.",
+                [("handle", out.get("owner_handle")), ("scanner", "absent")],
+            )
+        elif out.get("ok") and out.get("owner_handle"):
             out["display"] = display_of(
                 f"Owner {out.get('owner_handle')}",
                 f"Resolved {out.get('name')}. Verified owner handle {out.get('owner_handle')}.",
@@ -500,6 +579,148 @@ class Engine:
                 f"FG-GATE-REFUSE — {out.get('reason')}",
                 [("code", "FG-GATE-REFUSE"), ("reason", out.get("reason"))],
             )
+        return out
+
+    def peer_block(self, payload: dict[str, Any]) -> dict[str, Any]:
+        handle = str(payload.get("handle") or "").strip().lower()
+        if not _handle_ok(handle):
+            rec = self._receipt("peer_block", {"ok": False, "reason": "bad_handle", "network_wide": False})
+            return {
+                "ok": False,
+                "code": "FG-GATE-REFUSE",
+                "reason": "bad_handle",
+                "network_wide": False,
+                "receipt": rec,
+                "limitation": LIMITATION,
+                "display": display_of("Blocked", "FG-GATE-REFUSE — bad_handle", [("reason", "bad_handle")]),
+            }
+        self.blocked.add(handle)
+        rec = self._receipt("peer_block", {"handle": handle, "scope": "this-node", "network_wide": False})
+        return {
+            "ok": True,
+            "handle": handle,
+            "peer_blocked": True,
+            "scope": "this-node",
+            "network_wide": False,
+            "island_mode": self.island,
+            "receipt": rec,
+            "limitation": LIMITATION,
+            "note": "This handle is blocked on this node only. There is no network-wide cutoff.",
+            "display": display_of(
+                "Peer blocked",
+                f"{handle} is blocked on this node only.",
+                [("handle", handle), ("scope", "this-node"), ("receipt", rec["hash"][:16])],
+            ),
+        }
+
+    def peer_unblock(self, payload: dict[str, Any]) -> dict[str, Any]:
+        handle = str(payload.get("handle") or "").strip().lower()
+        if not _handle_ok(handle):
+            rec = self._receipt("peer_unblock", {"ok": False, "reason": "bad_handle", "network_wide": False})
+            return {
+                "ok": False,
+                "code": "FG-GATE-REFUSE",
+                "reason": "bad_handle",
+                "network_wide": False,
+                "receipt": rec,
+                "limitation": LIMITATION,
+                "display": display_of("Blocked", "FG-GATE-REFUSE — bad_handle", [("reason", "bad_handle")]),
+            }
+        self.blocked.discard(handle)
+        rec = self._receipt("peer_unblock", {"handle": handle, "scope": "this-node", "network_wide": False})
+        return {
+            "ok": True,
+            "handle": handle,
+            "peer_blocked": False,
+            "scope": "this-node",
+            "network_wide": False,
+            "receipt": rec,
+            "limitation": LIMITATION,
+            "display": display_of(
+                "Peer unblocked",
+                f"{handle} can be opened on this node again.",
+                [("handle", handle), ("receipt", rec["hash"][:16])],
+            ),
+        }
+
+    def island_mode(self, payload: dict[str, Any]) -> dict[str, Any]:
+        enabled = payload.get("enabled")
+        if not isinstance(enabled, bool):
+            rec = self._receipt("island_mode", {"ok": False, "reason": "bad_island", "network_wide": False})
+            return {
+                "ok": False,
+                "code": "FG-GATE-REFUSE",
+                "reason": "bad_island",
+                "network_wide": False,
+                "receipt": rec,
+                "limitation": LIMITATION,
+                "display": display_of("Blocked", "FG-GATE-REFUSE — bad_island", [("reason", "bad_island")]),
+            }
+        self.island = enabled
+        rec = self._receipt("island_mode", {"enabled": enabled, "scope": "this-node", "network_wide": False})
+        summary = (
+            "This node left the mesh. Local apps and normal DNS still run."
+            if enabled
+            else "This node rejoined. Earlier receipts were not rewritten."
+        )
+        return {
+            "ok": True,
+            "island_mode": enabled,
+            "local_runtime": True,
+            "scope": "this-node",
+            "network_wide": False,
+            "receipt": rec,
+            "limitation": LIMITATION,
+            "note": summary + " No other node was cut off.",
+            "display": display_of("Island mode", summary, [("enabled", enabled), ("receipt", rec["hash"][:16])]),
+        }
+
+    def trust(self, payload: dict[str, Any]) -> dict[str, Any]:
+        handle = str(payload.get("handle") or "").strip().lower()
+        if not _handle_ok(handle):
+            rec = self._receipt("trust", {"ok": False, "reason": "bad_handle"})
+            return {
+                "ok": False,
+                "code": "FG-GATE-REFUSE",
+                "reason": "bad_handle",
+                "receipt": rec,
+                "limitation": LIMITATION,
+                "display": display_of("Blocked", "FG-GATE-REFUSE — bad_handle", [("reason", "bad_handle")]),
+            }
+        record = self.mesh.lookup(name=f"{handle}.aziel", handle="")
+        if record is None:
+            record = self.mesh.lookup(name="", handle=handle)
+        out = local_trust(
+            handle=handle,
+            record=record,
+            equivocating=handle in self.mesh.equivocations,
+            hash_matches=self.hash_matches.get(handle, 0),
+            peer_blocked=handle in self.blocked,
+            island_mode=self.island,
+        )
+        rec = self._receipt(
+            "trust",
+            {
+                "handle": handle,
+                "local_only": True,
+                "public_ranking": False,
+                "equivocating": out["equivocating"],
+                "hash_matches": out["hash_matches"],
+            },
+        )
+        out["receipt"] = rec
+        out["limitation"] = LIMITATION
+        out["display"] = display_of(
+            "Local trust",
+            f"Local trust for {handle}. Chain age, witnessed heartbeats, hash matches, vouches, equivocation.",
+            [
+                ("handle", handle),
+                ("name_status", out.get("name_status")),
+                ("heartbeats_witnessed", out.get("heartbeats_witnessed")),
+                ("hash_matches", out.get("hash_matches")),
+                ("equivocating", out.get("equivocating")),
+            ],
+        )
         return out
 
     def local_app(self, payload: dict[str, Any]) -> dict[str, Any]:

@@ -26,6 +26,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from .hashgate import contains_secret, gate_bytes, verify_record
+from .meshguard import evaluate_name, promote_objects
 from .names import REFUSE, SPEC, classify_destination
 from .preview import scrub_html
 
@@ -76,6 +77,10 @@ class MeshDirectory:
         self._post = post or _default_post
         self.by_name: dict[str, dict[str, Any]] = {}
         self.by_handle: dict[str, dict[str, Any]] = {}
+        self.seen_seq: dict[tuple[str, int], str] = {}
+        self.digest_at: dict[tuple[str, int], str] = {}
+        self.max_seq: dict[str, int] = {}
+        self.equivocations: set[str] = set()
         self.load_error = ""
         for record in records or []:
             self.add(record)
@@ -92,7 +97,50 @@ class MeshDirectory:
         # <handle>.aziel is the stable handle name. A longer name does not replace it.
         if name == f"{handle}.aziel" or handle not in self.by_handle:
             self.by_handle[handle] = record
+        checked = verify_record(record)
+        if checked["ok"]:
+            self.note_verified(record)
         return {"ok": True, "name": name, "handle": handle}
+
+    def note_verified(self, record: dict[str, Any]) -> None:
+        """Index a signature-checked ref. A second digest at the same seq is equivocation."""
+        ref = record.get("ref") if isinstance(record.get("ref"), dict) else None
+        if not isinstance(ref, dict):
+            return
+        handle = str(record.get("handle") or "").strip().lower()
+        seq = ref.get("seq")
+        if not handle or isinstance(seq, bool) or not isinstance(seq, int):
+            return
+        digest = str(ref.get("engine_digest") or "") + "|" + str(ref.get("object") or "")
+        key = (handle, seq)
+        previous = self.seen_seq.get(key)
+        if previous is not None and previous != digest:
+            self.equivocations.add(handle)
+        else:
+            self.seen_seq[key] = digest
+        self.digest_at[key] = str(ref.get("engine_digest") or "")
+        self.max_seq[handle] = max(self.max_seq.get(handle, seq), seq)
+
+    def chain_check(self, record: dict[str, Any]) -> dict[str, Any]:
+        ref = record.get("ref") if isinstance(record.get("ref"), dict) else {}
+        handle = str(record.get("handle") or "").strip().lower()
+        if handle in self.equivocations:
+            return {"ok": False, "reason": "equivocating_handle"}
+        seq = ref.get("seq")
+        if isinstance(seq, bool) or not isinstance(seq, int) or seq < 1:
+            return {"ok": False, "reason": "bad_prev"}
+        prev = str(ref.get("prev") or "")
+        if seq == 1:
+            if prev != "0" * 64:
+                return {"ok": False, "reason": "bad_prev"}
+        else:
+            parent = self.digest_at.get((handle, seq - 1))
+            if parent is None or prev != parent:
+                return {"ok": False, "reason": "bad_prev"}
+        known = self.max_seq.get(handle, seq)
+        if seq < known:
+            return {"ok": False, "reason": "rollback"}
+        return {"ok": True, "reason": ""}
 
     def lookup(self, *, name: str = "", handle: str = "") -> dict[str, Any] | None:
         name_l = name.strip().lower()
@@ -274,11 +322,35 @@ def _refuse(reason: str, classified: dict[str, Any], **extra: Any) -> dict[str, 
     return out
 
 
-def open_mesh(directory: MeshDirectory, classified: dict[str, Any]) -> dict[str, Any]:
+def open_mesh(
+    directory: MeshDirectory,
+    classified: dict[str, Any],
+    *,
+    island: bool = False,
+    blocked: set[str] | None = None,
+    operator_override: bool = False,
+    now: Any = None,
+) -> dict[str, Any]:
     if not classified.get("ok"):
         return _refuse(str(classified.get("reason") or "bad_handle"), classified)
     name = str(classified.get("name") or "")
     handle = str(classified.get("handle") or "")
+    if island:
+        return _refuse(
+            "island_mode",
+            classified,
+            island_mode=True,
+            network_wide=False,
+            note="This node dropped its mesh peers and relays. Local apps and normal DNS still run. No other node was cut off.",
+        )
+    if handle and handle in (blocked or set()):
+        return _refuse(
+            "peer_blocked",
+            classified,
+            peer_blocked=True,
+            network_wide=False,
+            note="This handle is blocked on this node only. Other peers stay reachable.",
+        )
     record = directory.lookup(name=name, handle=handle if not name else "")
     if record is None:
         return _refuse("name_not_in_ledger", classified, allowlisted=bool(classified.get("allowlisted")))
@@ -289,6 +361,15 @@ def open_mesh(directory: MeshDirectory, classified: dict[str, Any]) -> dict[str,
     checked = verify_record(record)
     if not checked["ok"]:
         return _refuse(str(checked["reason"]), classified, allowlisted=bool(classified.get("allowlisted")))
+    directory.note_verified(record)
+    chain = directory.chain_check(record)
+    if not chain["ok"]:
+        return _refuse(str(chain["reason"]), classified, html="", scripts_executed=False, executed=False)
+    status = evaluate_name(record, now() if callable(now) else now)
+    if status["state"] == "PENDING":
+        return _pending(classified, record, status)
+    if status["state"] != "FINAL":
+        return _refuse(str(status["reason"] or "name_not_final"), classified, name_status="REFUSED", html="")
     ref = record["ref"]
     page = directory.pull(record, str(ref.get("object") or ""))
     if page is None:
@@ -297,15 +378,10 @@ def open_mesh(directory: MeshDirectory, classified: dict[str, Any]) -> dict[str,
     objects.setdefault(str(ref.get("object") or ""), page)
     gated = gate_bytes(record, page, objects)
     if not gated["ok"]:
-        return _refuse(str(gated["reason"]), classified, content_hash=gated.get("content_hash") or "")
-    link = directory.connect(record)
-    if link.get("reason") == "keys_must_stay_on_node" or link.get("code") == REFUSE:
-        return _refuse("keys_must_stay_on_node", classified)
-    text = page.decode("utf-8", errors="replace")
-    scrubbed = scrub_html(text)
-    return {
-        "ok": True,
-        "action": "navigate",
+        return _refuse(str(gated["reason"]), classified, content_hash=gated.get("content_hash") or "", html="")
+    modules = ref.get("modules") if isinstance(ref.get("modules"), list) else []
+    air = promote_objects(page, [item for item in modules if isinstance(item, dict)], objects, operator_override=operator_override is True)
+    common = {
         "plane": "mesh",
         "spec": SPEC,
         "name": record.get("name"),
@@ -313,7 +389,6 @@ def open_mesh(directory: MeshDirectory, classified: dict[str, Any]) -> dict[str,
         "display_url": classified.get("display_url"),
         "host": record.get("name"),
         "owner_handle": record.get("handle"),
-        "verified_owner": True,
         "public_key": record.get("public_key"),
         "identity": "handle-key",
         "ca": False,
@@ -325,7 +400,7 @@ def open_mesh(directory: MeshDirectory, classified: dict[str, Any]) -> dict[str,
         "engine_digest": gated["engine_digest"],
         "hash_ok": True,
         "signature_ok": True,
-        "connect": link,
+        "name_status": "FINAL",
         "sandbox": {
             "network": False,
             "cross_origin": False,
@@ -335,16 +410,58 @@ def open_mesh(directory: MeshDirectory, classified: dict[str, Any]) -> dict[str,
         },
         "origin": f"aziel://{record.get('handle')}",
         "title": record.get("name"),
+        "scripts_executed": False,
+        "executed": False,
+        "not_chromium": True,
+        "fetched": False,
+        "airlock": air,
+        "network_wide": False,
+    }
+    if not air["promoted"]:
+        reason = str(air["reason"] or "scanner_absent")
+        if reason == "airlock_quarantine":
+            return _refuse(reason, classified, **common, ok=False, verified_owner=False, html="", promoted=False, quarantine=True)
+        return {
+            **common,
+            "ok": True,
+            "action": "airlock_hold",
+            "verified_owner": True,
+            "navigable": False,
+            "promoted": False,
+            "quarantine": True,
+            "html": "",
+            "excerpt": "",
+            "renderer": "mesh-quarantine",
+            "bytes_from": "quarantine",
+            "reason": reason,
+            "note": (
+                "FINAL name. Handle key and content hash matched. Bytes are in non-executable quarantine. "
+                "Malware scanner is absent (no ClamAV, no YARA). They are not shown and not run until an "
+                "explicit operator override. The sandbox remains the main defense. This node did not cut off the mesh."
+            ),
+        }
+    link = directory.connect(record)
+    if link.get("reason") == "keys_must_stay_on_node" or link.get("code") == REFUSE:
+        return _refuse("keys_must_stay_on_node", classified)
+    text = page.decode("utf-8", errors="replace")
+    scrubbed = scrub_html(text)
+    return {
+        **common,
+        "ok": True,
+        "action": "navigate",
+        "verified_owner": True,
+        "navigable": True,
+        "promoted": True,
+        "quarantine": False,
+        "connect": link,
         "html": scrubbed["html"][:80_000],
         "excerpt": text[:400],
         "stripped_kinds": scrubbed["stripped_kinds"],
-        "scripts_executed": False,
         "renderer": "mesh-hash-gate",
-        "not_chromium": True,
-        "fetched": False,
         "bytes_from": "qnm-pull" if directory.http and str(ref.get("object")) not in (record.get("objects") or {}) else "mesh-ledger",
         "note": (
-            "Mesh site. Authenticated with the owner handle key, not a certificate authority. "
+            "Mesh site promoted out of quarantine by an explicit operator override. "
+            "Scanner is absent. Authenticated with the owner handle key, not a certificate authority. "
             ".aziel is not registered with ICANN. Ordinary browsers do not resolve .aziel names. "
             "This shell does not execute scripts. Outside network, cross-origin, foreign storage, "
             "and local files stay denied until a receipted capability grant."
@@ -352,7 +469,45 @@ def open_mesh(directory: MeshDirectory, classified: dict[str, Any]) -> dict[str,
     }
 
 
-def resolve_query(directory: MeshDirectory, payload: dict[str, Any]) -> dict[str, Any]:
+def _pending(classified: dict[str, Any], record: dict[str, Any], status: dict[str, Any]) -> dict[str, Any]:
+    name = str(record.get("name") or classified.get("name") or "")
+    return {
+        "ok": True,
+        "action": "name_pending",
+        "code": "",
+        "reason": "name_pending",
+        "plane": "mesh",
+        "spec": SPEC,
+        "name": name,
+        "name_status": "PENDING",
+        "status_declared": status.get("status_declared") or "",
+        "url": classified.get("url"),
+        "display_url": classified.get("display_url"),
+        "owner_handle": record.get("handle") or classified.get("handle") or "",
+        "verified_owner": False,
+        "navigable": False,
+        "promoted": False,
+        "quarantine": False,
+        "html": "",
+        "scripts_executed": False,
+        "executed": False,
+        "icann": False,
+        "ca": False,
+        "allowlisted": bool(classified.get("allowlisted")),
+        "regular_browsers_resolve_aziel": False,
+        "keys_leave_node": False,
+        "witness_count": status.get("witness_count") or 0,
+        "chain_age_seconds": status.get("chain_age_seconds"),
+        "network_wide": False,
+        "note": (
+            f"Pending name {name}. Not a verified site. "
+            "A name stays pending until it has aged and enough independent witnesses exist, and the record says FINAL. "
+            "Ordinary browsers do not resolve .aziel names."
+        ),
+    }
+
+
+def resolve_query(directory: MeshDirectory, payload: dict[str, Any], **guard: Any) -> dict[str, Any]:
     handle = str(payload.get("handle") or "").strip().lower()
     raw = str(payload.get("name") or payload.get("url") or payload.get("q") or "").strip()
     if handle and not raw:
@@ -388,6 +543,7 @@ def resolve_query(directory: MeshDirectory, payload: dict[str, Any]) -> dict[str
             "error": classified.get("error") or "not_a_url",
             "suggest_search": classified.get("suggest_search"),
         }
-    opened = open_mesh(directory, classified)
-    opened["action"] = "resolve"
+    opened = open_mesh(directory, classified, **guard)
+    if opened.get("name_status") != "PENDING" and opened.get("action") != "airlock_hold":
+        opened["action"] = "resolve"
     return opened

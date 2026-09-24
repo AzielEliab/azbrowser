@@ -9,8 +9,9 @@ from __future__ import annotations
 import copy
 
 from azbrowser.ed25519 import node_sign, public_from_seed
-from azbrowser.engine import Engine
+from azbrowser.engine import OPS, Engine
 from azbrowser.hashgate import canonical, engine_digest_for, sha256_text
+from azbrowser.meshguard import vouch_message, witness_message
 from azbrowser.meshledger import MeshDirectory
 from azbrowser.names import classify_destination
 from azbrowser.receipts import Ledger
@@ -18,7 +19,32 @@ from azbrowser.receipts import Ledger
 PAGE = "<h1>Library</h1><p>Local-first shelf.</p>"
 
 
-def signed_record(page: str = PAGE, *, name: str = "library.aziel", handle: str = "library", modules=None, connect=None, seed: bytes | None = None):
+def _witness(record: dict, seed: bytes, handle: str) -> dict:
+    public = public_from_seed(seed).hex()
+    message = witness_message(record, handle)
+    body = canonical(message).encode("utf-8")
+    return {
+        "handle": handle,
+        "public_key": public,
+        "signature": node_sign(seed, body).hex(),
+        "receipt": sha256_text(canonical(message)),
+    }
+
+
+def signed_record(
+    page: str = PAGE,
+    *,
+    name: str = "library.aziel",
+    handle: str = "library",
+    modules=None,
+    connect=None,
+    seed: bytes | None = None,
+    status: str = "FINAL",
+    claimed_at: str = "2020-01-01T00:00:00Z",
+    seq: int = 1,
+    prev: str | None = None,
+    with_witnesses: bool | None = None,
+):
     seed = seed or bytes(range(32))
     public = public_from_seed(seed).hex()
     objects: dict[str, str] = {}
@@ -41,21 +67,42 @@ def signed_record(page: str = PAGE, *, name: str = "library.aziel", handle: str 
         "handle": handle,
         "public_key": public,
         "object": page_hash,
-        "seq": 1,
-        "prev": "0" * 64,
+        "seq": seq,
+        "prev": "0" * 64 if prev is None else prev,
         "modules": ref_modules,
     }
     ref["engine_digest"] = engine_digest_for(ref)
     signature = node_sign(seed, canonical(ref).encode("utf-8")).hex()
-    return {
+    record = {
         "name": name,
         "handle": handle,
         "public_key": public,
+        "status": status,
+        "claimed_at": claimed_at,
         "ref": ref,
         "signature": signature,
         "connect": connect or {"mode": "direct", "peer": handle, "relay": None},
         "objects": objects,
+        "witnesses": [],
     }
+    if with_witnesses is None:
+        with_witnesses = status == "FINAL"
+    if with_witnesses:
+        record["witnesses"] = [
+            _witness(record, bytes(range(32, 64)), "relay-a"),
+            _witness(record, bytes(range(64, 96)), "relay-b"),
+        ]
+    return record
+
+
+def _no_ranking_number(obj) -> None:
+    if isinstance(obj, dict):
+        assert "score" not in obj
+        for value in obj.values():
+            _no_ranking_number(value)
+    elif isinstance(obj, list):
+        for value in obj:
+            _no_ranking_number(value)
 
 
 def engine_with(record, **kwargs) -> Engine:
@@ -78,12 +125,26 @@ def test_aziel_resolves_with_owner_handle():
     assert out["keys_leave_node"] is False
     assert out["signature_ok"] is True
     assert out["hash_ok"] is True
-    assert out["connect"]["mode"] == "direct"
-    assert out["connect"]["socket"] is False
-    assert out["tab"]["kind"] == "mesh"
+    assert out["name_status"] == "FINAL"
+    assert out["quarantine"] is True
+    assert out["promoted"] is False
+    assert out["airlock"]["scanner"] == "absent"
+    assert out["html"] == ""
     assert out["scripts_executed"] is False
-    assert "Library" in out["html"]
-    assert out["receipt"]["action"] == "navigate"
+    assert out["executed"] is False
+    assert out["tab"]["kind"] == "mesh-quarantine"
+    assert out["receipt"]["action"] == "airlock_hold"
+    assert out["network_wide"] is False
+    shown = eng.navigate({"url": "library.aziel/shelf", "operator_override": True})
+    assert shown["ok"] is True
+    assert shown["promoted"] is True
+    assert shown["tab"]["kind"] == "mesh"
+    assert shown["scripts_executed"] is False
+    assert shown["executed"] is False
+    assert "Library" in shown["html"]
+    assert shown["receipt"]["action"] == "navigate"
+    assert shown["connect"]["mode"] == "direct"
+    assert shown["connect"]["socket"] is False
 
 
 def test_handle_name_resolution():
@@ -221,7 +282,7 @@ def test_qnm_connect_adapter_direct_lan_relay():
         return {"ok": True, "connected": True, "mode": body["mode"], "peer": body["peer"], "relay": body["relay"]}
 
     eng = Engine(Ledger(), mesh=MeshDirectory([record], http=True, post=post))
-    out = eng.navigate({"url": "library.aziel"})
+    out = eng.navigate({"url": "library.aziel", "operator_override": True})
     assert out["ok"] is True
     assert out["connect"]["mode"] == "relay"
     assert out["connect"]["connected"] is True
@@ -232,3 +293,173 @@ def test_qnm_connect_adapter_direct_lan_relay():
     assert calls[0][1]["mode"] == "relay"
     assert calls[0][1]["relay"] == "relay-1"
     assert "private_key" not in calls[0][1]
+
+
+def test_pending_name_is_not_a_verified_site():
+    record = signed_record(status="PENDING", with_witnesses=False)
+    eng = engine_with(record)
+    out = eng.navigate({"url": "library.aziel"})
+    assert out["ok"] is True
+    assert out["name_status"] == "PENDING"
+    assert out["verified_owner"] is False
+    assert out["navigable"] is False
+    assert out["html"] == ""
+    assert out["code"] != "FG-GATE-REFUSE"
+    assert out["display"]["title"] == "Pending"
+    assert "not a verified site" in out["display"]["summary"].lower()
+    assert out["receipt"]["action"] == "name_pending"
+    missing = signed_record(status="", with_witnesses=False)
+    missing.pop("status")
+    bare = Engine(Ledger(), mesh=MeshDirectory([missing], http=False))
+    shown = bare.navigate({"url": "library.aziel"})
+    assert shown["name_status"] == "PENDING"
+    assert shown["verified_owner"] is False
+    assert shown["html"] == ""
+
+
+def test_false_final_and_young_claim_are_refused():
+    stale = signed_record(status="FINAL", with_witnesses=False)
+    eng = engine_with(stale)
+    out = eng.navigate({"url": "library.aziel"})
+    assert out["code"] == "FG-GATE-REFUSE"
+    assert out["reason"] == "name_not_final"
+    assert out["html"] == ""
+    young = signed_record(claimed_at="2026-09-24T00:00:00Z")
+    again = engine_with(young)
+    refused = again.navigate({"url": "library.aziel"})
+    assert refused["reason"] == "name_not_final"
+
+
+def test_equivocating_handle_is_refused():
+    first = signed_record(page="<p>one</p>")
+    second = signed_record(page="<p>two</p>")
+    directory = MeshDirectory([first], http=False)
+    directory.add(second)
+    eng = Engine(Ledger(), mesh=directory)
+    out = eng.navigate({"url": "library.aziel"})
+    assert out["code"] == "FG-GATE-REFUSE"
+    assert out["reason"] == "equivocating_handle"
+    assert out["html"] == ""
+    assert "<p>one</p>" not in str(out)
+    assert "<p>two</p>" not in str(out)
+
+
+def test_rollback_and_bad_prev_refused():
+    first = signed_record()
+    second = signed_record(
+        page="<p>newer</p>",
+        name="notes.library.aziel",
+        seq=2,
+        prev=first["ref"]["engine_digest"],
+    )
+    eng = Engine(Ledger(), mesh=MeshDirectory([first, second], http=False))
+    stale = eng.navigate({"url": "library.aziel", "operator_override": True})
+    assert stale["code"] == "FG-GATE-REFUSE"
+    assert stale["reason"] == "rollback"
+    assert stale["html"] == ""
+    current = eng.navigate({"url": "notes.library.aziel", "operator_override": True})
+    assert current["ok"] is True
+    assert current["name_status"] == "FINAL"
+    orphan = signed_record(name="shelf.aziel", handle="shelf", seq=2, prev="ab" * 32)
+    orphan_eng = engine_with(orphan)
+    bad = orphan_eng.navigate({"url": "shelf.aziel"})
+    assert bad["reason"] == "bad_prev"
+
+
+def test_module_stays_in_airlock_and_never_runs():
+    body = "console.log('peer-module-ran')"
+    page = '<p>ok</p><script src="/app.js"></script>'
+    record = signed_record(page, modules=[{"path": "/app.js", "body": body}])
+    eng = engine_with(record)
+    held = eng.navigate({"url": "library.aziel"})
+    assert held["quarantine"] is True
+    assert held["promoted"] is False
+    assert held["airlock"]["scanner"] == "absent"
+    assert held["scripts_executed"] is False
+    assert body not in str(held)
+    assert all(row["body_included"] is False for row in held["airlock"]["modules"])
+    promoted = eng.navigate({"url": "library.aziel", "operator_override": True})
+    assert promoted["promoted"] is True
+    assert promoted["scripts_executed"] is False
+    assert promoted["executed"] is False
+    assert "<script" not in promoted["html"].lower()
+    assert body not in str(promoted)
+    exe = signed_record("<p>ok</p>", modules=[{"path": "/payload.exe", "body": "MZ-not-a-module"}])
+    dangerous = Engine(Ledger(), mesh=MeshDirectory([exe], http=False))
+    refused = dangerous.navigate({"url": "library.aziel", "operator_override": True})
+    assert refused["code"] == "FG-GATE-REFUSE"
+    assert refused["reason"] == "airlock_quarantine"
+    assert "MZ-not-a-module" not in str(refused)
+
+
+def test_peer_block_is_local_and_island_rejoins_without_forks():
+    library = signed_record()
+    shelf = signed_record(name="shelf.aziel", handle="shelf", seed=bytes(range(96, 128)))
+    eng = Engine(Ledger(), mesh=MeshDirectory([library, shelf], http=False))
+    blocked = eng.peer_block({"handle": "library"})
+    assert blocked["ok"] is True
+    assert blocked["network_wide"] is False
+    assert blocked["scope"] == "this-node"
+    refused = eng.navigate({"url": "library.aziel", "operator_override": True})
+    assert refused["reason"] == "peer_blocked"
+    assert refused["network_wide"] is False
+    other = eng.navigate({"url": "shelf.aziel"})
+    assert other["ok"] is True
+    assert other.get("reason") != "peer_blocked"
+    web = eng.navigate({"url": "https://example.com/docs"})
+    assert web["plane"] == "dns"
+    assert "network_cutoff" not in OPS
+    assert "mesh_disable" not in OPS
+    other_node = Engine(Ledger(), mesh=MeshDirectory([library], http=False))
+    still = other_node.navigate({"url": "library.aziel"})
+    assert still.get("reason") != "peer_blocked"
+    before = [row["hash"] for row in eng.ledger.entries]
+    island = eng.island_mode({"enabled": True})
+    assert island["island_mode"] is True
+    assert island["network_wide"] is False
+    assert island["local_runtime"] is True
+    mesh = eng.navigate({"url": "shelf.aziel"})
+    assert mesh["reason"] == "island_mode"
+    app = eng.local_app({"slug": "notes", "content": "<p>stays</p>"})
+    assert app["ok"] is True
+    assert "stays" in app["html"]
+    dns = eng.navigate({"url": "https://www.azieleliab.com/"})
+    assert dns["plane"] == "dns"
+    rejoined = eng.island_mode({"enabled": False})
+    assert rejoined["island_mode"] is False
+    after = [row["hash"] for row in eng.ledger.entries]
+    assert after[: len(before)] == before
+    assert eng.receipt_verify({})["ok"] is True
+    again = eng.navigate({"url": "shelf.aziel"})
+    assert again.get("reason") != "island_mode"
+
+
+def test_local_trust_has_no_public_ranking():
+    record = signed_record()
+    message = vouch_message("library", "elder")
+    seed = bytes(range(128, 160))
+    record["vouches"] = [
+        {
+            "handle": "elder",
+            "public_key": public_from_seed(seed).hex(),
+            "signature": node_sign(seed, canonical(message).encode("utf-8")).hex(),
+        }
+    ]
+    record["heartbeats"] = [{"handle": "relay-a"}, {"handle": "relay-b"}]
+    eng = engine_with(record)
+    eng.navigate({"url": "library.aziel"})
+    out = eng.trust({"handle": "library"})
+    assert out["ok"] is True
+    assert out["local_only"] is True
+    assert out["public_ranking"] is False
+    assert out["name_status"] == "FINAL"
+    assert out["chain_age_seconds"] >= 72 * 3600
+    assert out["heartbeats_witnessed"] == 2
+    assert out["hash_matches"] >= 1
+    assert out["vouches"] == ["elder"]
+    assert out["equivocating"] is False
+    assert out["network_wide"] is False
+    _no_ranking_number(out)
+    health = eng.health({})
+    assert health["mesh_browser"]["network_wide_cutoff"] is False
+    assert health["mesh_browser"]["scanner"] == "absent"

@@ -69,6 +69,9 @@ next input. No technical MCP UI is required for the human.
 | Mesh resolve | `resolve` |
 | Capability grant / check | `capability_grant` `capability_check` |
 | Local app tab | `local_app` |
+| Peer block / unblock | `peer_block` `peer_unblock` |
+| Island mode | `island_mode` |
+| Local trust | `trust` |
 
 No receipt = no action. Every mutating op appends a hash-chained receipt.
 
@@ -99,6 +102,19 @@ separate Software. Pairing is resolve-and-connect only.
   HTML scrub. This shell does not execute scripts.
 - Handle keys never leave the local node. A payload that contains a
   private key is refused.
+- Only a FINAL name (aged, and witnessed by at least two other handles)
+  can verify. A PENDING name is shown as pending and is not a verified
+  site. An equivocating handle, a stale seq, or a broken prev-hash is
+  `FG-GATE-REFUSE`.
+- Mesh downloads and modules enter the airlock before they are shown.
+  This process has no ClamAV and no YARA (`scanner: absent`). Bytes stay
+  in quarantine unless the operator passes `operator_override: true`.
+  This shell still does not execute scripts.
+- `peer_block` cuts off one handle on this node. `island_mode` drops
+  this node's mesh peers and leaves local apps and normal DNS running.
+  Rejoin appends a receipt and does not rewrite earlier ones. There is
+  no network-wide cutoff. `trust` is a local view (chain age, witnessed
+  heartbeats, hash matches, vouches, equivocation). It is not a public ranking.
 
 Lamb Lens order is Service, then Clarity, then Peace: refuse harm, say
 what the code does, then keep the default-deny sandbox.

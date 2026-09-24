@@ -29,11 +29,11 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:13px/
 .tab.active{background:var(--bg);color:var(--gold);border-color:var(--gold)}
 .tab .x{opacity:.6;border:0;background:transparent;color:inherit;cursor:pointer}
 #newtab{color:var(--gold);background:transparent;border:1px solid var(--trim);border-radius:8px;width:28px;height:28px;cursor:pointer;margin:0 6px 6px}
-#toolbar{display:flex;align-items:center;gap:6px;padding:8px;background:var(--bar);border-bottom:1px solid var(--gold)}
+#toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px;background:var(--bar);border-bottom:1px solid var(--gold)}
 #toolbar button{background:#161616;color:var(--text);border:1px solid var(--gold);border-radius:8px;min-width:36px;height:34px;cursor:pointer}
 #toolbar button:hover{background:#241c0d;color:var(--gold)}
 #homeBtn img{width:20px;height:20px;vertical-align:middle}
-#omnibox{flex:1;background:#0b0b0b;color:var(--text);border:1px solid var(--gold);border-radius:18px;padding:8px 16px;font:14px/1.3 inherit}
+#omnibox{flex:1;min-width:180px;background:#0b0b0b;color:var(--text);border:1px solid var(--gold);border-radius:18px;padding:8px 16px;font:14px/1.3 inherit}
 #omnibox:focus{outline:2px solid var(--gold)}
 #ownerLine{padding:4px 12px;min-height:1.4em;color:var(--gold);background:#0e0e0e}
 .lens{color:var(--gold);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
@@ -75,6 +75,10 @@ iframe.preview{width:100%;min-height:420px;border:1px solid var(--trim);backgrou
     <button id="btnGo" type="button" title="Go / ethical search">Go</button>
     <span class="lens">Lamb Lens</span>
     <button id="btnAirlock" type="button" title="Airlock current URL">Airlock</button>
+    <button id="btnPromote" type="button" title="Operator override. Promotes quarantined mesh bytes on this node.">Promote</button>
+    <button id="btnIsland" type="button" title="Drop this node's mesh peers. Local runtime stays up.">Island</button>
+    <button id="btnBlock" type="button" title="Block the current mesh handle on this node only.">Block peer</button>
+    <button id="btnTrust" type="button" title="Local trust for the current handle.">Trust</button>
   </div>
   <div id="ownerLine"></div>
   <div id="body">
@@ -155,11 +159,39 @@ function homePanel() {
     + '<div class="card"><p>New-tab search is Lamb Lens: cite sources, refuse doxxing / credential harvest / malware lure. Advisory. AZNet is a separate product/engine; pairing order/token only — not shared Phase-1 UI.</p>'
     + '<p>Type a query or HTTPS URL in the address bar. Home returns to the new-tab panel.</p></div>';
 }
+let lastHandle = "";
+let islandOn = false;
 function paintOwner(j) {
   const line = document.getElementById("ownerLine");
   if (!line) return;
+  if (j && j.owner_handle) lastHandle = j.owner_handle;
+  if (j && j.name_status === "PENDING") {
+    line.textContent = "Pending · " + (j.name || j.display_url || "") + " · not a verified site";
+    return;
+  }
+  if (j && j.display && j.display.title === "Island mode") {
+    islandOn = j.island_mode === true;
+    line.textContent = islandOn
+      ? "Island mode · this node only · local runtime stays up"
+      : "Island mode off · this node rejoined";
+    return;
+  }
+  if (j && j.display && j.display.title === "Local trust") {
+    line.textContent = "Local trust · " + (j.handle || "")
+      + " · chain age " + j.chain_age_seconds
+      + " · heartbeats " + j.heartbeats_witnessed
+      + " · hash matches " + j.hash_matches
+      + " · vouches " + ((j.vouches || []).join(",") || "none")
+      + " · equivocation " + j.equivocating;
+    return;
+  }
   if (j && j.code === "FG-GATE-REFUSE") {
     line.textContent = "Blocked · FG-GATE-REFUSE · " + (j.reason || "");
+    return;
+  }
+  if (j && j.verified_owner && j.owner_handle && j.quarantine) {
+    line.textContent = "Verified owner handle · " + j.owner_handle + " · quarantined · scanner absent";
+    if (j.display_url) document.getElementById("omnibox").value = j.display_url;
     return;
   }
   if (j && j.verified_owner && j.owner_handle) {
@@ -178,6 +210,14 @@ function renderResult(j) {
   paintOwner(j);
   if (j && j.code === "FG-GATE-REFUSE") {
     stage.innerHTML = '<div class="banner">Blocked. FG-GATE-REFUSE. ' + (j.reason || "") + '</div><p class="cite">' + (j.display && j.display.summary ? j.display.summary : "") + '</p>';
+    return;
+  }
+  if (j && j.name_status === "PENDING") {
+    stage.innerHTML = '<div class="banner">Pending · ' + (j.name || "") + ' · not a verified site</div>';
+    return;
+  }
+  if (j && j.quarantine && !j.promoted) {
+    stage.innerHTML = '<div class="banner">Quarantine · scanner absent · not promoted · not run</div><p class="cite">' + (j.display && j.display.summary ? j.display.summary : "") + '</p>';
     return;
   }
   if (j.action === "home" || (j.tab && j.tab.kind === "newtab" && !j.results && !j.html)) {
@@ -250,6 +290,22 @@ document.getElementById("btnReload").onclick = async () => { renderResult(await 
 document.getElementById("btnHome").onclick = async () => { document.getElementById("omnibox").value = ""; renderResult(await callOp("home", {})); paintTabs(); };
 document.getElementById("btnGo").onclick = go;
 document.getElementById("omnibox").addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
+document.getElementById("btnPromote").onclick = async () => {
+  const q = document.getElementById("omnibox").value.trim();
+  renderResult(await callOp("navigate", { url: q, operator_override: true }));
+};
+document.getElementById("btnIsland").onclick = async () => {
+  islandOn = !islandOn;
+  renderResult(await callOp("island_mode", { enabled: islandOn }));
+};
+document.getElementById("btnBlock").onclick = async () => {
+  const handle = lastHandle || (document.getElementById("omnibox").value.trim().split(".")[0] || "");
+  renderResult(await callOp("peer_block", { handle }));
+};
+document.getElementById("btnTrust").onclick = async () => {
+  const handle = lastHandle || (document.getElementById("omnibox").value.trim().split(".")[0] || "");
+  renderResult(await callOp("trust", { handle }));
+};
 document.getElementById("btnAirlock").onclick = async () => {
   const q = document.getElementById("omnibox").value.trim();
   renderResult(await callOp("airlock", { url: q }));

@@ -14,6 +14,8 @@ LIMITATION = (
     "protocol. Mesh names (.aziel) resolve on this shell through the AZNet "
     "resolver adapter and local qnm-node. .aziel is not an ICANN registration; "
     "ordinary browsers do not resolve it. Handle keys stay on the local node. "
+    "Mesh bytes stay quarantined when the malware scanner is absent unless the "
+    "operator override is explicit. Island mode and peer block are this node only. "
     "No receipt = no action. Advisory only. Author: Aziel Eliab only."
 )
 RUNTIME = "https://aziel-runtime.vibelock.workers.dev"

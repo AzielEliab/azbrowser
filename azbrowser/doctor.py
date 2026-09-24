@@ -46,6 +46,9 @@ def doctor() -> int:
     checks.append(("receipt_verify", bool(v.get("ok"))))
 
     checks.append(("ops_count", len(OPS) >= 16))
+    mesh = h.get("mesh_browser") or {}
+    checks.append(("no_network_cutoff", mesh.get("network_wide_cutoff") is False and mesh.get("scanner") == "absent"))
+    checks.append(("mesh_guard_ops", all(op in OPS for op in ("peer_block", "island_mode", "trust"))))
 
     ok = all(p for _, p in checks)
     print(f"AZBrowser doctor {__version__} spec={SPEC}")

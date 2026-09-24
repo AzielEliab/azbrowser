@@ -155,7 +155,9 @@ Every control calls a real `/v1` handler (same op agents call). No dead buttons.
 | Resolve | `POST /v1/resolve` | `resolve` |
 | Capability grant / check | `POST /v1/capability_grant` · `/v1/capability_check` | receipted sandbox |
 | Local app | `POST /v1/local_app` | `local_app` |
-| Mesh enable / disable / join / leave | `POST /v1/mesh/{op}` | PROXY; no auto-heal; no Node Gate |
+| Promote quarantined mesh bytes | `POST /v1/navigate` with `operator_override: true` | explicit operator override; scanner stays absent |
+| Island / block peer / trust | `POST /v1/island_mode` · `/v1/peer_block` · `/v1/trust` | this node only; no network-wide cutoff |
+| Mesh enable / disable / join / leave | `POST /v1/mesh/{op}` | PROXY to suite mesh; not an edge-mesh cutoff |
 
 Prove locally (after `pip install -e ".[dev]"`):
 
