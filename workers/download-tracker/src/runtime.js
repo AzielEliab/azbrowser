@@ -80,6 +80,8 @@ function toolDefs() {
     peer_unblock: "Remove a local peer block for one handle on this node.",
     island_mode: "Drop this node's mesh peers and relays, or rejoin. Local apps and normal DNS keep working. Receipted. No network-wide cutoff.",
     trust: "Local trust view for one handle: chain age, witnessed heartbeats, hash matches, vouches, equivocation. No public ranking.",
+    slots: "Show four reserved hub-mirror slots and three user slots for a handle. MirageGrid factory names are a separate unchanged layer.",
+    design_mode: "Open design mode. The local shell opens a local tab. The hosted Worker refuses it. Publish stays on the hosting node.",
   };
   return OPS.map((name) => ({
     name: "azbrowser_" + name,

@@ -72,6 +72,8 @@ next input. No technical MCP UI is required for the human.
 | Peer block / unblock | `peer_block` `peer_unblock` |
 | Island mode | `island_mode` |
 | Local trust | `trust` |
+| Domain slots | `slots` |
+| Design mode | `design_mode` |
 
 No receipt = no action. Every mutating op appends a hash-chained receipt.
 
@@ -115,6 +117,15 @@ separate Software. Pairing is resolve-and-connect only.
   Rejoin appends a receipt and does not rewrite earlier ones. There is
   no network-wide cutoff. `trust` is a local view (chain age, witnessed
   heartbeats, hash matches, vouches, equivocation). It is not a public ranking.
+- The chrome opens black with white text. Day / Night flips immediately
+  and is remembered. Aziel mode is black, royal purple, and gold.
+- `slots` lists the four reserved hub mirrors and three user names.
+  MirageGrid Cap-7 names are a separate layer and stay unchanged.
+- `design_mode` opens a local tab on the loopback shell. The hosted
+  Worker refuses it (`design_mode_local_only`). Publishing and the
+  designer stay on qnm-node. Keys stay on the node.
+- An isolated handle returns `FG-GATE-REFUSE` and a policy page. Peer
+  bytes are not loaded. Isolation does not delete local data.
 
 Lamb Lens order is Service, then Clarity, then Peace: refuse harm, say
 what the code does, then keep the default-deny sandbox.

@@ -11,6 +11,8 @@ from .airlock import STAGES, airlock
 from .ethics import classify_query
 from .meshguard import NAME_MIN_AGE_SECONDS, NAME_MIN_WITNESSES, local_trust
 from .meshledger import MeshDirectory, directory_from_env, open_mesh, resolve_query
+from .policy import design_page, design_remote_page
+from .slots import slots_for
 from .names import SPEC as MESH_SPEC
 from .names import _handle_ok
 from .names import classify_destination
@@ -64,6 +66,8 @@ OPS = (
     "peer_unblock",
     "island_mode",
     "trust",
+    "slots",
+    "design_mode",
 )
 
 ALIASES = {
@@ -79,6 +83,7 @@ ALIASES = {
     "local": "local_app",
     "trust_view": "trust",
     "peer_quarantine": "peer_block",
+    "design": "design_mode",
 }
 
 
@@ -164,6 +169,10 @@ class Engine:
                 "island_mode": self.island,
                 "name_min_age_seconds": NAME_MIN_AGE_SECONDS,
                 "name_min_witnesses": NAME_MIN_WITNESSES,
+                "reserved_slots": 4,
+                "user_slots": 3,
+                "design_mode": "local-tab",
+                "themes": ["night", "day", "aziel"],
             },
             "limitation": LIMITATION,
             "display": display_of("AZBrowser health", "Phase 1 research shell. Dual surface.", [("version", __version__), ("ops", len(OPS))]),
@@ -296,6 +305,8 @@ class Engine:
         return opened
 
     def _finish_local(self, classified: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+        if str(classified.get("slug") or "") == "design" or payload.get("design") is True:
+            return self.design_mode({"handle": payload.get("handle") or "", "remote": payload.get("remote") is True})
         content = payload.get("content")
         html = scrub_html(str(content))["html"] if content is not None else ""
         origin = str(classified.get("origin") or "")
@@ -722,6 +733,93 @@ class Engine:
             ],
         )
         return out
+
+    def slots(self, payload: dict[str, Any]) -> dict[str, Any]:
+        handle = str(payload.get("handle") or "").strip().lower()
+        if handle and not _handle_ok(handle):
+            rec = self._receipt("slots", {"ok": False, "reason": "bad_handle"})
+            return {
+                "ok": False,
+                "code": "FG-GATE-REFUSE",
+                "reason": "bad_handle",
+                "receipt": rec,
+                "limitation": LIMITATION,
+                "display": display_of("Blocked", "FG-GATE-REFUSE — bad_handle", [("reason", "bad_handle")]),
+            }
+        out = slots_for(self.mesh.records(), handle)
+        rec = self._receipt("slots", {"handle": handle, "reserved": 4, "user": 3, "miragegrid_changed": False})
+        out["receipt"] = rec
+        out["limitation"] = LIMITATION
+        out["display"] = display_of(
+            "Domain slots",
+            "Four reserved hub mirrors and three user slots. MirageGrid factory names are unchanged.",
+            [("handle", handle or "unset"), ("automatic", out.get("automatic_name") or "unset")],
+        )
+        return out
+
+    def design_mode(self, payload: dict[str, Any]) -> dict[str, Any]:
+        if payload.get("remote") is True:
+            rec = self._receipt("design_mode", {"ok": False, "reason": "design_mode_local_only", "remote": True})
+            return {
+                "ok": False,
+                "code": "FG-GATE-REFUSE",
+                "reason": "design_mode_local_only",
+                "policy_page": True,
+                "html": design_remote_page(),
+                "scripts_executed": False,
+                "executed": False,
+                "plane": "local",
+                "keys_leave_node": False,
+                "receipt": rec,
+                "limitation": LIMITATION,
+                "note": "Design mode is refused off the hosting node. Nothing was published.",
+                "display": display_of(
+                    "Blocked",
+                    "FG-GATE-REFUSE — design_mode_local_only",
+                    [("reason", "design_mode_local_only")],
+                ),
+            }
+        handle = str(payload.get("handle") or "").strip().lower()
+        slot_view = slots_for(self.mesh.records(), handle if _handle_ok(handle) else "")
+        html = design_page(slot_view)
+        origin = "azbrowser://local/design"
+        rec = self._receipt(
+            "design_mode",
+            {"origin": origin, "local": True, "publish": False, "keys_leave_node": False},
+        )
+        tab = self.tabs.push(origin, "Design", "local-app")
+        return {
+            "ok": True,
+            "action": "design_mode",
+            "plane": "local",
+            "kind": "local-app",
+            "origin": origin,
+            "url": origin,
+            "display_url": origin,
+            "slug": "design",
+            "source": "local",
+            "data_stays_local": True,
+            "uploaded": False,
+            "publish": False,
+            "keys_leave_node": False,
+            "scripts_executed": False,
+            "executed": False,
+            "html": html,
+            "shell_page": True,
+            "slots": slot_view,
+            "title": "Design",
+            "host": "127.0.0.1",
+            "tab": tab,
+            "receipt": rec,
+            "icann": False,
+            "note": "Local design tab. qnm-node hosts the designer. This shell does not publish and does not hold the handle key.",
+            "display": display_of(
+                "Design mode",
+                "Local tab only. Publish stays on qnm-node. The handle key stays on the node.",
+                [("origin", origin), ("receipt", rec["hash"][:16])],
+            ),
+            "limitation": LIMITATION,
+        }
 
     def local_app(self, payload: dict[str, Any]) -> dict[str, Any]:
         slug = str(payload.get("slug") or payload.get("app") or "app")

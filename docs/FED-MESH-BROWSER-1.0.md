@@ -290,6 +290,26 @@ This is not zero-knowledge. It is not a claim of protection against a
 state-level adversary. Keys do not leave the local node. The Worker
 still does not open a peer socket.
 
+## Wave 3 chrome, slots, and isolation
+
+The loopback chrome and the Worker chrome share three looks:
+
+| Look | Surface |
+| --- | --- |
+| Night | Black background, white text. This is the default when the OS preference is dark or missing. |
+| Day | White background, black text. |
+| Aziel mode | Black base, royal purple bars and panels, gold on the active tab, the Go button, and the focus ring. |
+
+One control flips day and night immediately. Aziel mode is a separate control. The choice is stored on this machine as `azbrowser-appearance`. The first visit with nothing stored follows `prefers-color-scheme`. There is no lock icon and no identity-lock banner.
+
+`slots` returns four reserved hub mirrors (`AZ.AzielEliab.AZ`, `AZ.AzielCorpusLibrary.AZ`, `AZ.Godlock.AZ`, `AZ.HeDidntJump.AZ`). Those are not user-nameable. Three user slots show ledger claims whose `slot` is `1`, `2`, or `3` for that handle, plus the automatic `<handle>.aziel` name. A second digest for the same handle at the same sequence is still `equivocating_handle`. Slot display does not create a second chain. MirageGrid's global Cap-7 factory names (`azgrid.az`, `azcloak.az`, `azvault.az`, `azshift.az`, and the three cloak names) are a separate layer and are not edited by this display.
+
+`design_mode` on the loopback shell opens `azbrowser://local/design`. The page lists the slots and says the designer itself is qnm-node on `127.0.0.1`. This process does not publish and does not unlock the handle key. The hosted Worker returns `FG-GATE-REFUSE` / `design_mode_local_only`.
+
+A ledger record with `isolation.state` of `ISOLATED` makes every name for that handle `FG-GATE-REFUSE` / `handle_isolated`. The response HTML is this shell's policy page. It names the reason code, the check, and the evidence hash. It does not include peer bytes. Isolation does not delete local data. A signed appeal can ask for a re-check; this shell does not decide it. Classifiers can miss and can false-positive. This browser does not run them. Operators follow the law in their jurisdiction, including US reporting to NCMEC where that duty applies. This browser does not keep that material.
+
+aziel-runtime `main` still has no FED-MESH Mesh Security or wave-3 section. These field names are the browser contract until that spec says otherwise.
+
 ## Human chrome
 
 The address area shows:

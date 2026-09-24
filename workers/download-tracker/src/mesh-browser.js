@@ -35,6 +35,10 @@ export function setMeshLedger(records) {
   seenSeq.clear();
 }
 
+export function meshRecords() {
+  return ledger.slice();
+}
+
 export function meshEquivocating(handle) {
   return equivocations.has(String(handle || "").toLowerCase());
 }
@@ -434,6 +438,101 @@ export async function localTrust({ handle, record, equivocating, hashMatches, pe
   };
 }
 
+function isolationFor(handle) {
+  const who = String(handle || "").toLowerCase();
+  if (!who) return null;
+  for (const row of ledger) {
+    if (String(row.handle || "").toLowerCase() !== who) continue;
+    const isolation = row.isolation;
+    if (isolation && String(isolation.state || "").toUpperCase() === "ISOLATED") return isolation;
+  }
+  return null;
+}
+
+function policyPage(handle, isolation) {
+  const row = isolation || {};
+  const esc = (value) => String(value == null ? "" : value)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const reason = String(row.reason || "unspecified");
+  const check = String(row.check || "unspecified");
+  const evidence = String(row.evidence_hash || "");
+  return `<article class="policy-page">
+<h1>This handle is isolated</h1>
+<p>FG-GATE-REFUSE · handle_isolated</p>
+<p>Handle <strong>${esc(handle)}</strong> is isolated from the mesh. This browser will not resolve its names or show its objects.</p>
+<dl>
+<dt>Reason code</dt><dd>${esc(reason)}</dd>
+<dt>Check</dt><dd>${esc(check)}</dd>
+<dt>Evidence</dt><dd>${esc(evidence) || "none recorded"}</dd>
+</dl>
+<p>The evidence field is a hash only. This browser does not store the content and does not forward it.</p>
+<p>Isolation does not delete data on the person's own machine. The local runtime can keep running. Relays that follow the policy refuse to relay or witness this handle.</p>
+<p>A signed appeal record can ask for a re-check. This shell does not grant or deny that appeal.</p>
+<p>Name checks, and the hosting node's local image and text checks, can miss and can false-positive. This page does not claim those checks catch everything. If a classifier is absent on the hosting node, publish stays blocked there. This browser does not run those classifiers.</p>
+<p>Operators must follow the law in their jurisdiction, including US reporting of child sexual abuse material to NCMEC where that duty applies. This browser does not keep that material as evidence.</p>
+</article>`;
+}
+
+export function designRemotePage() {
+  return `<article class="policy-page">
+<h1>Design mode stays on the hosting node</h1>
+<p>FG-GATE-REFUSE · design_mode_local_only</p>
+<p>This chrome is not the hosting node. Design mode is bound to localhost on the machine that holds the handle key. Remote access is refused. Nothing was published.</p>
+</article>`;
+}
+
+export const RESERVED_SLOTS = [
+  { id: "ae", label: "AZ.AzielEliab.AZ", host: "az.azieleliab.az", user_nameable: false, role: "hub-mirror" },
+  { id: "corpus", label: "AZ.AzielCorpusLibrary.AZ", host: "az.azielcorpuslibrary.az", user_nameable: false, role: "hub-mirror" },
+  { id: "godlock", label: "AZ.Godlock.AZ", host: "az.godlock.az", user_nameable: false, role: "hub-mirror" },
+  { id: "hdj", label: "AZ.HeDidntJump.AZ", host: "az.hedidntjump.az", user_nameable: false, role: "hub-mirror" },
+];
+
+function userSlotIndex(value) {
+  if (typeof value === "boolean") return null;
+  if (Number.isInteger(value) && value >= 1 && value <= 3) return value - 1;
+  const text = String(value || "").trim().toLowerCase();
+  if (["1", "2", "3", "user-1", "user-2", "user-3"].includes(text)) return Number(text.slice(-1)) - 1;
+  return null;
+}
+
+export function slotsFor(records, handle) {
+  const who = String(handle || "").trim().toLowerCase();
+  const user = [1, 2, 3].map((n) => ({ id: "user-" + n, name: null, status: "empty", user_nameable: true, conflict: false }));
+  for (const record of records || []) {
+    if (!record) continue;
+    if (who && String(record.handle || "").trim().toLowerCase() !== who) continue;
+    const index = userSlotIndex(record.slot);
+    if (index == null) continue;
+    const name = String(record.name || "") || null;
+    const status = String(record.status || "PENDING").toUpperCase() || "PENDING";
+    if (user[index].name && user[index].name !== name) {
+      user[index].conflict = true;
+      continue;
+    }
+    user[index].name = name;
+    user[index].status = status;
+  }
+  return {
+    ok: true,
+    handle: who,
+    automatic_name: who ? who + ".aziel" : "",
+    reserved: RESERVED_SLOTS.map((row) => ({ ...row })),
+    user,
+    reserved_count: 4,
+    user_count: 3,
+    user_nameable_reserved: false,
+    miragegrid: {
+      separate_layer: true,
+      changed: false,
+      real: ["azcloak.az", "azgrid.az", "azshift.az", "azvault.az"],
+      decoy: ["azbooth.az", "azflag.az", "azstandby.az"],
+      note: "MirageGrid global Cap-7 factory names are a separate layer and are unchanged.",
+    },
+    note: "Four reserved slots mirror the hub names and are not user-nameable. Three user slots are claimed with the existing name rules. The automatic handle name is separate from those three.",
+  };
+}
+
 function lookup(name, handle) {
   const nameL = String(name || "").toLowerCase();
   const handleL = String(handle || "").toLowerCase();
@@ -587,6 +686,28 @@ export async function openMesh(classified, guard = {}) {
   const record = lookup(classified.name, "");
   if (!record) return blocked("name_not_in_ledger", classified);
   if (containsSecret(record)) return blocked("keys_must_stay_on_node", classified);
+  const owner = String(record.handle || handle || "");
+  const isolation = isolationFor(owner);
+  if (isolation) {
+    return {
+      ...blocked("handle_isolated", classified),
+      policy_page: true,
+      html: policyPage(owner, isolation),
+      isolation: {
+        state: "ISOLATED",
+        reason: String(isolation.reason || "unspecified"),
+        check: String(isolation.check || "unspecified"),
+        evidence_hash: String(isolation.evidence_hash || ""),
+        content_stored: false,
+        content_forwarded: false,
+        deletes_local_data: false,
+        local_runtime: true,
+      },
+      executed: false,
+      network_wide: false,
+      note: "This handle is isolated from the mesh. The page is this shell's policy refusal. Peer bytes were not loaded.",
+    };
+  }
   const checked = await verifyRecord(record);
   if (!checked.ok) return blocked(checked.reason, classified);
   noteVerified(record);

@@ -28,6 +28,7 @@ from urllib.request import Request, urlopen
 from .hashgate import contains_secret, gate_bytes, verify_record
 from .meshguard import evaluate_name, promote_objects
 from .names import REFUSE, SPEC, classify_destination
+from .policy import policy_page
 from .preview import scrub_html
 
 PostFn = Callable[[str, dict[str, Any], float], Any]
@@ -141,6 +142,21 @@ class MeshDirectory:
         if seq < known:
             return {"ok": False, "reason": "rollback"}
         return {"ok": True, "reason": ""}
+
+    def records(self) -> list[dict[str, Any]]:
+        return list(self.by_name.values())
+
+    def isolation_for(self, handle: str) -> dict[str, Any] | None:
+        who = str(handle or "").strip().lower()
+        if not who:
+            return None
+        for record in self.by_name.values():
+            if str(record.get("handle") or "").strip().lower() != who:
+                continue
+            isolation = record.get("isolation")
+            if isinstance(isolation, dict) and str(isolation.get("state") or "").strip().upper() == "ISOLATED":
+                return isolation
+        return None
 
     def lookup(self, *, name: str = "", handle: str = "") -> dict[str, Any] | None:
         name_l = name.strip().lower()
@@ -358,6 +374,29 @@ def open_mesh(
         return _refuse(str(record["_refuse"]), classified)
     if contains_secret(record):
         return _refuse("keys_must_stay_on_node", classified)
+    owner = str(record.get("handle") or handle)
+    isolation = directory.isolation_for(owner)
+    if isolation:
+        return _refuse(
+            "handle_isolated",
+            classified,
+            policy_page=True,
+            html=policy_page(owner, isolation),
+            isolation={
+                "state": "ISOLATED",
+                "reason": str(isolation.get("reason") or "unspecified"),
+                "check": str(isolation.get("check") or "unspecified"),
+                "evidence_hash": str(isolation.get("evidence_hash") or ""),
+                "content_stored": False,
+                "content_forwarded": False,
+                "deletes_local_data": False,
+                "local_runtime": True,
+            },
+            scripts_executed=False,
+            executed=False,
+            network_wide=False,
+            note="This handle is isolated from the mesh. The page is this shell's policy refusal. Peer bytes were not loaded.",
+        )
     checked = verify_record(record)
     if not checked["ok"]:
         return _refuse(str(checked["reason"]), classified, allowlisted=bool(classified.get("allowlisted")))

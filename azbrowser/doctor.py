@@ -49,6 +49,10 @@ def doctor() -> int:
     mesh = h.get("mesh_browser") or {}
     checks.append(("no_network_cutoff", mesh.get("network_wide_cutoff") is False and mesh.get("scanner") == "absent"))
     checks.append(("mesh_guard_ops", all(op in OPS for op in ("peer_block", "island_mode", "trust"))))
+    slots = eng.slots({"handle": "library"})
+    checks.append(("domain_slots", slots.get("reserved_count") == 4 and slots.get("user_count") == 3 and (slots.get("miragegrid") or {}).get("changed") is False))
+    design = eng.design_mode({})
+    checks.append(("design_local", design.get("ok") is True and design.get("publish") is False and design.get("origin") == "azbrowser://local/design"))
 
     ok = all(p for _, p in checks)
     print(f"AZBrowser doctor {__version__} spec={SPEC}")

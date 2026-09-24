@@ -9,9 +9,12 @@ import {
   NAME_MIN_WITNESSES,
   capabilityDecision,
   classifyDestination,
+  designRemotePage,
   localTrust,
+  slotsFor,
   lookupRecord,
   meshEquivocating,
+  meshRecords,
   refreshMeshIndex,
   openMesh,
   originOf,
@@ -68,6 +71,8 @@ export const OPS = [
   "peer_unblock",
   "island_mode",
   "trust",
+  "slots",
+  "design_mode",
 ];
 
 export const ALIASES = {
@@ -83,6 +88,7 @@ export const ALIASES = {
   local: "local_app",
   trust_view: "trust",
   peer_quarantine: "peer_block",
+  design: "design_mode",
 };
 
 export const STAGES = ["download", "scan", "scrub", "verify", "vault"];
@@ -533,6 +539,25 @@ async function finishMesh(session, classified, payload) {
 }
 
 async function finishLocal(session, classified, payload) {
+  if (classified.slug === "design" || (payload && payload.design === true)) {
+    const rec = await appendReceipt(session, "design_mode", { ok: false, reason: "design_mode_local_only", remote: true });
+    return {
+      ok: false,
+      code: "FG-GATE-REFUSE",
+      reason: "design_mode_local_only",
+      policy_page: true,
+      html: designRemotePage(),
+      scripts_executed: false,
+      executed: false,
+      plane: "local",
+      keys_leave_node: false,
+      receipt: rec,
+      session_id: session.id,
+      limitation: LIMITATION,
+      note: "Design mode is refused off the hosting node. Nothing was published.",
+      display: displayOf("Blocked", "FG-GATE-REFUSE — design_mode_local_only", [["reason", "design_mode_local_only"]]),
+    };
+  }
   const content = payload && payload.content != null ? String(payload.content) : "";
   const scrubbed = content ? scrubHtml(content) : { html: "", stripped_kinds: [] };
   const rec = await appendReceipt(session, "local_app", {
@@ -646,6 +671,10 @@ export async function dispatch(op, payload, sessionId) {
         island_mode: !!session.island_mode,
         name_min_age_seconds: NAME_MIN_AGE_SECONDS,
         name_min_witnesses: NAME_MIN_WITNESSES,
+        reserved_slots: 4,
+        user_slots: 3,
+        design_mode: "local-only-refused-here",
+        themes: ["night", "day", "aziel"],
       },
       session_id: session.id,
       limitation: LIMITATION,
@@ -990,6 +1019,45 @@ export async function dispatch(op, payload, sessionId) {
     return out;
   }
 
+  if (name === "slots") {
+    const handle = String((payload && payload.handle) || "").trim().toLowerCase();
+    const handleOk = !handle || /^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$/.test(handle);
+    if (!handleOk) {
+      const rec = await appendReceipt(session, "slots", { ok: false, reason: "bad_handle" });
+      return { ok: false, code: "FG-GATE-REFUSE", reason: "bad_handle", receipt: rec, session_id: session.id, limitation: LIMITATION, display: displayOf("Blocked", "FG-GATE-REFUSE — bad_handle", [["reason", "bad_handle"]]) };
+    }
+    if (payload && Array.isArray(payload.ledger)) setMeshLedger(payload.ledger);
+    await refreshMeshIndex();
+    const out = slotsFor(meshRecords(), handle);
+    const rec = await appendReceipt(session, "slots", { handle, reserved: 4, user: 3, miragegrid_changed: false });
+    out.receipt = rec;
+    out.session_id = session.id;
+    out.limitation = LIMITATION;
+    out.display = displayOf("Domain slots", "Four reserved hub mirrors and three user slots. MirageGrid factory names are unchanged.", [["handle", handle || "unset"], ["automatic", out.automatic_name || "unset"]]);
+    return out;
+  }
+
+  if (name === "design_mode") {
+    const rec = await appendReceipt(session, "design_mode", { ok: false, reason: "design_mode_local_only", remote: true });
+    return {
+      ok: false,
+      code: "FG-GATE-REFUSE",
+      reason: "design_mode_local_only",
+      policy_page: true,
+      html: designRemotePage(),
+      scripts_executed: false,
+      executed: false,
+      plane: "local",
+      keys_leave_node: false,
+      publish: false,
+      receipt: rec,
+      session_id: session.id,
+      limitation: LIMITATION,
+      note: "Design mode is refused off the hosting node. Nothing was published.",
+      display: displayOf("Blocked", "FG-GATE-REFUSE — design_mode_local_only", [["reason", "design_mode_local_only"]]),
+    };
+  }
+
   if (name === "local_app") {
     const slug = String((payload && (payload.slug || payload.app)) || "app");
     const source = String((payload && payload.source) || "qnm");
@@ -1076,6 +1144,8 @@ Gate. No auto-heal. Not anonymity.
 | Peer block / unblock | \`peer_block\` \`peer_unblock\` |
 | Island mode | \`island_mode\` |
 | Local trust | \`trust\` |
+| Domain slots | \`slots\` |
+| Design mode | \`design_mode\` |
 
 No receipt = no action. Every mutating op appends a hash-chained receipt.
 

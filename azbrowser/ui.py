@@ -25,34 +25,62 @@ def _chrome() -> str:
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AZBrowser — local research shell</title>
 <style>
-:root {{ color-scheme: dark; --bg:#0b0b0b; --gold:#c9a227; --trim:#8a7219; --text:#f5f5f5; --muted:#c8c0b0; }}
+:root, html[data-theme="night"] {{ color-scheme: dark; --bg:#0b0b0b; --text:#f5f5f5; --muted:#c8c8c8; --bar:#141414; --panel:#111111; --line:#2c2c2c; --gold:#f5f5f5; --trim:#3a3a3a; --ink:#0b0b0b; --focus:#ffffff; --tab:#1c1c1c; --banner:#161616; }}
+html[data-theme="day"] {{ color-scheme: light; --bg:#ffffff; --text:#141414; --muted:#333333; --bar:#f3f3f3; --panel:#f7f7f7; --line:#d4d4d4; --gold:#141414; --trim:#c8c8c8; --ink:#ffffff; --focus:#141414; --tab:#ffffff; --banner:#f3f3f3; }}
+html[data-theme="aziel"] {{ color-scheme: dark; --bg:#0b0b0b; --text:#f6f1e4; --muted:#e4d2a0; --bar:#2a1454; --panel:#231246; --line:#6d4ea3; --gold:#f0d060; --trim:#8d6bc4; --ink:#1a1204; --focus:#f0d060; --tab:#3a1d6e; --banner:#2a1454; }}
 * {{ box-sizing: border-box; }}
-html,body {{ margin:0; height:100%; background:var(--bg); color:var(--text); font:14px/1.4 system-ui,sans-serif; }}
-#chrome {{ display:flex; flex-direction:column; height:100%; border:2px solid var(--gold); }}
-.tabs {{ display:flex; gap:4px; padding:6px 8px 0; background:#111; border-bottom:1px solid var(--gold); }}
-.tab {{ padding:6px 12px; border:1px solid var(--trim); border-bottom:none; border-radius:8px 8px 0 0; background:#1a1a1a; color:var(--text); cursor:pointer; }}
-.tab.active {{ background:#0b0b0b; color:var(--gold); }}
-.plus {{ color:var(--gold); cursor:pointer; padding:6px 10px; }}
-.bar {{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:8px; background:#111; border-bottom:1px solid var(--gold); }}
-.bar button {{ background:#161616; color:var(--text); border:1px solid var(--gold); border-radius:6px; min-width:36px; height:32px; cursor:pointer; }}
-.bar button:hover {{ background:#241c0d; color:var(--gold); }}
-#home img {{ width:22px; height:22px; vertical-align:middle; }}
-#omnibox {{ flex:1; min-width:180px; background:#0b0b0b; color:var(--text); border:1px solid var(--gold); border-radius:16px; padding:8px 14px; }}
-#ownerLine {{ padding:4px 12px; min-height:1.4em; color:var(--gold); background:#0e0e0e; }}
-.mode {{ color:var(--gold); font-size:12px; letter-spacing:.06em; }}
-main {{ flex:1; display:grid; grid-template-columns: 1fr 320px; min-height:0; }}
-#stage {{ overflow:auto; padding:16px; }}
-aside {{ border-left:1px solid var(--gold); overflow:auto; padding:12px; background:#101010; }}
-h2 {{ color:var(--gold); font-size:13px; margin:0 0 8px; }}
-.banner {{ border:1px solid var(--trim); background:#241c0d; color:#f0d78c; padding:10px; border-radius:8px; margin-bottom:12px; }}
-pre {{ white-space:pre-wrap; word-break:break-word; font-size:12px; }}
-.receipt {{ font-family:ui-monospace,monospace; font-size:11px; border-bottom:1px solid #333; padding:6px 0; }}
-.status {{ border-top:1px solid var(--gold); padding:6px 10px; font-size:12px; color:var(--muted); }}
-#meshStrip {{ border-top:1px solid var(--gold); padding:8px 10px; background:#0e0e0e; display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; font-size:12px; color:var(--muted); }}
-#meshStrip .live b {{ color:var(--gold); font-size:18px; margin-right:6px; }}
-#meshStrip button {{ background:#161616; color:var(--text); border:1px solid var(--trim); border-radius:6px; height:28px; padding:0 10px; cursor:pointer; }}
-a {{ color:var(--gold); }}
+html,body {{ margin:0; height:100%; background:var(--bg); color:var(--text); font:15px/1.45 "Segoe UI", system-ui, sans-serif; }}
+#chrome {{ display:flex; flex-direction:column; height:100%; background:var(--bg); }}
+.tabs {{ display:flex; gap:6px; padding:8px 10px 0; background:var(--bar); border-bottom:1px solid var(--line); min-height:42px; }}
+.tab {{ padding:8px 14px; border:1px solid transparent; border-bottom:none; border-radius:10px 10px 0 0; background:transparent; color:var(--muted); cursor:pointer; }}
+.tab.active {{ background:var(--gold); color:var(--ink); }}
+.plus {{ color:var(--text); cursor:pointer; padding:6px 10px; background:transparent; border:0; }}
+.bar {{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px 12px; background:var(--bar); }}
+.bar button, .node button, #bookmarks button {{ background:transparent; color:var(--text); border:1px solid var(--line); border-radius:8px; min-width:36px; height:34px; padding:0 10px; cursor:pointer; }}
+.bar button:hover, .node button:hover {{ border-color:var(--focus); }}
+.bar button:focus-visible, #omnibox:focus-visible, .node button:focus-visible {{ outline:2px solid var(--focus); outline-offset:2px; }}
+#go, #azielMode[aria-pressed="true"] {{ background:var(--gold); color:var(--ink); border-color:var(--gold); }}
+#home img {{ width:20px; height:20px; vertical-align:middle; }}
+#omnibox {{ flex:1; min-width:200px; background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:999px; padding:9px 16px; font:15px/1.3 inherit; }}
+#handleChip {{ font-size:12px; color:var(--muted); padding:0 4px; white-space:nowrap; }}
+#bookmarks {{ display:flex; gap:8px; align-items:center; padding:6px 12px; background:var(--bar); border-top:1px solid var(--line); font-size:13px; }}
+#bookmarks[hidden] {{ display:none; }}
+#bookmarkList {{ display:flex; gap:8px; flex-wrap:wrap; }}
+#ownerLine {{ padding:4px 14px 8px; min-height:1.2em; color:var(--muted); background:var(--bar); font-size:13px; }}
+.mode {{ color:var(--muted); font-size:12px; letter-spacing:.04em; }}
+main {{ flex:1; display:grid; grid-template-columns: 1fr 300px; min-height:0; }}
+#stage {{ overflow:auto; padding:28px 32px; }}
+aside {{ border-left:1px solid var(--line); overflow:auto; padding:16px; background:var(--panel); }}
+h2 {{ color:var(--muted); font-size:12px; letter-spacing:.06em; text-transform:uppercase; margin:16px 0 8px; }}
+.banner, .refusal {{ border:1px solid var(--line); background:var(--banner); color:var(--text); padding:16px 18px; border-radius:12px; margin-bottom:16px; }}
+.refusal {{ max-width:40rem; }}
+.refusal h1, .policy-page h1, .design-page h1 {{ font-size:1.7rem; font-weight:560; margin:0 0 8px; }}
+pre {{ white-space:pre-wrap; word-break:break-word; font-size:12px; color:var(--muted); }}
+.receipt {{ font-family:ui-monospace,monospace; font-size:11px; border-bottom:1px solid var(--line); padding:6px 0; }}
+.status {{ border-top:1px solid var(--line); padding:8px 12px; font-size:12px; color:var(--muted); }}
+#meshStrip {{ border-top:1px solid var(--line); padding:8px 12px; background:var(--panel); display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; font-size:12px; color:var(--muted); }}
+#meshStrip .live b {{ color:var(--text); font-size:18px; margin-right:6px; }}
+#meshStrip button {{ background:transparent; color:var(--text); border:1px solid var(--line); border-radius:6px; height:28px; padding:0 10px; cursor:pointer; }}
+.node {{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }}
+a {{ color:inherit; }}
+.start h1 {{ font-size:1.7rem; font-weight:560; margin:0 0 8px; }}
+#chrome, .bar, .tabs, aside, #stage {{ transition: background-color .12s ease, color .12s ease; }}
+@media (max-width: 860px) {{
+  main {{ grid-template-columns: 1fr; }}
+  aside {{ border-left: 0; border-top: 1px solid var(--line); }}
+}}
 </style>
+<script>
+(function() {{
+  var saved = null;
+  try {{ saved = JSON.parse(localStorage.getItem('azbrowser-appearance') || 'null'); }} catch (e) {{}}
+  var theme = 'night';
+  if (saved && (saved.theme === 'day' || saved.theme === 'night' || saved.theme === 'aziel')) theme = saved.theme;
+  else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) theme = 'day';
+  document.documentElement.setAttribute('data-theme', theme);
+  if (saved && saved.bookmarks) document.documentElement.setAttribute('data-bookmarks', 'on');
+}})();
+</script>
 <div id="chrome">
   <div class="tabs" id="tabs"></div>
   <div class="bar">
@@ -60,19 +88,32 @@ a {{ color:var(--gold); }}
     <button id="fwd" title="Forward" type="button">▶</button>
     <button id="reload" title="Reload" type="button">↻</button>
     <button id="home" title="Home" type="button"><img alt="Home" src="{SIGIL}"></button>
-    <input id="omnibox" placeholder="Search Lamb Lens, a URL, or a .aziel name" spellcheck="false">
+    <input id="omnibox" placeholder="Search Lamb Lens, a URL, or a .aziel name" spellcheck="false" aria-label="Address">
+    <span id="handleChip"></span>
     <button id="go" type="button">Go</button>
-    <span class="mode">Lamb Lens</span>
-    <button id="airlockBtn" type="button">Airlock</button>
-    <button id="promoteBtn" type="button" title="Operator override. Promotes quarantined mesh bytes on this node.">Promote</button>
-    <button id="islandBtn" type="button" title="Drop this node's mesh peers. Local runtime stays up.">Island</button>
-    <button id="blockBtn" type="button" title="Block the current mesh handle on this node only.">Block peer</button>
-    <button id="trustBtn" type="button" title="Local trust for the current handle.">Trust</button>
+    <button id="themeToggle" type="button" title="Switch day and night">Day</button>
+    <button id="azielMode" type="button" title="Aziel mode. Gold, black, and royal purple." aria-pressed="false">Aziel</button>
+    <button id="settingsBtn" type="button" title="Settings">Settings</button>
+    <button id="designBtn" type="button" title="Open design mode as a local tab">Design</button>
+  </div>
+  <div id="bookmarks" hidden>
+    <span>Bookmarks</span>
+    <div id="bookmarkList"></div>
+    <button id="bookmarkAdd" type="button">Bookmark this page</button>
   </div>
   <div id="ownerLine"></div>
   <main>
     <section id="stage"></section>
     <aside>
+      <h2>This node</h2>
+      <div class="node">
+        <button id="airlockBtn" type="button">Airlock</button>
+        <button id="promoteBtn" type="button" title="Operator override. Promotes quarantined mesh bytes on this node.">Promote</button>
+        <button id="islandBtn" type="button" title="Drop this node's mesh peers. Local runtime stays up.">Island</button>
+        <button id="blockBtn" type="button" title="Block the current mesh handle on this node only.">Block peer</button>
+        <button id="trustBtn" type="button" title="Local trust for the current handle.">Trust</button>
+        <button id="slotsBtn" type="button" title="Show this handle's domain slots">Slots</button>
+      </div>
       <h2>Airlock</h2>
       <div id="airlockPanel"></div>
       <h2>Receipts</h2>
@@ -105,9 +146,12 @@ let islandOn = false;
 function paintOwner(obj) {{
   const line = document.getElementById('ownerLine');
   if (!line) return;
+  const chip = document.getElementById('handleChip');
+  if (chip) chip.textContent = '';
   if (obj && obj.owner_handle) lastHandle = obj.owner_handle;
   if (obj && obj.name_status === 'PENDING') {{
     line.textContent = 'Pending · ' + (obj.name || obj.display_url || '') + ' · not a verified site';
+    if (chip) chip.textContent = 'Pending';
     return;
   }}
   if (obj && obj.display && obj.display.title === 'Island mode') {{
@@ -132,11 +176,13 @@ function paintOwner(obj) {{
   }}
   if (obj && obj.verified_owner && obj.owner_handle && obj.quarantine) {{
     line.textContent = 'Verified owner handle · ' + obj.owner_handle + ' · quarantined · scanner absent';
+    if (chip) chip.textContent = obj.owner_handle;
     if (obj.display_url) document.getElementById('omnibox').value = obj.display_url;
     return;
   }}
   if (obj && obj.verified_owner && obj.owner_handle) {{
     line.textContent = 'Verified owner handle · ' + obj.owner_handle;
+    if (chip) chip.textContent = obj.owner_handle;
     if (obj.display_url) document.getElementById('omnibox').value = obj.display_url;
     return;
   }}
@@ -146,15 +192,30 @@ function paintOwner(obj) {{
   }}
   line.textContent = '';
 }}
+function noteReceipt(obj) {{
+  if (!obj || !obj.receipt) return;
+  const rec = document.getElementById('receipts');
+  const el = document.createElement('div');
+  el.className = 'receipt';
+  el.textContent = obj.receipt.seq + ' ' + obj.receipt.action + ' ' + obj.receipt.hash;
+  rec.prepend(el);
+}}
 function show(obj) {{
   const stage = document.getElementById('stage');
   const rec = document.getElementById('receipts');
   paintOwner(obj);
+  noteReceipt(obj);
   const summary = (obj.display && obj.display.summary) || obj.note || '';
+  if (obj && (obj.policy_page || obj.shell_page) && obj.html) {{
+    stage.innerHTML = obj.html;
+    return;
+  }}
+  if (obj && obj.code === 'FG-GATE-REFUSE') {{
+    stage.innerHTML = '<section class="refusal"><h1>Blocked</h1><p>FG-GATE-REFUSE</p><p>' + (obj.reason || '') + '</p><p>' + summary + '</p></section>';
+    return;
+  }}
   let body = '<div class="banner">' + summary + '</div>';
-  if (obj.code === 'FG-GATE-REFUSE') {{
-    body += '<p>FG-GATE-REFUSE · ' + (obj.reason || '') + '</p>';
-  }} else if (obj.name_status === 'PENDING') {{
+  if (obj.name_status === 'PENDING') {{
     body += '<p>Pending · not a verified site</p>';
   }} else if (obj.quarantine && !obj.promoted) {{
     body += '<p>Quarantine · scanner absent · not promoted · not run</p>';
@@ -162,12 +223,6 @@ function show(obj) {{
     body += '<iframe sandbox="" style="width:100%;min-height:240px;background:#fff;border:1px solid #8a7219" srcdoc="' + String(obj.html).replace(/"/g,'&quot;') + '"></iframe>';
   }}
   stage.innerHTML = body + '<pre>' + JSON.stringify(obj,null,2) + '</pre>';
-  if (obj.receipt) {{
-    const el = document.createElement('div');
-    el.className = 'receipt';
-    el.textContent = obj.receipt.seq + ' ' + obj.receipt.action + ' ' + obj.receipt.hash;
-    rec.prepend(el);
-  }}
   if (obj.stages) {{
     document.getElementById('airlockPanel').innerHTML = obj.stages.map(s => s.stage + ' · ' + (s.hash||'').slice(0,16)).join('<br>');
   }}
@@ -219,7 +274,83 @@ document.getElementById('trustBtn').onclick = async () => {{
   const handle = lastHandle || (document.getElementById('omnibox').value.trim().split('.')[0] || '');
   show(await op('trust', {{handle: handle}}));
 }};
-document.getElementById('stage').innerHTML = '<div class="banner">{LIMITATION}</div><p>Local loopback UI. Counted Worker: <a href="{HOST}">{HOST}</a></p><p>Ops: {ops}</p><img alt="sigil" src="'+SIGIL+'" width="96" height="96">';
+document.getElementById('designBtn').onclick = async () => {{
+  const handle = lastHandle || (document.getElementById('omnibox').value.trim().split('.')[0] || '');
+  show(await op('design_mode', {{handle: handle}}));
+  paintTabs();
+}};
+document.getElementById('slotsBtn').onclick = async () => {{
+  const handle = lastHandle || (document.getElementById('omnibox').value.trim().split('.')[0] || '');
+  const obj = await op('slots', {{handle: handle}});
+  show(obj);
+  const stage = document.getElementById('stage');
+  const reserved = (obj.reserved || []).map(row => '<li>' + row.label + ' · ' + row.host + ' · not user-nameable</li>').join('');
+  const user = (obj.user || []).map(row => '<li>' + row.id + ' · ' + (row.name || 'empty') + ' · ' + row.status + '</li>').join('');
+  stage.innerHTML = '<section class="refusal"><h1>Domain slots</h1><p>Automatic name: ' + (obj.automatic_name || 'unset') + '</p><h2>Reserved</h2><ul>' + reserved + '</ul><h2>User</h2><ul>' + user + '</ul><p>' + (obj.note || '') + '</p></section>';
+}};
+const APPEAR_KEY = 'azbrowser-appearance';
+function readAppearance() {{
+  var saved = null;
+  try {{ saved = JSON.parse(localStorage.getItem(APPEAR_KEY) || 'null'); }} catch (e) {{}}
+  if (saved && saved.theme) return saved;
+  var day = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+  return {{ theme: day ? 'day' : 'night', mode: day ? 'day' : 'night', aziel: false, bookmarks: false }};
+}}
+function paintAppearance(state) {{
+  const theme = state.aziel ? 'aziel' : state.mode;
+  document.documentElement.setAttribute('data-theme', theme);
+  document.getElementById('bookmarks').hidden = !state.bookmarks;
+  document.getElementById('themeToggle').textContent = state.mode === 'day' ? 'Night' : 'Day';
+  document.getElementById('azielMode').setAttribute('aria-pressed', state.aziel ? 'true' : 'false');
+  localStorage.setItem(APPEAR_KEY, JSON.stringify({{ theme: theme, mode: state.mode, aziel: state.aziel, bookmarks: state.bookmarks }}));
+  paintBookmarks();
+}}
+let appearance = readAppearance();
+if (appearance.theme === 'aziel') appearance.aziel = true;
+if (!appearance.mode) appearance.mode = appearance.theme === 'day' ? 'day' : 'night';
+function paintBookmarks() {{
+  const list = document.getElementById('bookmarkList');
+  const rows = JSON.parse(localStorage.getItem('azbrowser-bookmarks') || '[]');
+  list.innerHTML = '';
+  rows.forEach(row => {{
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = row.title || row.url;
+    b.onclick = () => {{ document.getElementById('omnibox').value = row.url; document.getElementById('go').click(); }};
+    list.appendChild(b);
+  }});
+}}
+document.getElementById('themeToggle').onclick = () => {{
+  appearance.mode = appearance.mode === 'day' ? 'night' : 'day';
+  appearance.aziel = false;
+  paintAppearance(appearance);
+}};
+document.getElementById('azielMode').onclick = () => {{
+  appearance.aziel = !appearance.aziel;
+  paintAppearance(appearance);
+}};
+document.getElementById('bookmarkAdd').onclick = () => {{
+  const url = document.getElementById('omnibox').value.trim();
+  if (!url) return;
+  const rows = JSON.parse(localStorage.getItem('azbrowser-bookmarks') || '[]');
+  rows.push({{ title: url, url: url }});
+  localStorage.setItem('azbrowser-bookmarks', JSON.stringify(rows.slice(-12)));
+  paintBookmarks();
+}};
+document.getElementById('settingsBtn').onclick = () => {{
+  const on = appearance.bookmarks ? ' checked' : '';
+  document.getElementById('stage').innerHTML = '<section class="refusal"><h1>Settings</h1><p>Day and night flip immediately. Aziel mode uses gold, black, and royal purple. The choice is remembered on this machine.</p><label><input id="bookmarkPref" type="checkbox"' + on + '> Show bookmarks bar</label><p>Design mode opens as a local tab. Domain slots are four reserved hub mirrors and three user names.</p></section>';
+  document.getElementById('bookmarkPref').onchange = (e) => {{
+    appearance.bookmarks = e.target.checked;
+    paintAppearance(appearance);
+  }};
+}};
+paintAppearance(appearance);
+if (document.documentElement.getAttribute('data-bookmarks') === 'on') {{
+  appearance.bookmarks = true;
+  document.getElementById('bookmarks').hidden = false;
+}}
+document.getElementById('stage').innerHTML = '<section class="start"><h1>AZBrowser</h1><p>Lamb Lens search, a URL, or a .aziel name.</p><div class="banner">{LIMITATION}</div><p>Counted Worker: <a href="{HOST}">{HOST}</a></p><img alt="sigil" src="'+SIGIL+'" width="96" height="96"></section>';
 function meshNum() {{
   for (let i = 0; i < arguments.length; i++) {{
     const raw = arguments[i];
