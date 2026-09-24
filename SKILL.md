@@ -66,8 +66,77 @@ next input. No technical MCP UI is required for the human.
 | Ethics gate | `ethics_gate` |
 | HTML scrub | `scrub` |
 | Liveness / skill | `health` `skill` |
+| Mesh resolve | `resolve` |
+| Capability grant / check | `capability_grant` `capability_check` |
+| Local app tab | `local_app` |
+| Peer block / unblock | `peer_block` `peer_unblock` |
+| Island mode | `island_mode` |
+| Local trust | `trust` |
+| Domain slots | `slots` |
+| Design mode | `design_mode` |
 
 No receipt = no action. Every mutating op appends a hash-chained receipt.
+
+## Local-first edge mesh
+
+AZBrowser is the browser for the local-first edge mesh. AZNet stays a
+separate Software. Pairing is resolve-and-connect only.
+
+- `<handle>.aziel` resolves through the AZNet resolver adapter
+  (`POST http://127.0.0.1:8771/v1/resolve`) against the local mesh ledger,
+  then the local shell asks qnm-node (`POST http://127.0.0.1:8891/local/connect`)
+  for direct, LAN, or relay. `.aziel` is not an ICANN TLD. Ordinary browsers
+  do not resolve it.
+- `.az` is Azerbaijan's country domain and stays on normal DNS and standard
+  TLS, except the operator Cap-7 / AZ.* allowlist (`azgrid.az`, `azcloak.az`,
+  `azvault.az`, `azshift.az`, `AZ.AzielEliab.AZ`, `AZ.Godlock.AZ`,
+  `AZ.AzielCorpusLibrary.AZ`, `AZ.HeDidntJump.AZ`). Cloak names
+  `azbooth.az`, `azflag.az`, and `azstandby.az` are not on that list.
+- Mesh pages, scripts, and modules must match the handle key's signed
+  content hash. Mismatch, an unsigned module, or tampered bytes return
+  `FG-GATE-REFUSE` plus the reason. The address bar shows the verified
+  owner handle, or that refusal. There is no identity-lock chrome.
+- Mesh and local apps (qnm-node `127.0.0.1:8891`, local FragGate
+  `127.0.0.1:8787`) get no outside network, no cross-origin fetch, no
+  storage outside their origin, and no local files unless a capability
+  grant receipt allows that exact resource. This is default deny, not
+  tracker detection. The normal web keeps Lamb Lens plus the existing
+  HTML scrub. This shell does not execute scripts.
+- Handle keys never leave the local node. A payload that contains a
+  private key is refused.
+- Only a FINAL name (aged, and witnessed by at least two other handles)
+  can verify. A PENDING name is shown as pending and is not a verified
+  site. An equivocating handle, a stale seq, or a broken prev-hash is
+  `FG-GATE-REFUSE`.
+- Mesh downloads and modules enter the airlock before they are shown.
+  This process has no ClamAV and no YARA (`scanner: absent`). Bytes stay
+  in quarantine unless the operator passes `operator_override: true`.
+  This shell still does not execute scripts.
+- `peer_block` cuts off one handle on this node. `island_mode` drops
+  this node's mesh peers and leaves local apps and normal DNS running.
+  Rejoin appends a receipt and does not rewrite earlier ones. There is
+  no network-wide cutoff. `trust` is a local view (chain age, witnessed
+  heartbeats, hash matches, vouches, equivocation). It is not a public ranking.
+- The first visit is night: black background, white text. A later choice
+  of day or Aziel mode is remembered on this machine. Aziel mode is black,
+  royal purple, and gold. The new-tab page is the sigil, one search box,
+  and quick links. Honest limits sit in Settings under About.
+- `slots` lists the four reserved hub mirrors and three user names.
+  MirageGrid Cap-7 names are a separate layer and stay unchanged.
+- `design_mode` opens a local tab on the loopback shell. The hosted
+  Worker refuses it (`design_mode_local_only`). Publishing and the
+  designer stay on qnm-node. Keys stay on the node.
+- An isolated handle returns `FG-GATE-REFUSE` and a policy page. Peer
+  bytes are not loaded. Isolation does not delete local data.
+
+Lamb Lens order is Service, then Clarity, then Peace. A feature that
+sacrifices one of the three fails review. Service is one request for a
+local app, a mesh name, or an ordinary web address. Clarity puts a
+plain reason and a next step on every refusal, and keeps verified,
+pending, and isolated handles distinct. Peace means no ads, no
+tracking, no telemetry, and no notification spam. Capability grants
+stay rare. MirageGrid Cap-7 decoys stay separate from the four reserved
+hub mirrors and three user slots.
 
 ## Human Worker (not a second agent brand)
 

@@ -27,14 +27,41 @@ AZ-OS / Lumen / AZInterface are **not** this product.
 v0.1 is a **research shell**. It cannot ship a Chromium binary. The
 Worker looks like a real browser (tabs, omnibox, Back/Forward/Reload,
 Home brandmark) and sandboxes navigation via controlled
-fetch/proxy preview + receipted airlock + AZNet ethical search. It does
+fetch/proxy preview + receipted airlock + Lamb Lens ethical search. It does
 **not** replace the operator's OS browser.
+
+The mesh plane added here is the practical browser for the local-first
+edge mesh: name resolution, handle-key hash gates, a capability sandbox,
+and local-app tabs inside this shell. It is not a Chromium, Electron, or
+Tauri port. AZNet stays a separate Software. See
+[docs/FED-MESH-BROWSER-1.0.md](docs/FED-MESH-BROWSER-1.0.md).
+
+## Lamb Lens
+
+AZBrowser follows Lamb Lens under all conditions, in this order:
+**Service, then Clarity, then Peace.** A feature that sacrifices one of
+the three fails review.
+
+- **Service.** Do what the person asked, in one request. Local apps and
+  mesh names open from that request, and ordinary web addresses keep
+  working.
+- **Clarity.** Verified handles, pending names, and isolated handles
+  look different. Every refusal (`FG-GATE-REFUSE`, an ethics refusal, a
+  blocked capability) says what happened and what to do next. Settings
+  are on the page. There is no hidden switch.
+- **Peace.** No ads, no tracking, no telemetry, and no notification
+  spam. Capability grants are rare, receipted, and specific.
+
+The live MirageGrid global Cap-7 decoys (`azbooth.az`, `azflag.az`,
+`azstandby.az`) stay a separate layer from the per-node slots: four
+reserved hub mirrors plus three user domains.
 
 ## Dual surface (mandatory)
 
 1. **Human UI** — Worker homepage is complete software: browser chrome,
    AZNet / Lamb Lens panel, airlock stages + hashes, append-only
-   receipts, counted download. Black / gold / white. Humans stay here.
+   receipts, counted download. Night (black / white), day, and Aziel
+   mode (gold, black, royal purple). Humans stay here.
 2. **Agent / MCP — FragGate only.** There is no separate AZBrowser MCP
    outside the door. Catalog door:
 
@@ -146,7 +173,15 @@ Every control calls a real `/v1` handler (same op agents call). No dead buttons.
 | FragGate list | `GET /v1/fraggate/list` | PROXY to aziel-runtime |
 | FragGate call | `POST /v1/fraggate/call` | PROXY to aziel-runtime |
 | Live Nodes strip | `GET /v1/mesh` · `GET /v1/mesh/nodes` | PROXY to aziel-runtime (default OFF; QNS-CD-1.0 cross-map in payload) |
-| Mesh enable / disable / join / leave | `POST /v1/mesh/{op}` | PROXY; no auto-heal; no Node Gate |
+| Resolve | `POST /v1/resolve` | `resolve` |
+| Capability grant / check | `POST /v1/capability_grant` · `/v1/capability_check` | receipted sandbox |
+| Local app | `POST /v1/local_app` | `local_app` |
+| Promote quarantined mesh bytes | `POST /v1/navigate` with `operator_override: true` | explicit operator override; scanner stays absent |
+| Island / block peer / trust | `POST /v1/island_mode` · `/v1/peer_block` · `/v1/trust` | this node only; no network-wide cutoff |
+| Domain slots | `POST /v1/slots` | 4 reserved hub mirrors + 3 user names |
+| Design mode | `POST /v1/design_mode` | local tab on the loopback shell; hosted Worker refuses |
+| Day / Night / Aziel | chrome only | night on first run; later choice is remembered |
+| Mesh enable / disable / join / leave | `POST /v1/mesh/{op}` | PROXY to suite mesh; not an edge-mesh cutoff |
 
 Prove locally (after `pip install -e ".[dev]"`):
 

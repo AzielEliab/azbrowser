@@ -10,6 +10,13 @@ order/token only — not a shared Phase-1 UI.
 AZMail is a sibling: https://github.com/AzielEliab/azmail
 AZNet is a sibling functional pair (separate app): https://github.com/AzielEliab/aznet
 
+AZBrowser is the browser for the local-first edge mesh
+(`docs/FED-MESH-BROWSER-1.0.md`). It pairs with AZNet for `.aziel`
+resolution and with local qnm-node for direct / LAN / relay connect.
+Those products stay separate. `.aziel` is not an ICANN registration.
+Handle keys stay on the local node. `.az` stays on normal DNS except
+the operator's explicit Cap-7 / AZ.* allowlist.
+
 **Dual surface is mandatory.** Human Worker chrome stays complete.
 Backend MCP / OpenAPI / FragGate ops stay first-class. Do not ship UI-only.
 

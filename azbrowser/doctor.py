@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from .meta import LIMITATION, SPEC, __version__
 from .engine import Engine, OPS
+from .names import classify_destination
 from .receipts import Ledger
 
 
@@ -27,6 +28,13 @@ def doctor() -> int:
 
     nav = eng.navigate({"url": "https://www.azieleliab.com/"})
     checks.append(("navigate_receipt", bool(nav.get("receipt"))))
+    checks.append(("normal_web_dns", nav.get("plane") == "dns" and nav.get("code") != "FG-GATE-REFUSE"))
+    aziel = classify_destination("library.aziel")
+    checks.append(("aziel_is_mesh", aziel.get("plane") == "mesh" and aziel.get("icann") is False))
+    az_dns = classify_destination("example.az")
+    checks.append(("az_dns_fallthrough", az_dns.get("plane") == "dns" and az_dns.get("url", "").startswith("https://example.az/")))
+    az_list = classify_destination("AZ.AzielEliab.AZ")
+    checks.append(("az_allowlist", az_list.get("plane") == "mesh" and az_list.get("allowlisted") is True))
 
     home = eng.home({})
     checks.append(("home_sigil", "sigil.png" in str(home.get("sigil"))))
@@ -38,6 +46,21 @@ def doctor() -> int:
     checks.append(("receipt_verify", bool(v.get("ok"))))
 
     checks.append(("ops_count", len(OPS) >= 16))
+    mesh = h.get("mesh_browser") or {}
+    checks.append(("no_network_cutoff", mesh.get("network_wide_cutoff") is False and mesh.get("scanner") == "absent"))
+    checks.append(("mesh_guard_ops", all(op in OPS for op in ("peer_block", "island_mode", "trust"))))
+    slots = eng.slots({"handle": "library"})
+    checks.append(("domain_slots", slots.get("reserved_count") == 4 and slots.get("user_count") == 3 and (slots.get("miragegrid") or {}).get("changed") is False))
+    design = eng.design_mode({})
+    checks.append(("design_local", design.get("ok") is True and design.get("publish") is False and design.get("origin") == "azbrowser://local/design"))
+    lens = h.get("lamb_lens") or {}
+    checks.append(("lamb_lens", lens.get("order") == ["Service", "Clarity", "Peace"] and lens.get("telemetry") == "off" and lens.get("ads") is False and lens.get("miragegrid_decoys") == "separate"))
+    missing = eng.navigate({"url": "missing-name.aziel"})
+    clarity = missing.get("clarity") or {}
+    checks.append(("clarity_next", missing.get("code") == "FG-GATE-REFUSE" and bool(clarity.get("plain")) and bool(clarity.get("next"))))
+    web = eng.navigate({"url": "https://example.com/library"})
+    local = eng.local_app({"slug": "notes", "content": "<p>notes</p>"})
+    checks.append(("service_one_step", web.get("plane") == "dns" and web.get("code") != "FG-GATE-REFUSE" and local.get("ok") is True and local.get("plane") == "local"))
 
     ok = all(p for _, p in checks)
     print(f"AZBrowser doctor {__version__} spec={SPEC}")
