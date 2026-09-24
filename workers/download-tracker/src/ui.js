@@ -29,10 +29,12 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:15px/
 .tab .x{opacity:.6;border:0;background:transparent;color:inherit;cursor:pointer}
 #newtab{color:var(--gold);background:transparent;border:1px solid var(--trim);border-radius:8px;width:28px;height:28px;cursor:pointer;margin:0 6px 6px}
 #toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;background:var(--bar)}
-#toolbar button{background:transparent;color:var(--text);border:1px solid var(--line);border-radius:8px;min-width:36px;height:34px;padding:0 10px;cursor:pointer}
-#toolbar button:hover{border-color:var(--focus)}
-#toolbar button:focus-visible,#omnibox:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
-#btnGo,#azielMode[aria-pressed="true"]{background:var(--gold);color:var(--ink);border-color:var(--gold)}
+#toolbar button{background:transparent;color:var(--text);border:0;border-radius:8px;min-width:34px;height:34px;padding:0 8px;cursor:pointer}
+#toolbar button:hover{background:var(--banner)}
+#toolbar button:focus-visible,#omnibox:focus-visible,#startBox:focus-visible,.quick button:focus-visible,.node button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+#toolbar #btnGo,#toolbar #btnGo:hover{background:var(--gold);color:var(--ink);border-radius:999px;padding:0 16px;min-width:52px}
+#themeMenu button[aria-pressed="true"]{background:var(--gold);color:var(--ink)}
+.node button{background:transparent;color:var(--text);border:1px solid var(--line);border-radius:8px;height:32px;padding:0 10px;cursor:pointer}
 .start{min-height:62vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding:48px 20px 32px}
 .start h1{font-size:1.35rem;font-weight:500;margin:0}
 .start img{width:84px;height:84px}
@@ -77,7 +79,7 @@ iframe.preview{width:100%;min-height:420px;border:1px solid var(--trim);backgrou
 .sigil-home{text-align:center;padding:24px 8px}
 .sigil-home img{width:112px;height:112px}
 .count a{color:var(--gold);margin-left:8px}
-#meshStrip{border-top:1px solid var(--line);padding:8px 12px;background:var(--panel);display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;font-size:12px;color:var(--muted)}
+#meshStrip{border-top:1px solid var(--line);padding:8px 14px;background:transparent;display:flex;gap:16px;align-items:center;font-size:12px;color:var(--muted)}
 #meshStrip .live{color:var(--text)}
 #meshStrip .live b{color:var(--gold);font-size:18px;margin-right:6px}
 #meshStrip .rollup span{margin-right:10px}

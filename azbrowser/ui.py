@@ -36,10 +36,13 @@ html,body {{ margin:0; height:100%; background:var(--bg); color:var(--text); fon
 .tab.active {{ background:var(--gold); color:var(--ink); }}
 .plus {{ color:var(--text); cursor:pointer; padding:6px 10px; background:transparent; border:0; }}
 .bar {{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px 12px; background:var(--bar); }}
-.bar button, .node button, #bookmarks button {{ background:transparent; color:var(--text); border:1px solid var(--line); border-radius:8px; min-width:36px; height:34px; padding:0 10px; cursor:pointer; }}
-.bar button:hover, .node button:hover {{ border-color:var(--focus); }}
-.bar button:focus-visible, #omnibox:focus-visible, .node button:focus-visible {{ outline:2px solid var(--focus); outline-offset:2px; }}
-#go, #azielMode[aria-pressed="true"] {{ background:var(--gold); color:var(--ink); border-color:var(--gold); }}
+.bar button, #bookmarks button {{ background:transparent; color:var(--text); border:0; border-radius:8px; min-width:34px; height:34px; padding:0 8px; cursor:pointer; }}
+.node button {{ background:transparent; color:var(--text); border:1px solid var(--line); border-radius:8px; min-width:36px; height:34px; padding:0 10px; cursor:pointer; }}
+.bar button:hover {{ background:var(--banner); }}
+.node button:hover {{ border-color:var(--focus); }}
+.bar button:focus-visible, #omnibox:focus-visible, #startBox:focus-visible, .node button:focus-visible, .quick button:focus-visible {{ outline:2px solid var(--focus); outline-offset:2px; }}
+#go {{ background:var(--gold); color:var(--ink); border-radius:999px; padding:0 16px; min-width:52px; }}
+#themeMenu button[aria-pressed="true"] {{ background:var(--gold); color:var(--ink); }}
 #home img {{ width:20px; height:20px; vertical-align:middle; }}
 #omnibox {{ flex:1; min-width:200px; background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:999px; padding:9px 16px; font:15px/1.3 inherit; }}
 #handleChip {{ font-size:12px; color:var(--muted); padding:0 4px; white-space:nowrap; }}
@@ -58,7 +61,7 @@ h2 {{ color:var(--muted); font-size:12px; letter-spacing:.06em; text-transform:u
 pre {{ white-space:pre-wrap; word-break:break-word; font-size:12px; color:var(--muted); }}
 .receipt {{ font-family:ui-monospace,monospace; font-size:11px; border-bottom:1px solid var(--line); padding:6px 0; }}
 .status {{ border-top:1px solid var(--line); padding:8px 12px; font-size:12px; color:var(--muted); }}
-#meshStrip {{ border-top:1px solid var(--line); padding:8px 12px; background:var(--panel); display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; font-size:12px; color:var(--muted); }}
+#meshStrip {{ border-top:1px solid var(--line); padding:8px 14px; background:transparent; display:flex; flex-wrap:wrap; align-items:center; gap:16px; font-size:12px; color:var(--muted); }}
 #meshStrip .live b {{ color:var(--text); font-size:18px; margin-right:6px; }}
 #meshStrip button {{ background:transparent; color:var(--text); border:1px solid var(--line); border-radius:6px; height:28px; padding:0 10px; cursor:pointer; }}
 .node {{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }}
