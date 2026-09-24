@@ -144,7 +144,7 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92em}
   <a class="btn block primary" id="downloadBtn" href="/download?asset=${esc(ASSET)}" aria-describedby="downloadNote">Download</a>
   <p class="asset-note" id="downloadNote">${esc(downloads)} downloads · ${esc(ASSET)} · counted on this Worker for every branch and fork</p>
   <ul class="features">
-    <li>Search, a .aziel name, or a web address in one step</li>
+    <li>Back, forward, reload, and new tabs in the shell</li>
     <li>A receipt kept for each action</li>
     <li>Night, Day, and Aziel, remembered on this machine</li>
   </ul>
