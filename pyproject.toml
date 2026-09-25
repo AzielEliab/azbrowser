@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "azbrowser"
 version = "0.1.0"
-description = "AZBrowser: Phase 1 research-browser shell + AZNet ethical search. Not Chromium. Author Aziel Eliab."
+description = "AZBrowser: local research browser for search, tabs, and .aziel names. Author Aziel Eliab."
 readme = "README.md"
 license = {file = "LICENSE"}
 authors = [{name = "Aziel Eliab"}]

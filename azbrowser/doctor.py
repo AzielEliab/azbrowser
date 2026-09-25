@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from .meta import LIMITATION, SPEC, __version__
+import json
+
+from .meta import SPEC, __version__
 from .engine import Engine, OPS
 from .names import classify_destination
 from .receipts import Ledger
 
 
-def doctor() -> int:
+def doctor(as_json: bool = False) -> int:
     eng = Engine(Ledger())
     checks = []
 
@@ -63,9 +65,18 @@ def doctor() -> int:
     checks.append(("service_one_step", web.get("plane") == "dns" and web.get("code") != "FG-GATE-REFUSE" and local.get("ok") is True and local.get("plane") == "local"))
 
     ok = all(p for _, p in checks)
-    print(f"AZBrowser doctor {__version__} spec={SPEC}")
+    if as_json:
+        print(json.dumps({
+            "ok": ok,
+            "name": "AZBrowser",
+            "version": __version__,
+            "spec": SPEC,
+            "author": "Aziel Eliab",
+            "checks": [{"name": name, "ok": passed} for name, passed in checks],
+        }, indent=2))
+        return 0 if ok else 1
+    print(f"AZBrowser doctor {__version__}")
     for name, passed in checks:
         print(f"  {'ok' if passed else 'FAIL':<4} {name}")
-    print(LIMITATION)
-    print("No receipt = no action." if ok else "Doctor failed.")
+    print("No receipt = no action." if ok else "Doctor failed. Try: azbrowser doctor")
     return 0 if ok else 1
