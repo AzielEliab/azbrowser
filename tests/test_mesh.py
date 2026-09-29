@@ -112,7 +112,7 @@ def test_local_chrome_has_live_nodes_strip():
     assert "Live Nodes" in html
     assert "Mesh off" in html
     assert 'id="sidePanel" hidden' in html
-    assert "Search or enter a .aziel name or web address" in html
+    assert "AZ Search, or enter a .aziel name or web address" in html
     assert "THIS IS NOT" not in html
     assert "QNM-BUILD-1.0" not in html
     assert "QNS-CD-1.0" not in html

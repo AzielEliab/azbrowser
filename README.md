@@ -17,7 +17,7 @@ azbrowser ui
 
 Open http://127.0.0.1:8878/
 
-Type a search, a `.aziel` name, or a web address, then press Go.
+Type an AZ Search query, a `.aziel` name, or a web address, then press Go. A plain query opens an AZ Search results page. A URL or `.aziel` name navigates.
 Airlock, mesh, slots, and design mode are under Advanced.
 
 ## One-click install
@@ -30,7 +30,7 @@ Then run `azbrowser ui` and open http://127.0.0.1:8878/
 
 ## Notes
 
-Version 0.1.0 is a research shell: tabs, an address bar, a sandboxed preview, a receipted airlock, and Lamb Lens search. The local app listens on 127.0.0.1. It does not ship a Chromium binary.
+Version 0.1.0 is a research shell: tabs, an address bar, a sandboxed preview, a receipted airlock, and AZ Search. Lamb Lens order is Service, then Clarity, then Peace. The local app listens on 127.0.0.1. It does not ship a Chromium binary. AZ Search is not a new Softwares card.
 
 `.aziel` names resolve in this shell. `.aziel` is not an ICANN registration. Handle keys stay on this machine. AZMail and AZNet are separate programs: https://github.com/AzielEliab/azmail and https://github.com/AzielEliab/aznet
 
@@ -154,8 +154,8 @@ Every control calls a real `/v1` handler (same op agents call). No dead buttons.
 | Forward | `POST /v1/forward` | `forward` |
 | Reload | `POST /v1/reload` | `reload` |
 | Home (sigil) | `POST /v1/home` | `home` |
-| Go / Enter | `POST /v1/navigate` or `/v1/ethical_search` | `navigate` / `ethical_search` |
-| Lamb Lens search | `POST /v1/ethical_search` (`lamb_lens` alias) | `ethical_search` |
+| Go / Enter | `POST /v1/navigate` or `/v1/ethical_search` | URL or `.aziel` navigates. A plain query is AZ Search |
+| AZ Search | `POST /v1/ethical_search` (`lamb_lens`, `search`, `az_search`) | results with cites and a receipt. Empty is an honest miss |
 | Airlock | `POST /v1/airlock` | `airlock` |
 | New tab `+` | `POST /v1/tab_new` | `tab_new` |
 | Tab click / × | `POST /v1/tab_switch` / `tab_close` | tabs |
