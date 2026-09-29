@@ -35,7 +35,7 @@ from .meta import (
     SPEC,
     __version__,
 )
-from .search import ethical_search
+from .search import ethical_search, fetch_corpus
 from .tabs import TabSession
 
 OPS = (
@@ -78,6 +78,7 @@ ALIASES = {
     "lamb_lens": "ethical_search",
     "lamb_lens_search": "ethical_search",
     "search": "ethical_search",
+    "az_search": "ethical_search",
     "airlock_ingest": "airlock",
     "tab_open": "tab_new",
     "receipt_list": "receipts",
@@ -111,6 +112,7 @@ class Engine:
         self.island = False
         self.blocked: set[str] = set()
         self.hash_matches: dict[str, int] = {}
+        self.airlock_history: list[dict[str, Any]] = []
 
     def _receipt(self, action: str, payload: dict[str, Any]) -> dict[str, Any]:
         return self.ledger.append(action, payload, tab_id=self.tabs.active)
@@ -123,6 +125,9 @@ class Engine:
                 "ok": False,
                 "code": "ETHICS_REFUSE",
                 "ethics": ethics,
+                "results": [],
+                "citations": [],
+                "invented": False,
                 "receipt": rec,
                 "display": display_of(
                     "AZNet refused",
@@ -200,6 +205,11 @@ class Engine:
         refused = self._gate(url)
         if refused:
             return refused
+        if url.startswith("azbrowser://search"):
+            from urllib.parse import parse_qs, urlparse
+
+            asked = (parse_qs(urlparse(url).query).get("q") or [""])[0]
+            return self.ethical_search({"q": asked, "fetch_corpus": payload.get("fetch_corpus") is True})
         classified = classify_destination(url)
         if classified.get("plane") in {"cap7", "cite"}:
             return self._finish_sidenet(classified, payload)
@@ -464,14 +474,39 @@ class Engine:
         refused = self._gate(q)
         if refused:
             return refused
-        out = ethical_search(q, limit=int(payload.get("limit") or 8))
+        corpus_rows = payload.get("corpus") if isinstance(payload.get("corpus"), list) else None
+        corpus_status: dict[str, Any] | None = None
+        if corpus_rows is None and payload.get("fetch_corpus") is True:
+            fetched = fetch_corpus(q)
+            corpus_rows = fetched.get("records") if isinstance(fetched.get("records"), list) else []
+            corpus_status = {"asked": True, "ok": bool(fetched.get("ok")), "error": fetched.get("error") or ""}
+        out = ethical_search(
+            q,
+            limit=int(payload.get("limit") or 8),
+            records=self.mesh.records(),
+            receipts=self.ledger.list(64),
+            airlocks=list(self.airlock_history),
+            corpus=corpus_rows,
+            corpus_status=corpus_status,
+            handle=str(payload.get("handle") or ""),
+        )
         rec = self._receipt("ethical_search", {"q": q, "ok": out.get("ok"), "n": len(out.get("results") or [])})
         out["receipt"] = rec
         out["limitation"] = LIMITATION
+        if out.get("ok"):
+            from urllib.parse import quote
+
+            tab = self.tabs.push("azbrowser://search?q=" + quote(q, safe=""), (q[:48] or "AZ Search"), "search")
+            out["tab"] = tab
         out["display"] = display_of(
-            "AZNet / Lamb Lens",
-            out.get("label") or "Ethical search.",
-            [("query", q), ("results", len(out.get("results") or [])), ("receipt", rec["hash"][:16])],
+            "AZ Search",
+            out.get("label") or "AZ Search.",
+            [
+                ("query", q),
+                ("results", len(out.get("results") or [])),
+                ("receipt", rec["hash"][:16]),
+                ("sidenet", "AZNet"),
+            ],
         )
         return out
 
@@ -483,6 +518,16 @@ class Engine:
         if refused:
             return refused
         out = airlock(url=url, content=content, filename=filename, fetch=bool(payload.get("fetch")))
+        self.airlock_history.append(
+            {
+                "url": url,
+                "filename": filename,
+                "verdict": str((out.get("scan") or {}).get("verdict") or ""),
+                "hash": str(out.get("content_hash") or ""),
+                "ok": out.get("ok"),
+            }
+        )
+        self.airlock_history = self.airlock_history[-32:]
         rec = self._receipt(
             "airlock",
             {"url": url, "ok": out.get("ok"), "hash": out.get("content_hash") or "", "verdict": (out.get("scan") or {}).get("verdict")},

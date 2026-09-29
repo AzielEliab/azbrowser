@@ -35,7 +35,7 @@ def _chrome() -> str:
 <html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AZBrowser — local research shell</title>
+<title>AZ Browser — local research shell</title>
 <style>
 :root, html[data-theme="night"] {{ color-scheme: dark; --bg:#0b0b0b; --text:#f5f5f5; --muted:#c8c8c8; --bar:#141414; --panel:#111111; --line:#2c2c2c; --gold:#f5f5f5; --trim:#3a3a3a; --ink:#0b0b0b; --focus:#c9a227; --tab:#1c1c1c; --banner:#161616; }}
 html[data-theme="day"] {{ color-scheme: light; --bg:#ffffff; --text:#141414; --muted:#333333; --bar:#f3f3f3; --panel:#f7f7f7; --line:#d4d4d4; --gold:#141414; --trim:#c8c8c8; --ink:#ffffff; --focus:#c9a227; --tab:#ffffff; --banner:#f3f3f3; }}
@@ -145,9 +145,9 @@ html[data-panel="open"] main {{ grid-template-columns: 1fr 280px; }}
     <button id="fwd" title="Forward" type="button">▶</button>
     <button id="reload" title="Reload" type="button">↻</button>
     <button id="home" title="Home" type="button"><img class="brandmark" alt="" src="/sigil.png"></button>
-    <input id="omnibox" placeholder="Search or enter a .aziel name or web address" spellcheck="false" aria-label="Address">
+    <input id="omnibox" placeholder="AZ Search, or enter a .aziel name or web address" spellcheck="false" aria-label="Address">
     <span id="handleChip"></span>
-    <button id="go" type="button" title="Go">Go</button>
+    <button id="go" type="button" title="AZ Search">Go</button>
     <div class="theme">
       <button id="themeToggle" type="button" title="Theme. Night, Day, or Aziel." aria-haspopup="true" aria-expanded="false">Night</button>
       <div id="themeMenu" hidden>
@@ -301,7 +301,8 @@ function resultList(results) {{
     const title = hit.title || url || 'Result';
     const blurb = hit.blurb || '';
     const open = url ? '<button type="button" class="hit" data-url="' + escText(url) + '">' + escText(title) + '</button>' : '<strong>' + escText(title) + '</strong>';
-    return '<li>' + open + (blurb ? '<p>' + escText(blurb) + '</p>' : '') + (url ? '<p class="cite">' + escText(url) + '</p>' : '') + '</li>';
+    const cite = [hit.source || '', hit.record_id || '', hit.receipt || ''].filter(Boolean).join(' · ');
+    return '<li>' + open + (blurb ? '<p>' + escText(blurb) + '</p>' : '') + (cite ? '<p class="cite">' + escText(cite) + '</p>' : '') + (url ? '<p class="cite">' + escText(url) + '</p>' : '') + '</li>';
   }}).join('') + '</ul>';
 }}
 function bindHits() {{
@@ -314,15 +315,17 @@ function bindHits() {{
 }}
 function humanPage(obj, summary) {{
   const searching = obj.action === 'ethical_search';
-  const title = searching ? 'Search' : ((obj.display && obj.display.title) || 'Result');
+  const title = searching ? 'AZ Search' : ((obj.display && obj.display.title) || 'Result');
   const lead = searching
-    ? ('Advisory results for “' + (obj.query || '') + '”. Cite the source.')
+    ? ((obj.clarity && obj.clarity.plain) || obj.label || summary)
     : summary;
   let body = '<article class="page"><h1>' + escText(title) + '</h1>';
   if (lead) body += '<p>' + escText(lead) + '</p>';
   if (obj.name_status === 'PENDING') body += '<p>Pending. No page was loaded.</p>';
   else if (obj.quarantine && !obj.promoted) body += '<p>Held in quarantine. This shell has no malware scanner. Choose Promote under Advanced to view the scrubbed page. Scripts do not run.</p>';
+  if (searching && obj.clarity && obj.clarity.next) body += '<p>' + escText(obj.clarity.next) + '</p>';
   if (Array.isArray(obj.results) && obj.results.length) body += resultList(obj.results);
+  if (searching && obj.receipt && obj.receipt.hash) body += '<p class="cite">Receipt ' + escText(obj.receipt.hash) + '</p>';
   if (obj.note && obj.note !== summary && obj.note !== lead) body += '<p>' + escText(obj.note) + '</p>';
   if (obj.html) {{
     body += '<iframe sandbox="" title="Page preview" style="width:100%;min-height:240px;background:#fff;border:1px solid var(--line);border-radius:12px" srcdoc="' + String(obj.html).replace(/"/g,'&quot;') + '"></iframe>';
@@ -392,7 +395,7 @@ document.getElementById('go').onclick = async () => {{
     return;
   }}
   const looksUrl = /\\.|:/.test(q) && !/\\s/.test(q);
-  show(await op(looksUrl ? 'navigate' : 'ethical_search', looksUrl ? {{url:q}} : {{q}}));
+  show(await op(looksUrl ? 'navigate' : 'ethical_search', looksUrl ? {{url:q}} : {{q:q, fetch_corpus:true}}));
   paintTabs();
 }};
 document.getElementById('omnibox').addEventListener('keydown', (e) => {{ if (e.key==='Enter') document.getElementById('go').click(); }});
@@ -517,7 +520,7 @@ function settingsPage() {{
     + '<label><input id="bookmarkPref" type="checkbox"' + on + '> Show bookmarks bar</label>'
     + '<h2>Advanced</h2><p>Advanced holds Airlock, Promote, Island, Block peer, Trust, Slots, and Design. Mesh on, off, join, and leave are in that same panel. Design mode stays on this machine. If AZNet is not answering on this machine, Check again is there too.</p>'
     + '<h2>About</h2>'
-    + '<p>AZBrowser is a research shell for search, tabs, and mesh names. Version {__version__}. Author Aziel Eliab.</p>'
+    + '<p>AZ Browser is a research shell. AZ Search is the address-bar search. Version {__version__}. Author Aziel Eliab. The sidenet is AZNet. Cap-7 names are not ICANN names. AZ Search is not a new Softwares card.</p>'
     + '<p>A search, a .aziel name, or a web address goes in one step. Local apps open here. Web addresses keep working.</p>'
     + '<p>A verified handle is named beside the address. A pending name is marked Pending and is not opened. An isolated handle explains what happened and what you can do next.</p>'
     + '<p>Mesh pages stay in quarantine until you choose Promote. This shell has no malware scanner, and it does not run page scripts. Handle keys stay on this machine.</p>'
@@ -543,9 +546,9 @@ if (document.documentElement.getAttribute('data-bookmarks') === 'on') {{
   document.getElementById('bookmarks').hidden = false;
 }}
 function startPage() {{
-  return '<section class="start"><img class="brandmark" alt="" src="'+SIGIL+'" width="84" height="84"><h1>AZBrowser</h1>'
-    + '<p>Search, open a .aziel name, or type a web address.</p>'
-    + '<form id="startForm" class="start-form"><input id="startBox" aria-label="Search" placeholder="Search or enter a .aziel name or web address" spellcheck="false"><button id="startGo" type="submit">Go</button></form>'
+  return '<section class="start"><img class="brandmark" alt="" src="'+SIGIL+'" width="84" height="84"><h1>AZ Browser</h1>'
+    + '<p>AZ Search. Open a .aziel name, or type a web address.</p>'
+    + '<form id="startForm" class="start-form"><input id="startBox" aria-label="Search" placeholder="AZ Search, or enter a .aziel name or web address" spellcheck="false"><button id="startGo" type="submit">Go</button></form>'
     + '<nav class="quick" aria-label="Shortcuts">'
     + '<button type="button" id="quickSites">Your sites</button>'
     + '<button type="button" data-go="az.azieleliab.az">Aziel</button>'

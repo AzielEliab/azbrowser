@@ -14,7 +14,7 @@ export function homeHtml({ views = 0, downloads = 0 } = {}) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AZBrowser — research shell — ${IDENTITY}</title>
+<title>AZ Browser — research shell — ${IDENTITY}</title>
 <link rel="icon" href="${SIGIL}">
 <style>
 :root,html[data-theme="night"]{color-scheme:dark;--bg:#0b0b0b;--text:#f5f5f5;--muted:#c8c8c8;--panel:#111111;--bar:#141414;--line:#2c2c2c;--gold:#f5f5f5;--trim:#3a3a3a;--ink:#0b0b0b;--focus:#ffffff;--banner:#161616}
@@ -110,9 +110,9 @@ iframe.preview{width:100%;min-height:420px;border:1px solid var(--trim);backgrou
     <button id="btnFwd" type="button" title="Forward">▶</button>
     <button id="btnReload" type="button" title="Reload">↻</button>
     <button id="btnHome" type="button" title="Home"><span id="homeBtn"><img class="brandmark" alt="" src="${SIGIL}"></span></button>
-    <input id="omnibox" placeholder="Search or enter a .aziel name or web address" spellcheck="false" autocomplete="off" aria-label="Address">
+    <input id="omnibox" placeholder="AZ Search, or enter a .aziel name or web address" spellcheck="false" autocomplete="off" aria-label="Address">
     <span id="handleChip"></span>
-    <button id="btnGo" type="button" title="Go / ethical search">Go</button>
+    <button id="btnGo" type="button" title="AZ Search">Go</button>
     <div class="theme">
       <button id="themeToggle" class="iconbtn" type="button" title="Theme. Night, day, or Aziel." aria-haspopup="true" aria-expanded="false">☾</button>
       <div id="themeMenu" hidden>
@@ -196,8 +196,9 @@ async function fraggate(slug, op, payload) {
   return r.json();
 }
 function homePanel() {
-  return '<section class="start"><img class="brandmark" alt="" src="'+SIGIL+'"><h1>AZBrowser</h1>'
-    + '<form id="startForm"><input id="startBox" aria-label="Search" placeholder="Search or enter a .aziel name or web address" spellcheck="false"></form>'
+  return '<section class="start"><img class="brandmark" alt="" src="'+SIGIL+'"><h1>AZ Browser</h1>'
+    + '<p>AZ Search. Open a .aziel name, or type a web address.</p>'
+    + '<form id="startForm"><input id="startBox" aria-label="Search" placeholder="AZ Search, or enter a .aziel name or web address" spellcheck="false"></form>'
     + '<nav class="quick" aria-label="Quick links">'
     + '<button type="button" data-go="azbrowser://local/design">Local apps</button>'
     + '<button type="button" id="quickSites">Your sites</button>'
@@ -320,10 +321,25 @@ function renderResult(j) {
     stage.innerHTML = '<div class="banner">Lamb Lens refused. '+(j.ethics&&j.ethics.reasons?j.ethics.reasons.join(", "):"")+'</div><p>Advisory ethical gate. Not a guaranteed block.</p>';
     return;
   }
-  if (j.results) {
-    stage.innerHTML = '<div class="banner">'+(j.label||"Lamb Lens")+' — advisory. Cite sources.</div>'
-      + j.results.map(h => '<div class="card"><a href="#" data-url="'+h.url+'">'+h.title+'</a><div class="cite">'+h.source+' · '+h.url+'</div><p>'+h.blurb+'</p></div>').join("");
-    stage.querySelectorAll("a[data-url]").forEach(a => a.onclick = (e) => { e.preventDefault(); document.getElementById("omnibox").value = a.dataset.url; go(); });
+  if (j.action === "ethical_search" || Array.isArray(j.results)) {
+    const hits = Array.isArray(j.results) ? j.results : [];
+    const plain = (j.clarity && j.clarity.plain) || j.label || "AZ Search";
+    const next = (j.clarity && j.clarity.next) || "";
+    const cards = hits.map((h) => {
+      const url = h.url || "";
+      const title = escText(h.title || url || "Result");
+      const open = url
+        ? '<a href="#" data-url="' + escText(url) + '">' + title + "</a>"
+        : "<strong>" + title + "</strong>";
+      const meta = [h.source || "", h.record_id || "", h.receipt || ""].filter(Boolean).join(" · ");
+      return '<div class="card">' + open
+        + (meta ? '<div class="cite">' + escText(meta) + "</div>" : "")
+        + (url ? '<div class="cite">' + escText(url) + "</div>" : "")
+        + "<p>" + escText(h.blurb || "") + "</p></div>";
+    }).join("");
+    const receipt = j.receipt && j.receipt.hash ? '<p class="cite">Receipt ' + escText(j.receipt.hash) + "</p>" : "";
+    stage.innerHTML = '<div class="banner">' + escText(plain) + "</div><p>" + escText(next) + "</p>" + cards + receipt;
+    stage.querySelectorAll("a[data-url]").forEach((a) => a.onclick = (e) => { e.preventDefault(); document.getElementById("omnibox").value = a.dataset.url; go(); });
     return;
   }
   if (j.html) {
@@ -373,7 +389,7 @@ async function go() {
   const q = document.getElementById("omnibox").value.trim();
   if (!q) { renderResult(await callOp("home", {})); return; }
   const looksUrl = (/^[a-z]+:/i.test(q) || (/[.]/.test(q) && !/\\s/.test(q)));
-  renderResult(await callOp(looksUrl ? "navigate" : "ethical_search", looksUrl ? { url: q } : { q }));
+  renderResult(await callOp(looksUrl ? "navigate" : "ethical_search", looksUrl ? { url: q } : { q, fetch_corpus: true }));
   paintTabs();
 }
 document.getElementById("btnBack").onclick = async () => { renderResult(await callOp("back", {})); };
@@ -481,7 +497,7 @@ document.getElementById("settingsBtn").onclick = () => {
     + '<label><input id="bookmarkPref" type="checkbox"' + on + '> Show bookmarks bar</label>'
     + '<h2>Tools</h2><p>The tools icon opens Airlock, Promote, Island, Block peer, Trust, and Slots. Design mode on this hosted page stays on the machine that holds the handle key.</p>'
     + '<h2>About</h2>'
-    + '<p>AZBrowser is a research shell for search, tabs, and mesh names. Version ${VERSION}. Author Aziel Eliab.</p>'
+    + '<p>AZ Browser is a research shell. AZ Search is the address-bar search. Version ${VERSION}. Author Aziel Eliab. The sidenet is AZNet. Cap-7 names are not ICANN names. AZ Search is not a new Softwares card.</p>'
     + '<p>A search, a .aziel name, or a web address goes in one step. Local apps open on the machine that hosts them. Web addresses keep working.</p>'
     + '<p>A verified handle is named beside the address. A pending name is marked Pending and is not opened. An isolated handle explains what happened and what you can do next.</p>'
     + '<p>Mesh pages stay in quarantine until you choose Promote. This shell has no malware scanner, and it does not run page scripts. Handle keys stay on the local machine.</p>'

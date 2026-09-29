@@ -196,7 +196,7 @@ def test_bind_message_and_chrome():
     assert "#c9a227" in html
     assert ":focus-visible" in html
     assert "max-width: 480px" in html
-    assert "Search or enter a .aziel name or web address" in html
+    assert "AZ Search, or enter a .aziel name or web address" in html
     assert "Live Nodes" in html
     assert "Mesh off" in html
     assert HOST in html

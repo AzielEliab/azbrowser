@@ -71,11 +71,14 @@ when rendering is an iframe / proxy sandbox.
 
 ### Network layer
 
-L0 is ordinary public web and the FragGate path. Lamb Lens is ethical
-search: cite sources; refuse doxxing, credential harvest, and malware
-lure; label every result **advisory**. Cap-7 is a separate pairing with
-AZNet. AZNet is not a mode label inside this shell, and this shell does
-not register `.az`.
+L0 is ordinary public web and the FragGate path. AZ Search is the
+primary search: local and mesh `.aziel` names, slots, Cap-7 and hub
+mirrors, receipts, airlock history, and FragGate corpus rows whose
+returned fields contain the query. It does not invent a hit. Lamb Lens
+order is Service, then Clarity, then Peace: cite sources; refuse
+doxxing, credential harvest, and malware lure. Cap-7 is mesh pairing
+with the AZNet sidenet. It is not an ICANN name. AZ Search is not a
+new Softwares card. Agents use the FragGate door.
 
 ### Security kernel
 

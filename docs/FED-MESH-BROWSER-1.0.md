@@ -380,7 +380,45 @@ Health reports this lock as `lamb_lens`. `miragegrid_decoys` is
 `separate`: the live MirageGrid global Cap-7 decoys (`azbooth.az`,
 `azflag.az`, `azstandby.az`) are not the per-node slots. Those slots
 remain four reserved hub mirrors plus three user domains, plus the
-automatic `<handle>.aziel` name.
+automatic `<handle>.aziel` name. `search_engine` is `AZ Search`.
+The user-facing product name is AZ Browser. `sidenet` is AZNet.
+
+## AZ Search
+
+AZ Search is the address bar and the new-tab box. It is not a new
+Softwares card. Agents keep the FragGate door: `slug=azbrowser`,
+`op=ethical_search` (aliases `lamb_lens`, `search`, `az_search`).
+
+| Input | What happens |
+| --- | --- |
+| `http`/`https` URL, `.aziel` name, Cap-7 host, or AZ.* cite | `navigate` |
+| Plain words | AZ Search results page |
+
+A result is included only when it is one of these records and the
+query occurs in that record:
+
+- a local or posted mesh `.aziel` name
+- a reserved hub-mirror slot, a claimed user slot, or an automatic
+  `<handle>.aziel` name already on the ledger
+- a Cap-7 factory name (false sites stay labeled `false_site`;
+  `icann` and `public_icann` stay false)
+- an AZ.* hub cite, with the hub URL the public site actually uses
+- a local receipt or airlock history row
+- a fixed public cite this shell already lists (library, FragGate,
+  runtime, and the other named pages)
+- a FragGate `aziel-corpus` row, and only when that response's
+  title, record id, keywords, or subjects contain the query
+
+Corpus lookup is `POST /v1/fraggate/call` with `slug=aziel-corpus`
+and `op=search`. The human chrome asks for it with `fetch_corpus`.
+If the door is unreachable, those rows are absent. They are not
+replaced with a guessed page. A corpus row is given an `http` URL
+only when the row itself carried one.
+
+An empty result list is a completed search. The page says nothing
+matched and what to try next. Ethics refusals still return
+`ETHICS_REFUSE` and no hits. Every search appends a receipt. The
+results page shows that receipt hash and the cite for each hit.
 
 ## Open alignment points
 

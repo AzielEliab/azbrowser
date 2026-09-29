@@ -4,6 +4,7 @@
  */
 
 import { clarify, ethicsClarity, lensStatus, stampRefusal } from "./lens.js";
+import { assembleSearch, fetchCorpus } from "./search.js";
 import {
   MESH_SPEC,
   NAME_MIN_AGE_SECONDS,
@@ -82,6 +83,7 @@ export const ALIASES = {
   lamb_lens: "ethical_search",
   lamb_lens_search: "ethical_search",
   search: "ethical_search",
+  az_search: "ethical_search",
   airlock_ingest: "airlock",
   tab_open: "tab_new",
   receipt_list: "receipts",
@@ -127,17 +129,6 @@ const MALWARE = [
   /\b0-?day exploit\b/i,
   /\bwrite (?:a |an )?(?:virus|trojan|worm)\b/i,
   /\bdrive-?by download\b/i,
-];
-
-const CATALOG = [
-  { title: "Aziel Digital Library", url: "https://www.azielcorpuslibrary.net/", source: "aziel-corpus", blurb: "Public MASTER library. FragGate slug=aziel-corpus op=search.", tags: "library corpus aziel research" },
-  { title: "FragGate kernel", url: "https://github.com/AzielEliab/fraggate", source: "github", blurb: "One door — discover, route, refuse. FG-0.1.", tags: "fraggate mcp door kernel" },
-  { title: "aziel-runtime", url: "https://github.com/AzielEliab/aziel-runtime", source: "github", blurb: "Catalog + FragGate + MCP.", tags: "runtime mcp openapi catalog" },
-  { title: "AZMail (sibling)", url: "https://github.com/AzielEliab/azmail", source: "github", blurb: "APP 1.0 Mail Airlock. Optional deep-link only.", tags: "azmail mail airlock sibling" },
-  { title: "GodLock", url: "https://godlock.uk/", source: "godlock.uk", blurb: "Offline ABAD / hardening score. Not a VPN.", tags: "godlock abad hardening" },
-  { title: "Aziel Eliab", url: "https://www.azieleliab.com/", source: "author", blurb: "Public identity: Aziel Eliab only.", tags: "author identity aziel eliab" },
-  { title: "Wikipedia", url: "https://en.wikipedia.org/wiki/Main_Page", source: "wikipedia", blurb: "Cite the article.", tags: "encyclopedia wiki research" },
-  { title: "MDN Web Docs", url: "https://developer.mozilla.org/", source: "mdn", blurb: "Public web-platform documentation.", tags: "html css javascript http browser" },
 ];
 
 export function classifyQuery(text) {
@@ -237,6 +228,7 @@ export function createSession() {
     island_mode: false,
     blocked_peers: [],
     hash_matches: {},
+    airlocks: [],
   };
 }
 
@@ -289,50 +281,9 @@ function extractText(html, limit) {
     .slice(0, limit || 2400);
 }
 
-function rank(query, item) {
-  const q = query.toLowerCase().split(/\s+/);
-  const blob = [item.title, item.blurb, item.tags].join(" ").toLowerCase();
-  return q.reduce((n, w) => n + (w && blob.includes(w) ? 1 : 0), 0);
-}
-
-export function ethicalSearch(query, limit) {
-  const ethics = classifyQuery(query);
-  if (ethics.refuse) {
-    return {
-      ok: false,
-      code: "ETHICS_REFUSE",
-      action: "ethical_search",
-      alias: "lamb_lens",
-      query,
-      ethics,
-      results: [],
-      citations: [],
-      advisory: true,
-      label: "Lamb Lens — refused. Advisory ethical gate.",
-    };
-  }
-  const scored = [...CATALOG].sort((a, b) => rank(query, b) - rank(query, a));
-  let hits = scored.filter((it) => rank(query, it) > 0).slice(0, Math.max(1, Math.min(limit || 8, 16)));
-  if (!hits.length) {
-    const q = encodeURIComponent(query);
-    hits = [
-      { title: "Wikipedia search: " + query, url: "https://en.wikipedia.org/w/index.php?search=" + q, source: "wikipedia", blurb: "Cite the article. Advisory.", tags: "wikipedia" },
-      { title: "Library lookup: " + query, url: "https://www.azielcorpuslibrary.net/", source: "aziel-corpus", blurb: "FragGate slug=aziel-corpus op=search.", tags: "library" },
-    ];
-  }
-  return {
-    ok: true,
-    action: "ethical_search",
-    alias: "lamb_lens",
-    mode: "lamb_lens",
-    query,
-    ethics,
-    results: hits,
-    citations: hits.map((h) => ({ title: h.title, url: h.url, source: h.source })),
-    advisory: true,
-    label: "Lamb Lens — ethical internet search. Advisory. Cite sources.",
-    note: "Not a guaranteed index. Not doxxing. Not a malware lure.",
-  };
+export function ethicalSearch(query, limit, sources) {
+  const bag = { ...(sources || {}), limit: limit || (sources && sources.limit) || 8 };
+  return assembleSearch(query, classifyQuery(query), bag);
 }
 
 function scanBytes(name, data, url) {
@@ -648,6 +599,9 @@ async function dispatchInner(op, payload, sessionId) {
       ok: false,
       code: "ETHICS_REFUSE",
       ethics,
+      results: [],
+      citations: [],
+      invented: false,
       receipt: rec,
       session_id: session.id,
       display: displayOf("Lamb Lens refused", "Advisory ethical gate refused this input.", [["reasons", ethics.reasons.join(",")], ["receipt", rec.hash.slice(0, 16)]]),
@@ -772,6 +726,10 @@ async function dispatchInner(op, payload, sessionId) {
     const blocked = await refuse(url);
     if (blocked) return blocked;
     if (payload && Array.isArray(payload.ledger)) setMeshLedger(payload.ledger);
+    if (url.startsWith("azbrowser://search")) {
+      const asked = new URL(url).searchParams.get("q") || "";
+      return dispatch("ethical_search", { q: asked, fetch_corpus: payload && payload.fetch_corpus === true, session_id: session.id }, session.id);
+    }
     const classified = classifyDestination(url);
     if (classified.plane === "cap7" || classified.plane === "cite") return finishSidenet(session, classified);
     if (classified.plane === "mesh") return finishMesh(session, classified, payload);
@@ -887,12 +845,27 @@ async function dispatchInner(op, payload, sessionId) {
     if (!q) return { ok: false, error: "q required", limitation: LIMITATION, session_id: session.id };
     const blocked = await refuse(q);
     if (blocked) return blocked;
-    const out = ethicalSearch(q, (payload && payload.limit) || 8);
+    let corpus = Array.isArray(payload && payload.corpus) ? payload.corpus : null;
+    let corpusStatus = null;
+    if (!corpus && payload && payload.fetch_corpus === true) {
+      const fetched = await fetchCorpus(q);
+      corpus = fetched.records || [];
+      corpusStatus = { asked: true, ok: !!fetched.ok, error: fetched.error || "" };
+    }
+    const out = ethicalSearch(q, (payload && payload.limit) || 8, {
+      records: meshRecords(),
+      receipts: session.receipts,
+      airlocks: session.airlocks || [],
+      corpus,
+      corpus_status: corpusStatus,
+      handle: String((payload && payload.handle) || ""),
+    });
     const rec = await appendReceipt(session, "ethical_search", { q, ok: out.ok, n: (out.results || []).length });
     out.receipt = rec;
     out.session_id = session.id;
     out.limitation = LIMITATION;
-    out.display = displayOf("Lamb Lens", out.label || "Ethical search.", [["query", q], ["results", (out.results || []).length], ["receipt", rec.hash.slice(0, 16)]]);
+    if (out.ok) out.tab = pushTab(session, "azbrowser://search?q=" + encodeURIComponent(q), (q || "AZ Search").slice(0, 48), "search");
+    out.display = displayOf("AZ Search", out.label || "AZ Search.", [["query", q], ["results", (out.results || []).length], ["receipt", rec.hash.slice(0, 16)], ["sidenet", "AZNet"]]);
     return out;
   }
 
@@ -903,6 +876,9 @@ async function dispatchInner(op, payload, sessionId) {
     const blocked = await refuse([url, filename, String(content || "").slice(0, 200)].join(" "));
     if (blocked) return blocked;
     const out = await runAirlock({ url, content, filename, fetchLive: !!(payload && payload.fetch) });
+    session.airlocks = session.airlocks || [];
+    session.airlocks.push({ url, filename, verdict: String((out.scan || {}).verdict || ""), hash: String(out.content_hash || ""), ok: out.ok });
+    session.airlocks = session.airlocks.slice(-32);
     const rec = await appendReceipt(session, "airlock", { url, ok: out.ok, hash: out.content_hash || "", verdict: (out.scan || {}).verdict });
     out.receipt = rec;
     out.session_id = session.id;
@@ -1211,7 +1187,7 @@ Gate. No auto-heal. Not anonymity.
 | UI chrome | op |
 |-----------|-----|
 | Address Go / preview | \`navigate\` / \`preview\` |
-| Lamb Lens search | \`ethical_search\` / \`lamb_lens\` / \`lamb_lens_search\` / \`search\` |
+| AZ Search | \`ethical_search\` / \`lamb_lens\` / \`lamb_lens_search\` / \`search\` / \`az_search\` |
 | Back / Forward / Reload | \`back\` \`forward\` \`reload\` |
 | Home | \`home\` |
 | New / close / switch tab | \`tab_new\` \`tab_close\` \`tab_switch\` \`tab_list\` |
@@ -1256,7 +1232,7 @@ curl -s -A 'Mozilla/5.0' -X POST https://azbrowser-download-tracker.vibelock.wor
   -d '{"slug":"azbrowser","op":"health","payload":{}}'
 \`\`\`
 
-Lamb Lens order is Service, then Clarity, then Peace. A feature that sacrifices one of the three fails review. Every refusal includes a plain reason and a next step. MirageGrid Cap-7 decoys stay separate from the four reserved hub mirrors and three user slots.
+AZ Search is the address-bar and new-tab search. It lists local mesh names, slots, Cap-7 names, hub cites, receipts, airlock history, and corpus rows whose returned fields contain the query. It does not invent a hit. It is not a Softwares card. Agents use FragGate slug azbrowser op ethical_search. Lamb Lens order is Service, then Clarity, then Peace. A feature that sacrifices one of the three fails review. Every refusal includes a plain reason and a next step. The sidenet is AZNet. Cap-7 is not an ICANN name. MirageGrid Cap-7 decoys stay separate from the four reserved hub mirrors and three user slots.
 
 Apache-2.0. Forks are welcome and always allowed.
 `;

@@ -9,7 +9,7 @@ description: >-
 # AZBrowser
 
 Secure research browser / hardened investigation platform (Phase 1).
-Lamb Lens is AZBrowser ethical search. AZNet is a separate product/engine;
+AZ Search is AZ Browser's search. Lamb Lens order is Service, then Clarity, then Peace. AZNet is the sidenet and a separate product;
 pairing is order/token only — not a shared Phase-1 UI
 (https://github.com/AzielEliab/aznet).
 
@@ -57,7 +57,7 @@ next input. No technical MCP UI is required for the human.
 | UI chrome | op |
 |-----------|-----|
 | Address Go / preview | `navigate` / `preview` |
-| Lamb Lens search | `ethical_search` / `lamb_lens` / `lamb_lens_search` / `search` |
+| AZ Search | `ethical_search` / `lamb_lens` / `lamb_lens_search` / `search` / `az_search` |
 | Back / Forward / Reload | `back` `forward` `reload` |
 | Home | `home` |
 | New / close / switch tab | `tab_new` `tab_close` `tab_switch` `tab_list` |
