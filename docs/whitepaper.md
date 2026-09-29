@@ -9,8 +9,9 @@
 
 AZBrowser is a **secure research browser** and hardened investigation
 platform. Phase 1 ships a **browser-chrome UX** (not a Chromium binary)
-with a receipted security kernel, an ingestion airlock, and **AZNet** —
-the ethical-search / network mode.
+with a receipted security kernel, an ingestion airlock, and Lamb Lens
+ethical search. AZNet is the sidenet this browser clients. It stays a
+separate program.
 
 The kernel rule is simple: **No receipt = no action.**
 
@@ -26,13 +27,14 @@ separate app; this repo does not embed its protocol.
 
 The practical browser for the local-first edge mesh is this research
 shell, not a second Chromium. AZNet remains a separate Software. The
-shell resolves `<handle>.aziel` through an AZNet resolver adapter and
-asks local qnm-node to connect. Mesh bytes must match a handle-key
+shell resolves `<handle>.aziel` on its local ledger and asks local
+qnm-node to connect. Cap-7 names are asked of AZNet when that package
+is installed. They are not public ICANN names. Mesh bytes must match a handle-key
 signature and a SHA-256 content hash (`FG-GATE-REFUSE` on mismatch).
 Mesh and local apps are default-deny for network, cross-origin,
 foreign storage, and files. Grants are hash-chained receipts. `.aziel`
 is not registered with ICANN. Ordinary browsers do not resolve it.
-`.az` stays on normal DNS except the operator Cap-7 / AZ.* allowlist.
+Other `.az` names stay on normal DNS.
 The spec and the open alignment points are in
 [FED-MESH-BROWSER-1.0.md](FED-MESH-BROWSER-1.0.md).
 
@@ -40,7 +42,7 @@ The spec and the open alignment points are in
 
 v0.1 **cannot** ship a full Chromium / WebKit / Gecko binary. The Worker
 delivers a research shell: address bar, tabs, Home sigil, controlled
-fetch/proxy preview in a sandbox iframe, receipted airlock, and AZNet
+fetch/proxy preview in a sandbox iframe, receipted airlock, and Lamb Lens
 ethical search. It does **not** replace the operator's OS browser.
 
 ## Architecture (Phase 1)
@@ -49,7 +51,7 @@ ethical search. It does **not** replace the operator's OS browser.
 ┌─────────────────────────────────────────────┐
 │  Browser runtime (chrome UX, tab isolation) │
 ├─────────────────────────────────────────────┤
-│  Network layer — AZNet ethical search mode  │
+│  L0 public web + FragGate · Cap-7 client to AZNet │
 ├─────────────────────────────────────────────┤
 │  Security kernel — integrity + receipts     │
 │  "No receipt = no action"                   │
@@ -67,11 +69,13 @@ Home brandmark
 black background / gold trim / white text. Tabs are isolated in UX even
 when rendering is an iframe / proxy sandbox.
 
-### Network layer (AZNet)
+### Network layer
 
-AZNet is the product's ethical-search / network **mode label**. Lamb
-Lens style: cite sources; refuse doxxing, credential harvest, and
-malware lure; label every result **advisory**.
+L0 is ordinary public web and the FragGate path. Lamb Lens is ethical
+search: cite sources; refuse doxxing, credential harvest, and malware
+lure; label every result **advisory**. Cap-7 is a separate pairing with
+AZNet. AZNet is not a mode label inside this shell, and this shell does
+not register `.az`.
 
 ### Security kernel
 

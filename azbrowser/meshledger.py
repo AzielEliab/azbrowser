@@ -1,13 +1,16 @@
 """AZNet resolver + qnm-node transport adapter.
 
-Looks up ``.aziel`` names and Cap-7 / AZ.* allowlist names on the local
-mesh ledger, then asks the local qnm-node to connect (direct, LAN, or
-relay). Private keys are refused if a payload contains them. This module
-does not embed AZNet and does not open a public qnsd proxy.
+Looks up ``.aziel`` names on the local mesh ledger, then asks the local
+qnm-node to connect (direct, LAN, or relay). Cap-7 names are not looked
+up here; ``azbrowser.sidenet`` asks AZNet. Private keys are refused if a
+payload contains them. This module does not embed AZNet and does not
+open a public qnsd proxy.
 
-Intended HTTP (not on those repos' main branches when this was written):
+AZNet's loopback UI does not serve ``POST /v1/resolve``. Cap-7 names
+use ``aznet.names.resolve`` when that package is installed
+(``azbrowser.sidenet``). The posts below are still attempted for a
+``.aziel`` ledger row and a miss is not a resolution:
 
-- ``POST http://127.0.0.1:8771/v1/resolve`` ``{"name": "<name>"}``
 - ``POST http://127.0.0.1:8891/local/resolve`` ``{"name": "<name>"}``
 - ``POST http://127.0.0.1:8891/local/connect`` ``{"mode","peer","relay"}``
 - ``POST http://127.0.0.1:8891/local/pull`` ``{"name","object"}``
@@ -28,6 +31,7 @@ from urllib.request import Request, urlopen
 from .hashgate import contains_secret, gate_bytes, verify_record
 from .meshguard import evaluate_name, promote_objects
 from .names import REFUSE, SPEC, classify_destination
+from .sidenet import answer as sidenet_answer
 from .lens import clarify
 from .policy import policy_page
 from .preview import scrub_html
@@ -555,6 +559,9 @@ def resolve_query(directory: MeshDirectory, payload: dict[str, Any], **guard: An
     if handle and not raw:
         raw = handle + ".aziel"
     classified = classify_destination(raw)
+    if classified.get("plane") in {"cap7", "cite"}:
+        now = payload.get("now") if isinstance(payload.get("now"), str) else None
+        return sidenet_answer(classified, now=now)
     if classified.get("plane") == "dns":
         return {
             "ok": True,

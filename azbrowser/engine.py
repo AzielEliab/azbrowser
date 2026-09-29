@@ -17,6 +17,8 @@ from .slots import slots_for
 from .names import SPEC as MESH_SPEC
 from .names import _handle_ok
 from .names import classify_destination
+from .sidenet import answer as sidenet_answer
+from .sidenet import sidenet_status
 from .preview import preview_url, sanitize_url, scrub_html
 from .receipts import Ledger
 from .sandbox import CapabilitySandbox
@@ -136,7 +138,9 @@ class Engine:
             "ok": True,
             "product": "azbrowser",
             "name": "AZBrowser",
-            "aznet": True,
+            "aznet": False,
+            "client_of": "aznet",
+            "sidenet": sidenet_status(),
             "version": __version__,
             "spec": SPEC,
             "identity": IDENTITY,
@@ -162,7 +166,9 @@ class Engine:
                 "paired_with": "aznet",
                 "merged_with_aznet": False,
                 "qnm": "http://127.0.0.1:8891",
-                "aznet_resolver": "http://127.0.0.1:8771/v1/resolve",
+                "aznet_resolver": None,
+                "aznet_http_resolve": False,
+                "loopback_resolve_route": False,
                 "scripts_executed": False,
                 "tracker_detection": False,
                 "scanner": "absent",
@@ -195,6 +201,8 @@ class Engine:
         if refused:
             return refused
         classified = classify_destination(url)
+        if classified.get("plane") in {"cap7", "cite"}:
+            return self._finish_sidenet(classified, payload)
         if classified.get("plane") == "mesh":
             return self._finish_mesh(classified, payload)
         if classified.get("plane") == "local":
@@ -217,6 +225,8 @@ class Engine:
             "receipt": rec,
             "limitation": LIMITATION,
             "plane": "dns",
+            "layer": "L0",
+            "l0": True,
             "dns": True,
             "tls": "standard",
             "icann": True,
@@ -234,6 +244,35 @@ class Engine:
             "blocked": set(self.blocked),
             "operator_override": payload.get("operator_override") is True,
         }
+
+    def _finish_sidenet(self, classified: dict[str, Any], payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        now = payload.get("now") if isinstance(payload, dict) and isinstance(payload.get("now"), str) else None
+        opened = sidenet_answer(classified, now=now)
+        rec = self._receipt(
+            str(opened.get("action") or "sidenet"),
+            {
+                "plane": opened.get("plane") or "",
+                "ok": bool(opened.get("ok")),
+                "code": opened.get("code") or "",
+                "reason": opened.get("reason") or "",
+                "name": opened.get("name") or "",
+                "false_site": bool(opened.get("false_site")),
+                "icann": False,
+                "icann_registration_by_this_code": False,
+                "resolves_to_hub": bool(opened.get("resolves_to_hub")),
+                "hosts_payloads": False,
+                "keys_leave_node": False,
+                "pair_token_echoed": False,
+            },
+        )
+        opened["receipt"] = rec
+        opened["limitation"] = LIMITATION
+        opened["display"] = display_of(
+            str(opened.get("title") or "AZNet"),
+            str(opened.get("summary") or ""),
+            list(opened.get("fields") or []) + [("receipt", rec["hash"][:16])],
+        )
+        return opened
 
     def _finish_mesh(self, classified: dict[str, Any], payload: dict[str, Any] | None = None) -> dict[str, Any]:
         opened = open_mesh(self.mesh, classified, **self._guard(payload or {}))
@@ -327,6 +366,8 @@ class Engine:
             "ok": True,
             "action": "navigate",
             "plane": "local",
+            "layer": "L0",
+            "l0": True,
             "kind": "local-app",
             "origin": origin,
             "url": classified.get("url"),
@@ -544,6 +585,12 @@ class Engine:
                 "Blocked",
                 f"FG-GATE-REFUSE — {out.get('reason')}",
                 [("code", "FG-GATE-REFUSE"), ("reason", out.get("reason"))],
+            )
+        elif out.get("plane") in {"cap7", "cite"}:
+            out["display"] = display_of(
+                str(out.get("title") or "AZNet"),
+                str(out.get("summary") or out.get("note") or ""),
+                list(out.get("fields") or []) + [("receipt", rec["hash"][:16])],
             )
         else:
             out["display"] = display_of(

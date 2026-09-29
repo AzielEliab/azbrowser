@@ -16,7 +16,59 @@ LOCK = "A feature that sacrifices Service, Clarity, or Peace fails review."
 _REASONS: dict[str, tuple[str, str]] = {
     "name_not_in_ledger": (
         "This name is not in the local ledger, so there is nothing to open.",
-        "Check the spelling, or open a name this node already has. An allowlisted hub name still needs a ledger record.",
+        "Check the spelling, or open a name this node already has.",
+    ),
+    "resolver_absent": (
+        "AZNet's name library is not installed on this machine, so this Cap-7 name was not resolved.",
+        "Install AZNet beside this browser, then try the name again. It was not sent to public DNS.",
+    ),
+    "ledger_absent": (
+        "AZNet is installed, and its name ledger file is not on this machine.",
+        "Open AZNet so the local name ledger exists, then try the Cap-7 name again. It was not sent to public DNS.",
+    ),
+    "hub_cite": (
+        "This AZ.* name cites a hub site. It is not a mesh page and this shell did not register .az.",
+        "Open the hub address if you want that public site. Cap-7 names are the mesh pairing.",
+    ),
+    "cap7_ok": (
+        "AZNet returned a Cap-7 name record. This shell did not load page bytes.",
+        "The record is a hash or a handle. It is not a public DNS site and it does not open a hub.",
+    ),
+    "cap7_unclaimed": (
+        "AZNet has no anchored claim for this Cap-7 name.",
+        "Nothing was opened. The name was not sent to public DNS.",
+    ),
+    "cap7_pending": (
+        "AZNet has this Cap-7 claim, and it is not final yet.",
+        "Wait until it is final, or open a different name. No page bytes were loaded.",
+    ),
+    "cap7_isolated": (
+        "AZNet will not serve this Cap-7 name because the handle is isolated.",
+        "Open a different name. This shell does not decide that isolation.",
+    ),
+    "cap7_fork": (
+        "AZNet has two Cap-7 claims that share an anchor time. Neither was merged.",
+        "Open a different name. This shell will not pick a side.",
+    ),
+    "cap7_equivocation": (
+        "AZNet refused this Cap-7 name because the handle signed two statements at one sequence.",
+        "Open a different name.",
+    ),
+    "cap7_expired": (
+        "AZNet says this Cap-7 name is expired.",
+        "Open a different name. Nothing was loaded.",
+    ),
+    "cap7_revoked": (
+        "AZNet says the owner released this Cap-7 name.",
+        "Open a different name. Nothing was loaded.",
+    ),
+    "cap7_self_cert": (
+        "AZNet answered this name with the handle itself. The key is not proven by a claim record.",
+        "No page bytes were loaded. This is not a public DNS site.",
+    ),
+    "cap7_reserved": (
+        "AZNet reserves this Cap-7 label. It is not a user claim.",
+        "Nothing was opened. The name was not sent to public DNS.",
     ),
     "name_not_final": (
         "This name is not final. It has not aged, or it does not have enough witnesses.",

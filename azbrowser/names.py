@@ -2,8 +2,8 @@
 
 ``.aziel`` is a mesh name. It is not an ICANN TLD. Ordinary browsers do
 not resolve it. ``.az`` is Azerbaijan's country domain and stays on
-normal DNS unless the host is on the operator's explicit Cap-7 / AZ.*
-allowlist.
+normal DNS except the seven Cap-7 factory names. Those are mesh aliases,
+not public ICANN names. The four AZ.* display names are hub cites.
 
 Author: Aziel Eliab only.
 """
@@ -14,6 +14,8 @@ import os
 import re
 from typing import Any
 from urllib.parse import urlparse
+
+from .sidenet import cap7_destination, cite_destination
 
 SPEC = "FED-MESH-BROWSER-1.0"
 REFUSE = "FG-GATE-REFUSE"
@@ -39,10 +41,21 @@ _HOST = re.compile(r"^[a-z0-9.-]+$")
 
 
 def allowlist() -> frozenset[str]:
-    """Operator allowlist. Env extends it; it does not add every .az name."""
+    """Cap-7 factory hosts plus operator extras.
+
+    The four AZ.* names are cites, not this set. Env extras are not Cap-7
+    and are not an ICANN registration. A host already on Cap-7 stays Cap-7.
+    """
+    return frozenset(CAP7_ALLOWLIST | operator_extra_hosts())
+
+
+def operator_extra_hosts() -> frozenset[str]:
     extra = os.environ.get("AZBROWSER_AZ_ALLOWLIST", "")
     found = {part.strip().lower().rstrip(".") for part in extra.split(",") if part.strip()}
-    return frozenset(CAP7_ALLOWLIST | AZ_STAR_ALLOWLIST | found)
+    reserved = {f"{label}.az" for label in (
+        "azgrid", "azbooth", "azcloak", "azvault", "azshift", "azflag", "azstandby",
+    )}
+    return frozenset(found - reserved - set(AZ_STAR_ALLOWLIST) - set(CAP7_FALSE_SITES))
 
 
 def _handle_ok(label: str) -> bool:
@@ -105,16 +118,23 @@ def classify_destination(raw: str) -> dict[str, Any]:
         return _mesh(host, handle, path if path.startswith("/") else "/" + path, text, allowlisted=False)
 
     if host.endswith(".az"):
-        listed = host in allowlist()
-        if listed and host not in CAP7_FALSE_SITES:
+        pathname = path if path.startswith("/") else "/" + path
+        cap7 = cap7_destination(host, pathname, text)
+        if cap7:
+            return cap7
+        cite = cite_destination(host, pathname, text)
+        if cite:
+            return cite
+        if host in operator_extra_hosts():
             labels = host.split(".")
-            # AZ.Name.AZ → owner label is the middle name. Cap-7 factory names are label.az.
-            handle = labels[1] if len(labels) >= 3 and labels[0] == "az" else labels[0]
-            return _mesh(host, handle, path if path.startswith("/") else "/" + path, text, allowlisted=True)
+            handle = labels[0]
+            return _mesh(host, handle, pathname, text, allowlisted=True)
         url = _https(host, parsed.port, parsed.path or "/", parsed.query)
         return {
             "ok": True,
             "plane": "dns",
+            "layer": "L0",
+            "l0": True,
             "url": url,
             "host": host,
             "path": parsed.path or "/",
@@ -123,7 +143,7 @@ def classify_destination(raw: str) -> dict[str, Any]:
             "icann": True,
             "allowlisted": False,
             "regular_browsers_resolve_aziel": False,
-            "note": ".az is Azerbaijan's country domain. This host is not on the Cap-7 / AZ.* allowlist, so it uses normal DNS and standard TLS.",
+            "note": ".az is Azerbaijan's country domain. This host is not a Cap-7 name, so it uses normal DNS and standard TLS.",
         }
 
     if scheme not in {"https", "http", ""}:
@@ -133,6 +153,8 @@ def classify_destination(raw: str) -> dict[str, Any]:
     return {
         "ok": True,
         "plane": "dns",
+        "layer": "L0",
+        "l0": True,
         "url": url,
         "host": host,
         "path": parsed.path or "/",
@@ -172,6 +194,8 @@ def _mesh(name: str, handle: str, path: str, raw: str, *, allowlisted: bool) -> 
         "ca": False,
         "icann": False,
         "allowlisted": allowlisted,
+        "layer": "aziel",
+        "l0": False,
         "regular_browsers_resolve_aziel": False,
         "keys_leave_node": False,
     }
@@ -192,6 +216,8 @@ def _local(slug: str, source: str, raw: str, port: int | None = None, path: str 
         "raw": raw,
         "dns": False,
         "icann": False,
+        "layer": "L0",
+        "l0": True,
         "data_stays_local": True,
         "keys_leave_node": False,
     }

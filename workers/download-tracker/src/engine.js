@@ -18,6 +18,7 @@ import {
   meshRecords,
   refreshMeshIndex,
   openMesh,
+  answerSidenet,
   originOf,
   setMeshLedger,
 } from "./mesh-browser.js";
@@ -39,7 +40,7 @@ export const AZMAIL_WORKER = "https://azmail-download-tracker.vibelock.workers.d
 export const AZNET = "https://github.com/AzielEliab/aznet";
 export const AZNET_WORKER = "https://aznet-download-tracker.vibelock.workers.dev";
 export const LIMITATION =
-  "THIS IS: a Phase 1 research-browser shell (browser-chrome UX) with controlled fetch/proxy preview, receipted airlock, and Lamb Lens ethical search. THIS IS NOT: a Chromium/Firefox/Safari replacement, a full OS browser, a VPN, AZ-OS, Lumen, AZInterface, or AZNet. v0.1 cannot ship a Chromium binary. AZNet is a separate product/engine; pairing is order/token only — not a shared Phase-1 UI (https://github.com/AzielEliab/aznet). AZMail is a separate sibling repo (https://github.com/AzielEliab/azmail) — optional deep-link only. Mesh names (.aziel) resolve on the local shell through the AZNet resolver adapter and qnm-node. .aziel is not an ICANN registration; ordinary browsers do not resolve it. This Worker does not dial the local node. Handle keys stay on the local node. Mesh bytes stay quarantined when the malware scanner is absent unless the operator override is explicit. Island mode and peer block are this node only. No receipt = no action. Advisory only. Author: Aziel Eliab only.";
+  "THIS IS: a Phase 1 research-browser shell (browser-chrome UX) with controlled fetch/proxy preview, receipted airlock, and Lamb Lens ethical search. THIS IS NOT: a Chromium/Firefox/Safari replacement, a full OS browser, a VPN, AZ-OS, Lumen, AZInterface, or AZNet. v0.1 cannot ship a Chromium binary. AZNet is a separate product/engine; pairing is order/token only — not a shared Phase-1 UI (https://github.com/AzielEliab/aznet). AZBrowser is the browser client for that sidenet. Cap-7 names are mesh DNS pairing only and are not public ICANN names. AZ.* display names cite hub sites. This Worker does not dial AZNet and does not invent a Cap-7 target. AZMail is a separate sibling repo (https://github.com/AzielEliab/azmail) — optional deep-link only. .aziel names stay on a posted ledger. .aziel is not an ICANN registration; ordinary browsers do not resolve it. This Worker does not dial the local node. Handle keys stay on the local node. Mesh bytes stay quarantined when the malware scanner is absent unless the operator override is explicit. Island mode and peer block are this node only. No receipt = no action. Advisory only. Author: Aziel Eliab only.";
 
 export const OPS = [
   "health",
@@ -493,6 +494,29 @@ function meshGuard(session, payload) {
   };
 }
 
+async function finishSidenet(session, classified) {
+  const opened = answerSidenet(classified);
+  const rec = await appendReceipt(session, opened.action || "sidenet", {
+    plane: opened.plane || "",
+    ok: !!opened.ok,
+    code: opened.code || "",
+    reason: opened.reason || "",
+    name: opened.name || "",
+    false_site: !!opened.false_site,
+    icann: false,
+    icann_registration_by_this_code: false,
+    resolves_to_hub: !!opened.resolves_to_hub,
+    hosts_payloads: false,
+    keys_leave_node: false,
+    pair_token_echoed: false,
+  });
+  opened.receipt = rec;
+  opened.session_id = session.id;
+  opened.limitation = LIMITATION;
+  opened.display = displayOf(opened.title || "AZNet", opened.summary || "", (opened.fields || []).concat([["receipt", rec.hash.slice(0, 16)]]));
+  return opened;
+}
+
 async function finishMesh(session, classified, payload) {
   const opened = await openMesh(classified, meshGuard(session, payload));
   if (opened.hash_ok && opened.owner_handle) {
@@ -573,6 +597,8 @@ async function finishLocal(session, classified, payload) {
     ok: true,
     action: "navigate",
     plane: "local",
+    layer: "L0",
+    l0: true,
     kind: "local-app",
     origin: classified.origin,
     url: classified.url,
@@ -636,7 +662,28 @@ async function dispatchInner(op, payload, sessionId) {
       name: "AZBrowser",
       lamb_lens: true,
       aznet: false,
-      aznet_note: "separate product/engine; pairing order/token only — not shared Phase-1 UI",
+      client_of: "aznet",
+      aznet_note: "separate product/engine; pairing order/token only — not shared Phase-1 UI. Cap-7 mesh DNS pairing only. This Worker does not dial 127.0.0.1:8771 and does not serve a resolve route.",
+      sidenet: {
+        product: "AZBrowser",
+        operator_name: "AZ Browser",
+        client_of: "aznet",
+        products_merged: false,
+        pairing: "order and token only",
+        softwares_frozen: true,
+        l0_unbroken: true,
+        cap7_only: true,
+        cap7_public_icann: false,
+        icann_registration_by_this_code: false,
+        resolves_to_hub_on_cap7: false,
+        aznet_http_resolve: false,
+        resolver: "absent",
+        pair_status: "unknown",
+        wrote: false,
+        pair_token_echoed: false,
+        worker_dials_local_node: false,
+        hosts_payloads: false,
+      },
       version: VERSION,
       spec: SPEC,
       identity: IDENTITY,
@@ -662,7 +709,13 @@ async function dispatchInner(op, payload, sessionId) {
         paired_with: "aznet",
         merged_with_aznet: false,
         qnm: "http://127.0.0.1:8891",
-        aznet_resolver: "http://127.0.0.1:8771/v1/resolve",
+        aznet_resolver: null,
+        aznet_http_resolve: false,
+        loopback_resolve_route: false,
+        softwares_frozen: true,
+        cap7_public_icann: false,
+        icann_registration_by_this_code: false,
+        resolves_to_hub_on_cap7: false,
         scripts_executed: false,
         tracker_detection: false,
         qnsd_public_proxy: false,
@@ -720,6 +773,7 @@ async function dispatchInner(op, payload, sessionId) {
     if (blocked) return blocked;
     if (payload && Array.isArray(payload.ledger)) setMeshLedger(payload.ledger);
     const classified = classifyDestination(url);
+    if (classified.plane === "cap7" || classified.plane === "cite") return finishSidenet(session, classified);
     if (classified.plane === "mesh") return finishMesh(session, classified, payload);
     if (classified.plane === "local") return finishLocal(session, classified, payload);
     if (classified.suggest_search) return dispatch("ethical_search", { q: url, session_id: session.id }, session.id);
@@ -735,6 +789,8 @@ async function dispatchInner(op, payload, sessionId) {
     const tab = pushTab(session, preview.url || url, preview.title || url, "preview");
     const rec = await appendReceipt(session, "navigate", { url: preview.url || url, ok: preview.ok, hash: preview.content_hash || "", plane: "dns" });
     preview.plane = "dns";
+    preview.layer = "L0";
+    preview.l0 = true;
     preview.dns = true;
     preview.tls = "standard";
     preview.icann = true;
@@ -902,7 +958,8 @@ async function dispatchInner(op, payload, sessionId) {
     if (payload && Array.isArray(payload.ledger)) setMeshLedger(payload.ledger);
     const classified = classifyDestination(query);
     let out;
-    if (classified.plane === "mesh") out = await openMesh(classified, meshGuard(session, payload));
+    if (classified.plane === "cap7" || classified.plane === "cite") out = answerSidenet(classified);
+    else if (classified.plane === "mesh") out = await openMesh(classified, meshGuard(session, payload));
     else if (classified.plane === "dns") out = { ok: true, action: "resolve", plane: "dns", url: classified.url, host: classified.host, dns: true, tls: "standard", icann: true, allowlisted: false, note: classified.note || "Normal DNS and standard TLS.", regular_browsers_resolve_aziel: false };
     else if (classified.plane === "local") out = { ok: true, action: "resolve", plane: "local", spec: MESH_SPEC, origin: classified.origin, slug: classified.slug, source: classified.source, url: classified.url };
     else out = { ok: false, action: "resolve", error: classified.error || "not_a_url", suggest_search: classified.suggest_search };
@@ -920,6 +977,7 @@ async function dispatchInner(op, payload, sessionId) {
     else if (out.ok && out.quarantine) out.display = displayOf("Quarantine", "Verified owner handle " + out.owner_handle + ". Scanner absent. Bytes not promoted and not run.", [["handle", out.owner_handle], ["scanner", "absent"]]);
     else if (out.ok && out.owner_handle) out.display = displayOf("Owner " + out.owner_handle, "Resolved " + out.name + ". Verified owner handle " + out.owner_handle + ".", [["handle", out.owner_handle], ["receipt", rec.hash.slice(0, 16)]]);
     else if (out.code === "FG-GATE-REFUSE") out.display = displayOf("Blocked", "FG-GATE-REFUSE — " + out.reason, [["code", "FG-GATE-REFUSE"], ["reason", out.reason]]);
+    else if (out.plane === "cap7" || out.plane === "cite") out.display = displayOf(out.title || "AZNet", out.summary || out.note || "", (out.fields || []).concat([["receipt", rec.hash.slice(0, 16)]]));
     else out.display = displayOf("Resolve", out.note || "Resolved.", [["plane", out.plane], ["url", out.url || ""], ["receipt", rec.hash.slice(0, 16)]]);
     return out;
   }
