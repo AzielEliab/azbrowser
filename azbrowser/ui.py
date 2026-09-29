@@ -260,6 +260,12 @@ function paintOwner(obj) {{
     if (obj.display_url) document.getElementById('omnibox').value = obj.display_url;
     return;
   }}
+  if (obj && obj.address_line) {{
+    line.textContent = obj.address_line;
+    if (chip && obj.plane === 'cap7') chip.textContent = obj.false_site ? 'False site' : 'Cap-7';
+    if (chip && obj.plane === 'cite') chip.textContent = 'Hub cite';
+    return;
+  }}
   if (obj && obj.plane === 'local' && obj.origin) {{
     line.textContent = 'Local app · ' + obj.origin + ' · data stays on this machine';
     return;

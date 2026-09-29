@@ -270,6 +270,12 @@ function paintOwner(j) {
     if (j.display_url) document.getElementById("omnibox").value = j.display_url;
     return;
   }
+  if (j && j.address_line) {
+    line.textContent = j.address_line;
+    if (chip && j.plane === "cap7") chip.textContent = j.false_site ? "False site" : "Cap-7";
+    if (chip && j.plane === "cite") chip.textContent = "Hub cite";
+    return;
+  }
   if (j && j.plane === "local" && j.origin) {
     line.textContent = "Local app · " + j.origin + " · data stays on this machine";
     return;

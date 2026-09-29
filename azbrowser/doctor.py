@@ -36,7 +36,24 @@ def doctor(as_json: bool = False) -> int:
     az_dns = classify_destination("example.az")
     checks.append(("az_dns_fallthrough", az_dns.get("plane") == "dns" and az_dns.get("url", "").startswith("https://example.az/")))
     az_list = classify_destination("AZ.AzielEliab.AZ")
-    checks.append(("az_allowlist", az_list.get("plane") == "mesh" and az_list.get("allowlisted") is True))
+    checks.append((
+        "az_cite",
+        az_list.get("plane") == "cite"
+        and az_list.get("mesh_answer") is False
+        and az_list.get("icann_registration_by_this_code") is False
+        and az_list.get("hub") == "https://www.azieleliab.com/",
+    ))
+    cap7 = classify_destination("azgrid.az")
+    checks.append((
+        "cap7_not_icann",
+        cap7.get("plane") == "cap7" and cap7.get("icann") is False and cap7.get("resolves_to_hub") is False,
+    ))
+    decoy = classify_destination("azbooth.az")
+    checks.append(("cap7_decoy_not_dns", decoy.get("plane") == "cap7" and decoy.get("false_site") is True and decoy.get("icann") is False))
+    public = classify_destination("https://www.azieleliab.com/")
+    frag = classify_destination("http://127.0.0.1:8787/")
+    checks.append(("l0_public_web", public.get("plane") == "dns" and public.get("layer") == "L0"))
+    checks.append(("l0_fraggate", frag.get("plane") == "local" and frag.get("layer") == "L0" and frag.get("source") == "fraggate"))
 
     home = eng.home({})
     checks.append(("home_sigil", "sigil.png" in str(home.get("sigil"))))

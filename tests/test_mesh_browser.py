@@ -7,6 +7,7 @@ fallthrough, hash mismatch, capability deny/grant, and normal web.
 from __future__ import annotations
 
 import copy
+from datetime import datetime, timedelta, timezone
 
 from azbrowser.ed25519 import node_sign, public_from_seed
 from azbrowser.engine import OPS, Engine
@@ -169,17 +170,24 @@ def test_az_allowlist_versus_dns_fallthrough():
     assert fall.get("code") != "FG-GATE-REFUSE"
     assert fall["icann"] is True
     decoy = classify_destination("azbooth.az")
-    assert decoy["plane"] == "dns"
-    assert decoy["allowlisted"] is False
+    assert decoy["plane"] == "cap7"
+    assert decoy["false_site"] is True
+    assert decoy["icann"] is False
+    assert decoy["resolves_to_hub"] is False
     allow = eng.navigate({"url": "AZ.AzielEliab.AZ"})
-    assert allow["plane"] == "mesh"
-    assert allow["code"] == "FG-GATE-REFUSE"
-    assert allow["reason"] == "name_not_in_ledger"
-    assert allow["allowlisted"] is True
+    assert allow["plane"] == "cite"
+    assert allow["code"] == "UNCLAIMED"
+    assert allow["mesh_answer"] is False
+    assert allow["icann_registration_by_this_code"] is False
+    assert allow["hub"] == "https://www.azieleliab.com/"
+    assert allow["html"] == ""
+    assert allow["url"] == ""
     cap7 = classify_destination("azgrid.az")
-    assert cap7["plane"] == "mesh"
+    assert cap7["plane"] == "cap7"
     assert cap7["allowlisted"] is True
     assert cap7["icann"] is False
+    assert cap7["resolves_to_hub"] is False
+    assert cap7["canonical_name"] == "azgrid.aziel"
 
 
 def test_hash_mismatch_is_fg_gate_refuse():
@@ -325,7 +333,8 @@ def test_false_final_and_young_claim_are_refused():
     assert out["code"] == "FG-GATE-REFUSE"
     assert out["reason"] == "name_not_final"
     assert out["html"] == ""
-    young = signed_record(claimed_at="2026-09-24T00:00:00Z")
+    claimed = (datetime.now(timezone.utc) - timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    young = signed_record(claimed_at=claimed)
     again = engine_with(young)
     refused = again.navigate({"url": "library.aziel"})
     assert refused["reason"] == "name_not_final"

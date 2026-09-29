@@ -34,6 +34,8 @@ Version 0.1.0 is a research shell: tabs, an address bar, a sandboxed preview, a 
 
 `.aziel` names resolve in this shell. `.aziel` is not an ICANN registration. Handle keys stay on this machine. AZMail and AZNet are separate programs: https://github.com/AzielEliab/azmail and https://github.com/AzielEliab/aznet
 
+AZ Browser is the client for the AZNet sidenet. Public web addresses and FragGate stay on L0. Cap-7 names (`azgrid.az`, `azcloak.az`, `azvault.az`, `azshift.az`, `azbooth.az`, `azflag.az`, `azstandby.az`) are mesh pairing only and are not public ICANN names. `AZ.AzielEliab.AZ` and the other three AZ.* names cite their hub sites. This shell does not register `.az`.
+
 See [docs/FED-MESH-BROWSER-1.0.md](docs/FED-MESH-BROWSER-1.0.md) and [docs/whitepaper.md](docs/whitepaper.md).
 How to contribute: [CONTRIBUTING.md](CONTRIBUTING.md).
 

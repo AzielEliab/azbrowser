@@ -37,11 +37,13 @@ same shape.
 
 | Input | Plane | Transport |
 | --- | --- | --- |
-| `<handle>.aziel`, `https://<name>.aziel/…`, `aziel://<handle>/…` | mesh | AZNet resolver, then qnm-node |
-| Cap-7 / AZ.* allowlist below | mesh | same |
-| Any other `.az` host | DNS | normal DNS, standard TLS |
-| Other `http`/`https` hosts | DNS | normal DNS, standard TLS (`http` is upgraded to `https`, as before) |
-| `azbrowser://local/<slug>`, `127.0.0.1:8891`, `127.0.0.1:8787` | local app | loopback only |
+| Other `http`/`https` hosts | L0 public web | normal DNS, standard TLS (`http` is upgraded to `https`, as before) |
+| `127.0.0.1:8787` and FragGate `/v1/fraggate/*` | L0 FragGate | loopback app, or the existing proxy to aziel-runtime |
+| Any `.az` host that is not Cap-7 | L0 public web | normal DNS, standard TLS |
+| `<handle>.aziel`, `https://<name>.aziel/…`, `aziel://<handle>/…` | mesh | local ledger, then qnm-node. Not an ICANN name |
+| The seven Cap-7 factory names below | cap7 | AZNet name library when it is installed. Not public DNS |
+| The four AZ.* display names | cite | hub HTTPS cite. Not a mesh target. This shell does not register `.az` |
+| `azbrowser://local/<slug>`, `127.0.0.1:8891` | local app | loopback only |
 
 `<handle>.aziel` is always a mesh name. A missing ledger row is
 `FG-GATE-REFUSE` / `name_not_in_ledger`. It is not sent to DNS.
@@ -50,23 +52,37 @@ same shape.
 resolve `.aziel` names. Nothing in this repository registers a TLD.
 
 `.az` is Azerbaijan's country-code domain. It stays on normal DNS
-except this explicit operator allowlist:
+except the seven Cap-7 factory names. That pairing is mesh DNS only.
+It is not a public ICANN registration, and `resolves_to_hub` stays
+false.
 
-| Host | Why it is mesh |
+| Host | Ledger name | Cap-7 role |
+| --- | --- | --- |
+| `azgrid.az` | `azgrid.aziel` | real duplication |
+| `azcloak.az` | `azcloak.aziel` | real duplication |
+| `azvault.az` | `azvault.aziel` | real duplication |
+| `azshift.az` | `azshift.aziel` | real duplication |
+| `azbooth.az` | `azbooth.aziel` | false site (cloak) |
+| `azflag.az` | `azflag.aziel` | false site (cloak) |
+| `azstandby.az` | `azstandby.aziel` | false site (cloak) |
+
+The three cloak names are still Cap-7. They are not sent to public DNS.
+A false site is labeled `false_site` and is not presented as a hub.
+
+These four display names are cites. AZNet does not return a mesh target
+for them. Internet reach of each one is the hub site. This repository
+does not register `.az`.
+
+| Display name | Hub the public web actually uses |
 | --- | --- |
-| `azgrid.az` | Cap-7 real duplication (factory label) |
-| `azcloak.az` | Cap-7 real duplication |
-| `azvault.az` | Cap-7 real duplication |
-| `azshift.az` | Cap-7 real duplication |
-| `az.azieleliab.az` | `AZ.AzielEliab.AZ` |
-| `az.godlock.az` | `AZ.Godlock.AZ` |
-| `az.azielcorpuslibrary.az` | `AZ.AzielCorpusLibrary.AZ` |
-| `az.hedidntjump.az` | `AZ.HeDidntJump.AZ` |
+| `AZ.AzielEliab.AZ` | `https://www.azieleliab.com/` |
+| `AZ.AzielCorpusLibrary.AZ` | `https://www.azielcorpuslibrary.net/` |
+| `AZ.Godlock.AZ` | `https://godlock.uk/` |
+| `AZ.HeDidntJump.AZ` | `https://www.hedidntjump.com/` |
 
-`azbooth.az`, `azflag.az`, and `azstandby.az` are Cap-7 cloak names.
-They are not on the allowlist, so they use normal DNS.
-`AZBROWSER_AZ_ALLOWLIST` may add hosts. It does not turn every `.az`
-name into a mesh name.
+`AZBROWSER_AZ_ALLOWLIST` may add other hosts to the local hash gate.
+Those extras are not Cap-7 and are not an ICANN registration. The
+variable does not turn every `.az` name into a mesh name.
 
 ## Resolver adapter
 
@@ -77,9 +93,11 @@ Lookup order:
 
 1. Records already in the local directory (tests, or
    `AZBROWSER_MESH_LEDGER`, a JSON file of public records).
-2. If HTTP transport is on: `POST {AZNET_RESOLVER_URL}` default
-   `http://127.0.0.1:8771/v1/resolve` with `{"name","handle"}`.
-3. Then `POST http://127.0.0.1:8891/local/resolve` with the same body.
+2. If HTTP transport is on: `POST http://127.0.0.1:8891/local/resolve`
+   with `{"name","handle"}`. AZNet's loopback page does not serve
+   `POST /v1/resolve`. A miss is not a resolution. Cap-7 names do not
+   use this ledger; they use `aznet.names.resolve` when that package
+   is installed, and otherwise the shell says the resolver is absent.
 
 A hit must be a public record:
 
@@ -379,14 +397,14 @@ the only place that should change when they do.
    `azbrowser/meshguard.py`, `azbrowser/meshledger.py`, and
    `workers/download-tracker/src/mesh-browser.js` together.
 
-2. [aznet](https://github.com/AzielEliab/aznet) `main` (`0cb9993`) has
-   no `.aziel` resolver library and no `/v1/resolve`. AZNet today is
-   the silent verification side-net (hashes only, pairing required).
-   Intended call: `POST http://127.0.0.1:8771/v1/resolve`. The record
-   shape above is what this browser will accept. AZNet must not start
-   storing payloads or private keys to satisfy it; the ledger row is
-   public key, signature, and content hashes. Page bytes can come from
-   the local object store or `qnm-node` pull.
+2. [aznet](https://github.com/AzielEliab/aznet) `main` (`f7e6a788`) has
+   `aznet.names.resolve` (AZN-NAME-1.0) and does not serve
+   `POST /v1/resolve` on `127.0.0.1:8771`. This browser calls that
+   library for Cap-7 names when the package is installed. It does not
+   invent an owner or a target when the package or the name file is
+   absent. AZNet stores hashes and handles, not page bytes. The
+   `.aziel` page-byte record above remains this shell's local hash
+   gate. It is not a claim that AZNet hosts those bytes.
 
 3. [qnm-node](https://github.com/AzielEliab/qnm-node) `main` already
    binds `127.0.0.1:8891` and already has `POST /local/pull` for the
@@ -404,13 +422,12 @@ the only place that should change when they do.
    navigate path. If FED-MESH picks another suite, replace `verify`
    only.
 
-5. Cap-7 names follow
-   `cursor/cap7-az-domain-reach-cb90` `src/cap7-shuffle.js`
-   (CAP7-SHUFFLE-1.0), which is not necessarily merged to runtime
-   `main`. Four real factory names and four `AZ.*` display names are
-   allowlisted. Three false sites are not. `resolves_to_hub` stays
-   false on Cap-7; this browser does not pretend an allowlisted name
-   is an ICANN `AZ` domain.
+5. Cap-7 pairing follows AZNet AZN-NAME-1.0. All seven factory labels
+   are mesh aliases. `resolves_to_hub` stays false. The three cloak
+   names are false sites and are not sent to public DNS. The four
+   AZ.* display names are hub cites (`public_icann` on that hub layer,
+   `icann_registration_by_this_code` false, `mesh_answer` false). This
+   browser does not pretend a Cap-7 name is an ICANN `.az` domain.
 
 6. The Worker hash gate matches the local shell, but
    `connect.socket` stays false there. A posted `ledger` on the op is

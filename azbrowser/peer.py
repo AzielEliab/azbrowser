@@ -13,6 +13,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from .meta import AZNET
+from .sidenet import pair_view
 
 AZNET_HOST = "127.0.0.1"
 AZNET_PORT = 8771
@@ -36,10 +37,25 @@ def aznet_answers(host: str = AZNET_HOST, port: int = AZNET_PORT, timeout: float
 
 def aznet_report(host: str = AZNET_HOST, port: int = AZNET_PORT, timeout: float = 0.4) -> dict[str, Any]:
     seen = aznet_answers(host, port, timeout)
+    pairing = pair_view()
+    status = str(pairing.get("pair_status") or "unknown")
+    if status == "PAIRED":
+        line = "AZNet paired on this machine. The pair token stays on the AZNet ledger."
+    elif seen:
+        line = SEEN_LINE + ". Pair token was not read from the ledger."
+    else:
+        line = ABSENT_LINE
     return {
         "seen": seen,
         "host": host,
         "port": int(port),
-        "line": SEEN_LINE if seen else ABSENT_LINE,
+        "line": line,
         "install": AZNET,
+        "pair_status": status,
+        "unlock_status": pairing.get("unlock_status"),
+        "pair_token_present": bool(pairing.get("pair_token_present")),
+        "pair_token_echoed": False,
+        "wrote": False,
+        "products_merged": False,
+        "resolver": pairing.get("resolver"),
     }

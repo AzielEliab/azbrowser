@@ -79,19 +79,28 @@ No receipt = no action. Every mutating op appends a hash-chained receipt.
 
 ## Local-first edge mesh
 
-AZBrowser is the browser for the local-first edge mesh. AZNet stays a
-separate Software. Pairing is resolve-and-connect only.
+AZBrowser is the browser client for the AZNet sidenet. AZNet stays a
+separate Software. Pairing is order and token only. L0 public web and
+the FragGate path stay as they are. Softwares catalog entries are not
+added here.
 
-- `<handle>.aziel` resolves through the AZNet resolver adapter
-  (`POST http://127.0.0.1:8771/v1/resolve`) against the local mesh ledger,
-  then the local shell asks qnm-node (`POST http://127.0.0.1:8891/local/connect`)
+- `<handle>.aziel` resolves on the local mesh ledger, then the local
+  shell asks qnm-node (`POST http://127.0.0.1:8891/local/connect`)
   for direct, LAN, or relay. `.aziel` is not an ICANN TLD. Ordinary browsers
-  do not resolve it.
-- `.az` is Azerbaijan's country domain and stays on normal DNS and standard
-  TLS, except the operator Cap-7 / AZ.* allowlist (`azgrid.az`, `azcloak.az`,
-  `azvault.az`, `azshift.az`, `AZ.AzielEliab.AZ`, `AZ.Godlock.AZ`,
-  `AZ.AzielCorpusLibrary.AZ`, `AZ.HeDidntJump.AZ`). Cloak names
-  `azbooth.az`, `azflag.az`, and `azstandby.az` are not on that list.
+  do not resolve it. AZNet's loopback page does not serve
+  `POST /v1/resolve`.
+- Cap-7 mesh DNS pairing is the seven factory names (`azgrid.az`,
+  `azcloak.az`, `azvault.az`, `azshift.az`, `azbooth.az`, `azflag.az`,
+  `azstandby.az`). They alias `{label}.aziel`. They are not public ICANN
+  names and they do not resolve to a hub. The three cloak names are
+  false sites and are still not sent to public DNS. The local shell
+  calls `aznet.names.resolve` when AZNet is installed. If it is not,
+  the shell says the resolver is absent and invents no target.
+- `AZ.AzielEliab.AZ`, `AZ.Godlock.AZ`, `AZ.AzielCorpusLibrary.AZ`, and
+  `AZ.HeDidntJump.AZ` cite the hub sites. They are not mesh targets.
+  This shell does not register `.az`.
+- `.az` is Azerbaijan's country domain. Every other `.az` host stays on
+  normal DNS and standard TLS.
 - Mesh pages, scripts, and modules must match the handle key's signed
   content hash. Mismatch, an unsigned module, or tampered bytes return
   `FG-GATE-REFUSE` plus the reason. The address bar shows the verified

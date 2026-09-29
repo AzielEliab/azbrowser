@@ -15,6 +15,13 @@ export const NAME_MIN_WITNESSES = 2;
 export const CAP7_ALLOWLIST = ["azgrid.az", "azcloak.az", "azvault.az", "azshift.az"];
 export const AZ_STAR_ALLOWLIST = ["az.azieleliab.az", "az.godlock.az", "az.azielcorpuslibrary.az", "az.hedidntjump.az"];
 export const CAP7_FALSE_SITES = ["azbooth.az", "azflag.az", "azstandby.az"];
+export const CAP7_FACTORY_LABELS = ["azgrid", "azbooth", "azcloak", "azvault", "azshift", "azflag", "azstandby"];
+export const AZ_DOMAIN_REACH = [
+  { display_name: "AZ.AzielEliab.AZ", mesh_key: "az.azieleliab.az", cap7_label: "azgrid", mirrors: "azieleliab.com", hub: "https://www.azieleliab.com/" },
+  { display_name: "AZ.AzielCorpusLibrary.AZ", mesh_key: "az.azielcorpuslibrary.az", cap7_label: "azvault", mirrors: "azielcorpuslibrary.net", hub: "https://www.azielcorpuslibrary.net/" },
+  { display_name: "AZ.Godlock.AZ", mesh_key: "az.godlock.az", cap7_label: "azcloak", mirrors: "godlock.uk", hub: "https://godlock.uk/" },
+  { display_name: "AZ.HeDidntJump.AZ", mesh_key: "az.hedidntjump.az", cap7_label: "azshift", mirrors: "hedidntjump.com", hub: "https://www.hedidntjump.com/" },
+];
 const SECRET = new Set([
   "private_key", "privatekey", "secret_key", "secretkey", "signing_key", "signingkey",
   "seed", "priv", "privkey", "ed25519_secret", "sk", "secret",
@@ -146,13 +153,11 @@ export function classifyDestination(raw) {
     return mesh(host, handle, parsed.pathname || "/", text, false);
   }
   if (host.endsWith(".az")) {
-    const listed = allowlist().has(host) && !CAP7_FALSE_SITES.includes(host);
-    if (listed) {
-      const labels = host.split(".");
-      const handle = labels.length >= 3 && labels[0] === "az" ? labels[1] : labels[0];
-      return mesh(host, handle, parsed.pathname || "/", text, true);
-    }
-    return dns(host, port, parsed.pathname || "/", parsed.search, ".az is Azerbaijan's country domain. This host is not on the Cap-7 / AZ.* allowlist, so it uses normal DNS and standard TLS.");
+    const cap7 = cap7Destination(host, parsed.pathname || "/", text);
+    if (cap7) return cap7;
+    const cite = citeDestination(host, parsed.pathname || "/", text);
+    if (cite) return cite;
+    return dns(host, port, parsed.pathname || "/", parsed.search, ".az is Azerbaijan's country domain. This host is not a Cap-7 name, so it uses normal DNS and standard TLS.");
   }
   if (scheme !== "https" && scheme !== "http") return { ok: false, plane: "dns", error: "https_only", scheme, url: text };
   return dns(host, port, parsed.pathname || "/", parsed.search, "");
@@ -170,6 +175,8 @@ function dns(host, port, path, search, note) {
     dns: true,
     tls: "standard",
     icann: true,
+    layer: "L0",
+    l0: true,
     allowlisted: false,
     regular_browsers_resolve_aziel: false,
     note: note || "Normal DNS and standard TLS.",
@@ -192,8 +199,200 @@ function mesh(name, handle, path, raw, allowlisted) {
     ca: false,
     icann: false,
     allowlisted,
+    layer: "aziel",
+    l0: false,
     regular_browsers_resolve_aziel: false,
     keys_leave_node: false,
+  };
+}
+
+function cap7Destination(host, path, raw) {
+  const label = host.endsWith(".az") ? host.slice(0, -3) : "";
+  if (!label || label.includes(".") || !CAP7_FACTORY_LABELS.includes(label)) return null;
+  const pathname = path.startsWith("/") ? path : "/" + path;
+  const falseSite = CAP7_FALSE_SITES.includes(host);
+  const name = label + ".aziel";
+  return {
+    ok: true,
+    plane: "cap7",
+    layer: "cap7",
+    l0: false,
+    name,
+    canonical_name: name,
+    handle: label,
+    label,
+    host,
+    path: pathname,
+    url: "",
+    display_url: host + (pathname === "/" ? "" : pathname),
+    raw,
+    dns: false,
+    tls: "handle-key",
+    ca: false,
+    icann: false,
+    public_icann: false,
+    icann_registration_by_this_code: false,
+    allowlisted: true,
+    false_site: falseSite,
+    resolves_to_hub: false,
+    standard_internet_reaches_cap7: false,
+    mesh_answer: true,
+    regular_browsers_resolve_aziel: false,
+    keys_leave_node: false,
+    note: "Cap-7 mesh duplication. The .az spelling is an allowlisted alias of " + name + ", not the Azerbaijan ccTLD, and not a public ICANN name. Standard internet does not reach it. It does not resolve to a hub.",
+  };
+}
+
+function citeDestination(host, path, raw) {
+  const row = AZ_DOMAIN_REACH.find((item) => item.mesh_key === host);
+  if (!row) return null;
+  const pathname = path.startsWith("/") ? path : "/" + path;
+  return {
+    ok: true,
+    plane: "cite",
+    layer: "az_domains",
+    l0: false,
+    name: row.mesh_key,
+    display_name: row.display_name,
+    host: row.mesh_key,
+    hub: row.hub,
+    mirrors: row.mirrors,
+    cap7_label: row.cap7_label,
+    path: pathname,
+    url: "",
+    display_url: row.display_name,
+    raw,
+    dns: false,
+    icann: false,
+    public_icann: true,
+    icann_tld_az: false,
+    icann_registration_by_this_code: false,
+    allowlisted: false,
+    false_site: false,
+    resolves_to_hub: true,
+    mesh_answer: false,
+    internet_reachable: true,
+    public_reach: "hub_https",
+    regular_browsers_resolve_aziel: false,
+    keys_leave_node: false,
+    note: row.display_name + " is a cite of " + row.hub + ". It is not a FED-MESH name record and not a Cap-7 mesh target. This shell did not register .az. The hub site itself is ordinary public web.",
+  };
+}
+
+export function answerSidenet(classified) {
+  if (classified && classified.plane === "cite") return citeAnswer(classified);
+  return cap7Answer(classified || {});
+}
+
+function citeAnswer(classified) {
+  const hub = String(classified.hub || "");
+  const display = String(classified.display_name || classified.name || "");
+  return {
+    ok: true,
+    action: "cite",
+    code: "UNCLAIMED",
+    reason: "hub_cite",
+    product: "AZBrowser",
+    client_of: "aznet",
+    products_merged: false,
+    pairing: "order and token only",
+    softwares_frozen: true,
+    plane: "cite",
+    layer: "az_domains",
+    l0: false,
+    spec: "AZN-NAME-1.0",
+    name: classified.name,
+    display_name: display,
+    display_url: display,
+    url: "",
+    hub,
+    mirrors: classified.mirrors,
+    owner: null,
+    target: null,
+    false_site: false,
+    dns: false,
+    icann: false,
+    public_icann: true,
+    allowlisted: false,
+    resolves_to_hub: true,
+    mesh_answer: false,
+    internet_reachable: true,
+    public_reach: "hub_https",
+    navigable: false,
+    hosts_payloads: false,
+    html: "",
+    scripts_executed: false,
+    executed: false,
+    socket: false,
+    qnsd_public_proxy: false,
+    worker_dials_local_node: false,
+    keys_leave_node: false,
+    icann_registration_by_this_code: false,
+    wrote: false,
+    pair_token_echoed: false,
+    title: "Hub cite",
+    summary: display + " cites " + hub + ". This shell did not register .az and did not open a mesh page.",
+    fields: [["name", display], ["hub", hub], ["mesh", "no"], ["registered .az", "no"]],
+    address_line: "Hub cite · " + display + " · public site is " + hub + " · this shell did not register .az",
+    clarity: clarify("hub_cite", "UNCLAIMED"),
+    note: classified.note || "",
+  };
+}
+
+function cap7Answer(classified) {
+  const query = String(classified.host || classified.display_url || "");
+  const name = String(classified.canonical_name || classified.name || "");
+  const falseSite = !!classified.false_site;
+  const summary = "This Worker does not dial AZNet. " + query + " was not sent to public DNS and no mesh target was invented.";
+  return {
+    ok: false,
+    action: "cap7",
+    code: "RESOLVER_ABSENT",
+    reason: "resolver_absent",
+    product: "AZBrowser",
+    client_of: "aznet",
+    products_merged: false,
+    pairing: "order and token only",
+    softwares_frozen: true,
+    plane: "cap7",
+    layer: "cap7",
+    l0: false,
+    spec: "AZN-NAME-1.0",
+    name,
+    display_url: classified.display_url || query,
+    url: "",
+    host: query,
+    label: classified.label,
+    false_site: falseSite,
+    dns: false,
+    icann: false,
+    public_icann: false,
+    allowlisted: true,
+    resolves_to_hub: false,
+    standard_internet_reaches_cap7: false,
+    mesh_answer: false,
+    navigable: false,
+    owner: null,
+    target: null,
+    hosts_payloads: false,
+    html: "",
+    scripts_executed: false,
+    executed: false,
+    socket: false,
+    qnsd_public_proxy: false,
+    worker_dials_local_node: false,
+    keys_leave_node: false,
+    icann_registration_by_this_code: false,
+    wrote: false,
+    pair_token_echoed: false,
+    resolver: "absent",
+    names_ledger: "absent",
+    title: falseSite ? "Cap-7 false site" : "Cap-7",
+    summary,
+    fields: [["name", name], ["code", "RESOLVER_ABSENT"], ["public ICANN", "no"]],
+    address_line: "Cap-7 · " + (falseSite ? "false site · " : "") + query + " · RESOLVER_ABSENT · not public DNS",
+    clarity: clarify("resolver_absent", "RESOLVER_ABSENT"),
+    note: summary,
   };
 }
 
@@ -212,6 +411,8 @@ function local(slug, source, raw, port, path) {
     raw,
     dns: false,
     icann: false,
+    layer: "L0",
+    l0: true,
     data_stays_local: true,
     keys_leave_node: false,
   };
