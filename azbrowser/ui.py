@@ -1,4 +1,8 @@
-"""Loopback research-browser chrome. 127.0.0.1 only. No telemetry."""
+"""Local research-browser chrome. Binds 127.0.0.1. No telemetry.
+
+Mesh security is single-node security-awareness plus a local phoenix
+re-seal. Binding this page to loopback is the app transport, not that model.
+"""
 
 from __future__ import annotations
 
@@ -12,6 +16,7 @@ from urllib.request import Request, urlopen
 
 from .door import classify_v1_path, door_target_url
 from .engine import Engine
+from .meshledger import read_public_relay
 from .meta import AZNET, HOST, __version__
 from .peer import aznet_report
 from .receipts import Ledger
@@ -24,6 +29,7 @@ def sigil_png() -> bytes:
 
 PORT = 8878
 ENGINE = Engine(Ledger("./azbrowser_receipts.jsonl"))
+ENGINE.mesh.relay_read = read_public_relay
 
 
 def bind_message(host: str, port: int) -> str:
@@ -170,7 +176,8 @@ html[data-panel="open"] main {{ grid-template-columns: 1fr 280px; }}
     <aside id="sidePanel" hidden>
       <h2>Advanced</h2>
       <div id="aznetRecover" hidden>
-        <p>AZNet is not running on :8771. Install it, then check again.</p>
+        <h2>Pair</h2>
+        <p>AZNet pair is broken. Garden verify needs a pair token and the azbrowser flag. The token stays on the AZNet ledger and is not shown here. This does not open a tunnel. Ordinary web addresses stay open.</p>
         <div class="node">
           <a id="aznetInstall" href="{AZNET}">Install AZNet</a>
           <button id="aznetCheck" type="button">Check again</button>
@@ -333,16 +340,23 @@ function humanPage(obj, summary) {{
   body += '<details class="more"><summary>Details</summary>' + fieldList(obj) + '<pre>' + escText(JSON.stringify(obj, null, 2)) + '</pre></details></article>';
   return body;
 }}
+function paintPair(obj) {{
+  const box = document.getElementById('aznetRecover');
+  if (!box || !obj) return;
+  if (obj.pair_ui === 'broken' || obj.code === 'AZN-PAIR-REQUIRED' || obj.pair_status === 'UNPAIRED') box.hidden = false;
+  if (obj.pair_status === 'PAIRED') box.hidden = true;
+}}
 function show(obj) {{
   const stage = document.getElementById('stage');
   paintOwner(obj);
+  paintPair(obj);
   noteReceipt(obj);
   const summary = (obj.display && obj.display.summary) || obj.note || '';
   if (obj && (obj.policy_page || obj.shell_page) && obj.html) {{
     stage.innerHTML = obj.html;
     return;
   }}
-  if (obj && obj.code === 'FG-GATE-REFUSE') {{
+  if (obj && (obj.code === 'FG-GATE-REFUSE' || obj.code === 'AZN-PAIR-REQUIRED')) {{
     stage.innerHTML = refusalHtml(obj, summary);
     return;
   }}
@@ -609,9 +623,10 @@ function paintMesh(raw) {{
 function paintAznet(j) {{
   const line = document.getElementById("aznetLine");
   const recover = document.getElementById("aznetRecover");
-  const seen = !!(j && j.seen === true);
-  if (line) line.textContent = (j && j.line) || (seen ? "AZNet seen on this machine" : "AZNet not running on :8771");
-  if (recover) recover.hidden = seen;
+  const status = String((j && j.pair_status) || "");
+  const broken = (j && j.pair_ui === "broken") || status === "UNPAIRED" || (j && j.seen !== true && status !== "PAIRED");
+  if (line) line.textContent = broken ? ((j && j.line) || "AZNet pair is broken on this machine") : ((j && j.line) || "AZNet paired");
+  if (recover) recover.hidden = !broken;
 }}
 async function refreshAznet() {{
   try {{

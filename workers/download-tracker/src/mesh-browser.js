@@ -10,6 +10,156 @@ import { clarify } from "./lens.js";
 
 export const MESH_SPEC = "FED-MESH-BROWSER-1.0";
 export const REFUSE = "FG-GATE-REFUSE";
+export const MESH_SECURITY_MODEL = "single-node-security-awareness";
+export const RELAY_NAME_PATH = "/v1/mesh/relay/name";
+const HEX64 = /^[0-9a-f]{64}$/;
+
+export function securityStamp(reason = "") {
+  const mismatch = reason === "hash_mismatch";
+  return {
+    security_model: MESH_SECURITY_MODEL,
+    loopback_isolation: false,
+    forced_loopback: false,
+    browse_plane: "open",
+    node_path: mismatch ? "isolated" : "open",
+    node_path_isolated: mismatch,
+    phoenix: {
+      spec: "REHEAL",
+      mode: "local-wait-reseal",
+      state: mismatch ? "local-wait" : "idle",
+      public_hostname_resurrection: false,
+      controller_hunt: false,
+      neighbor_vote: false,
+    },
+  };
+}
+
+export function localObjectHash(record) {
+  const ref = record && record.ref;
+  const value = String((ref && ref.object) || "").trim().toLowerCase();
+  return HEX64.test(value) ? value : "";
+}
+
+export function relayTargetHash(row) {
+  const target = row && row.target;
+  if (!target || typeof target !== "object") return "";
+  if (String(target.type || "") !== "hash") return "";
+  const value = String(target.value || "").trim().toLowerCase();
+  return HEX64.test(value) ? value : "";
+}
+
+export function relayStatementHash(row) {
+  const value = String((row && row.statement_hash) || "").trim().toLowerCase();
+  return HEX64.test(value) ? value : "";
+}
+
+/** Local page hash versus relay target hash. A disagreeing pair refuses this node path. */
+export function ledgerHashConflict(record, row, expectHash) {
+  const local = localObjectHash(record);
+  const relay = relayTargetHash(row);
+  const statement = relayStatementHash(row);
+  const expect = String(expectHash || "").trim().toLowerCase();
+  if (local && relay && local !== relay) return "hash_mismatch";
+  if (!expect || expect === statement) return "";
+  if (local && expect !== local) return "hash_mismatch";
+  if (!local && relay && expect !== relay) return "hash_mismatch";
+  if (!local && !relay && row) return "hash_mismatch";
+  return "";
+}
+
+export function normalizeRelay(doc) {
+  if (!doc || typeof doc !== "object") return { found: false };
+  if (doc.found === true && doc.row) return doc;
+  if (doc.found === false && (doc.unread || doc.isolated || doc.code)) return doc;
+  const code = String(doc.code || "");
+  if (code === "FED-MESH-ISOLATED") {
+    return {
+      found: false,
+      isolated: true,
+      code,
+      reason: String(doc.reason || "unspecified"),
+      evidence_hash: String(doc.evidence_hash || ""),
+    };
+  }
+  const row = doc.record && typeof doc.record === "object"
+    ? doc.record
+    : (doc.name && (doc.statement_hash || doc.status || doc.owner) ? doc : null);
+  if (!row || !row.name) {
+    if (code === "FED-MESH-NO-NAME" || doc.ok === false) return { found: false, code: code || "FED-MESH-NO-NAME" };
+    return { found: false };
+  }
+  return { found: true, row, source: "fed-mesh-relay" };
+}
+
+let relayReadImpl = null;
+
+export function setRelayReadImpl(fn) {
+  relayReadImpl = typeof fn === "function" ? fn : null;
+}
+
+export function currentRelayReadImpl() {
+  return relayReadImpl;
+}
+
+export async function pullRelayName(name, fetcher, origin) {
+  const base = String(origin || "https://aziel-runtime.vibelock.workers.dev").replace(/\/+$/, "");
+  const url = base + RELAY_NAME_PATH + "?name=" + encodeURIComponent(String(name || "").trim().toLowerCase());
+  try {
+    const res = await fetcher(url, {
+      method: "GET",
+      headers: { "user-agent": "Mozilla/5.0", accept: "application/json" },
+    });
+    const doc = await res.json();
+    const relay = normalizeRelay(doc);
+    relay.endpoint = url;
+    return relay;
+  } catch {
+    return { found: false, unread: true };
+  }
+}
+
+export function prepair(payload) {
+  const src = payload && typeof payload === "object" ? payload : {};
+  const wants = src.aznet_verify === true || src.garden === true;
+  if (!wants) {
+    return {
+      required: false,
+      blocked: false,
+      pair_ui: "hidden",
+      pair_token_echoed: false,
+      products_merged: false,
+      tunnel: false,
+    };
+  }
+  const token = String(
+    src.pair_token != null ? src.pair_token : src.token != null ? src.token : src.aznet_token != null ? src.aznet_token : "",
+  ).trim();
+  const flag = String(
+    src.pair_flag != null ? src.pair_flag : src.flag != null ? src.flag : src.azbrowser_flag != null ? src.azbrowser_flag : "",
+  ).trim().toLowerCase();
+  const tokenPresent = token.length >= 8;
+  const flagOk = flag === "azbrowser";
+  const base = {
+    required: true,
+    pair_token_present: tokenPresent,
+    pair_flag_ok: flagOk,
+    pair_flag_required: "azbrowser",
+    pair_token_echoed: false,
+    products_merged: false,
+    tunnel: false,
+    vpn: false,
+    pairing: "order and token only",
+  };
+  if (tokenPresent && flagOk) return { ...base, blocked: false, pair_ui: "hidden", pair_status: "PAIRED" };
+  return {
+    ...base,
+    blocked: true,
+    pair_ui: "broken",
+    pair_status: "UNPAIRED",
+    code: "AZN-PAIR-REQUIRED",
+    reason: "pair_required",
+  };
+}
 export const NAME_MIN_AGE_SECONDS = 72 * 3600;
 export const NAME_MIN_WITNESSES = 2;
 export const CAP7_ALLOWLIST = ["azgrid.az", "azcloak.az", "azvault.az", "azshift.az"];
@@ -822,6 +972,7 @@ function blocked(reason, classified) {
     url: classified.display_url || classified.url || "",
     display_url: classified.display_url || classified.url || "",
     icann: false,
+    dns: false,
     ca: false,
     allowlisted: !!classified.allowlisted,
     regular_browsers_resolve_aziel: false,
@@ -831,6 +982,74 @@ function blocked(reason, classified) {
     scripts_executed: false,
     qnsd_public_proxy: false,
     socket: false,
+    worker_dials_local_node: false,
+    ...securityStamp(reason),
+  };
+}
+
+function relayOnlyView(classified, row) {
+  const status = String(row.status || "").toLowerCase();
+  const released = row.released === true || status === "released";
+  const final = !released && (row.final === true || status === "final");
+  const owner = String(row.owner || classified.handle || "");
+  const base = {
+    ...securityStamp(""),
+    plane: "mesh",
+    spec: MESH_SPEC,
+    name: row.name || classified.name,
+    url: classified.url,
+    display_url: classified.display_url,
+    owner_handle: owner,
+    source: "fed-mesh-relay",
+    ledger_source: "fed-mesh-relay",
+    statement_hash: String(row.statement_hash || ""),
+    target: row.target || null,
+    icann: false,
+    dns: false,
+    ca: false,
+    html: "",
+    scripts_executed: false,
+    executed: false,
+    socket: false,
+    qnsd_public_proxy: false,
+    worker_dials_local_node: false,
+    keys_leave_node: false,
+    regular_browsers_resolve_aziel: false,
+    name_resolved: true,
+    navigable: false,
+    allowlisted: !!classified.allowlisted,
+  };
+  if (released) {
+    return {
+      ...blocked("name_not_in_ledger", classified),
+      source: "fed-mesh-relay",
+      ledger_source: "fed-mesh-relay",
+      name_resolved: false,
+      dns: false,
+      note: "The relay released this name. It was not sent to DNS.",
+    };
+  }
+  if (!final) {
+    return {
+      ...base,
+      ok: true,
+      action: "name_pending",
+      code: "",
+      reason: "name_pending",
+      name_status: "PENDING",
+      verified_owner: false,
+      note: "Pending name on the FED-MESH relay. Not a verified site. Not sent to DNS.",
+    };
+  }
+  return {
+    ...blocked("object_missing", classified),
+    ...base,
+    ok: false,
+    code: REFUSE,
+    reason: "object_missing",
+    name_status: "FINAL",
+    verified_owner: false,
+    note: "The relay has this .aziel name. Page bytes are not on this node. The name was not sent to DNS.",
   };
 }
 
@@ -892,7 +1111,37 @@ export async function openMesh(classified, guard = {}) {
   }
   await ensureIndex();
   const record = lookup(classified.name, "");
-  if (!record) return blocked("name_not_in_ledger", classified);
+  let relay = normalizeRelay(guard.relay);
+  if (!relay.found && !relay.isolated && !guard.relay && typeof guard.readRelay === "function") {
+    try {
+      relay = normalizeRelay(await guard.readRelay(classified.name));
+    } catch {
+      relay = { found: false, unread: true };
+    }
+  }
+  const relayRow = relay.found ? relay.row : null;
+  if (ledgerHashConflict(record, relayRow, guard.expect_hash)) return blocked("hash_mismatch", classified);
+  if (!record && relay.isolated) {
+    const owner = String(classified.handle || "");
+    return {
+      ...blocked("handle_isolated", classified),
+      policy_page: true,
+      html: policyPage(owner, { reason: relay.reason, evidence_hash: relay.evidence_hash, check: "fed-mesh-relay" }),
+      source: "fed-mesh-relay",
+      ledger_source: "fed-mesh-relay",
+      dns: false,
+      note: "This handle is isolated on the relay. The page is this shell's policy refusal. The name was not sent to DNS.",
+    };
+  }
+  if (!record) {
+    if (relayRow) return relayOnlyView(classified, relayRow);
+    return {
+      ...blocked("name_not_in_ledger", classified),
+      dns: false,
+      relay_unread: !!relay.unread,
+      note: "This .aziel name is not on the local ledger or the FED-MESH relay. It was not sent to DNS.",
+    };
+  }
   if (containsSecret(record)) return blocked("keys_must_stay_on_node", classified);
   const owner = String(record.handle || handle || "");
   const isolation = isolationFor(owner);
@@ -961,6 +1210,9 @@ export async function openMesh(classified, guard = {}) {
     network_wide: false,
     qnsd_public_proxy: false,
     socket: false,
+    ledger_source: relayRow ? "local-ledger+fed-mesh-relay" : "local-ledger",
+    relay_statement_hash: relayRow ? String(relayRow.statement_hash || "") : "",
+    ...securityStamp(""),
   };
   if (!air.promoted) {
     const reason = air.reason || "scanner_absent";

@@ -249,6 +249,48 @@ def lookup_cap7(query: str, now: str | None = None) -> dict[str, Any]:
     return {"resolver": "present", "ledger": "present", "result": data}
 
 
+def prepair(payload: dict[str, Any] | None) -> dict[str, Any]:
+    """AZNet garden verify needs a token and the azbrowser flag. The token is not returned."""
+    src = payload if isinstance(payload, dict) else {}
+    wants = src.get("aznet_verify") is True or src.get("garden") is True
+    if not wants:
+        return {
+            "required": False,
+            "blocked": False,
+            "pair_ui": "hidden",
+            "pair_token_echoed": False,
+            "products_merged": False,
+            "tunnel": False,
+        }
+    raw_token = src.get("pair_token", src.get("token", src.get("aznet_token", "")))
+    raw_flag = src.get("pair_flag", src.get("flag", src.get("azbrowser_flag", "")))
+    token = "" if raw_token is None else str(raw_token).strip()
+    flag = "" if raw_flag is None else str(raw_flag).strip().lower()
+    token_present = len(token) >= 8
+    flag_ok = flag == "azbrowser"
+    base: dict[str, Any] = {
+        "required": True,
+        "pair_token_present": token_present,
+        "pair_flag_ok": flag_ok,
+        "pair_flag_required": "azbrowser",
+        "pair_token_echoed": False,
+        "products_merged": False,
+        "tunnel": False,
+        "vpn": False,
+        "pairing": "order and token only",
+    }
+    if token_present and flag_ok:
+        return {**base, "blocked": False, "pair_ui": "hidden", "pair_status": "PAIRED"}
+    return {
+        **base,
+        "blocked": True,
+        "pair_ui": "broken",
+        "pair_status": "UNPAIRED",
+        "code": "AZN-PAIR-REQUIRED",
+        "reason": "pair_required",
+    }
+
+
 def pair_view() -> dict[str, Any]:
     """Read pair status. Does not write a token and does not return one."""
     view: dict[str, Any] = {

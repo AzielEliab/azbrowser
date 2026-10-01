@@ -22,6 +22,10 @@ import {
   answerSidenet,
   originOf,
   setMeshLedger,
+  currentRelayReadImpl,
+  prepair,
+  securityStamp,
+  MESH_SECURITY_MODEL,
 } from "./mesh-browser.js";
 
 export { setMeshLedger };
@@ -229,6 +233,7 @@ export function createSession() {
     blocked_peers: [],
     hash_matches: {},
     airlocks: [],
+    isolated_names: {},
   };
 }
 
@@ -437,11 +442,71 @@ function pushTab(session, url, title, kind) {
   return tab;
 }
 
+function expectHashOf(payload) {
+  const raw = payload && (payload.expect_hash || payload.statement_hash || payload.object);
+  const text = String(raw || "").trim().toLowerCase();
+  return /^[0-9a-f]{64}$/.test(text) ? text : "";
+}
+
 function meshGuard(session, payload) {
+  const posted = !!(payload && Object.prototype.hasOwnProperty.call(payload, "relay"));
+  const reader = currentRelayReadImpl();
   return {
     island: !!session.island_mode,
     blocked: session.blocked_peers || [],
     operator_override: !!(payload && payload.operator_override === true),
+    relay: payload && payload.relay,
+    expect_hash: expectHashOf(payload),
+    readRelay: posted || (payload && payload.read_relay === false) ? null : reader,
+  };
+}
+
+async function finishPair(session, pair, classified) {
+  const rec = await appendReceipt(session, "pair_refuse", {
+    ok: false,
+    code: "AZN-PAIR-REQUIRED",
+    pair_status: "UNPAIRED",
+    pair_token_present: !!pair.pair_token_present,
+    pair_flag_ok: !!pair.pair_flag_ok,
+    pair_token_echoed: false,
+    name: (classified && classified.name) || "",
+  });
+  return {
+    ok: false,
+    code: "AZN-PAIR-REQUIRED",
+    reason: "pair_required",
+    pair_ui: "broken",
+    pair_status: "UNPAIRED",
+    pair_required: true,
+    pair_token_present: !!pair.pair_token_present,
+    pair_flag_ok: !!pair.pair_flag_ok,
+    pair_flag_required: "azbrowser",
+    pair_token_echoed: false,
+    products_merged: false,
+    tunnel: false,
+    vpn: false,
+    pairing: "order and token only",
+    plane: "mesh",
+    html: "",
+    dns: false,
+    icann: false,
+    scripts_executed: false,
+    ...securityStamp(""),
+    receipt: rec,
+    session_id: session.id,
+    limitation: LIMITATION,
+    clarity: {
+      code: "AZN-PAIR-REQUIRED",
+      reason: "pair_required",
+      plain: "AZNet garden verify needs a pair token and the azbrowser flag. The token was not shown.",
+      next: "Pair from AZNet, then try this name again. Ordinary web addresses stay open.",
+    },
+    display: displayOf(
+      "Pair broken",
+      "AZNet garden verify needs a pair token and the azbrowser flag. The token was not shown.",
+      [["pair", "broken"], ["tunnel", "no"]],
+    ),
+    note: "Pair UI is for a broken pair. Relay name read does not require the pair. This is not a tunnel.",
   };
 }
 
@@ -468,8 +533,26 @@ async function finishSidenet(session, classified) {
   return opened;
 }
 
+function noteNodePath(session, opened, classified, payload) {
+  const key = String(opened.name || (classified && classified.name) || "").toLowerCase();
+  if (!session.isolated_names) session.isolated_names = {};
+  if (opened.reason === "hash_mismatch") {
+    session.isolated_names[key] = { phoenix: "local-wait" };
+  } else if (opened.hash_ok && session.isolated_names[key]) {
+    delete session.isolated_names[key];
+    opened.phoenix = { ...(opened.phoenix || securityStamp("").phoenix), state: "resealed" };
+    opened.node_path = "resealed";
+    opened.node_path_isolated = false;
+  }
+  const pair = prepair(payload);
+  opened.pair_required = pair.required;
+  opened.pair_ui = pair.pair_ui;
+  opened.pair_token_echoed = false;
+  return opened;
+}
+
 async function finishMesh(session, classified, payload) {
-  const opened = await openMesh(classified, meshGuard(session, payload));
+  const opened = noteNodePath(session, await openMesh(classified, meshGuard(session, payload)), classified, payload);
   if (opened.hash_ok && opened.owner_handle) {
     session.hash_matches[opened.owner_handle] = (session.hash_matches[opened.owner_handle] || 0) + 1;
   }
@@ -676,6 +759,10 @@ async function dispatchInner(op, payload, sessionId) {
         worker_dials_local_node: false,
         scanner: "absent",
         network_wide_cutoff: false,
+        security_model: MESH_SECURITY_MODEL,
+        loopback_isolation: false,
+        phoenix: "local-wait-reseal",
+        public_hostname_resurrection: false,
         island_mode: !!session.island_mode,
         name_min_age_seconds: NAME_MIN_AGE_SECONDS,
         name_min_witnesses: NAME_MIN_WITNESSES,
@@ -732,7 +819,11 @@ async function dispatchInner(op, payload, sessionId) {
     }
     const classified = classifyDestination(url);
     if (classified.plane === "cap7" || classified.plane === "cite") return finishSidenet(session, classified);
-    if (classified.plane === "mesh") return finishMesh(session, classified, payload);
+    if (classified.plane === "mesh") {
+      const pair = prepair(payload);
+      if (pair.blocked) return finishPair(session, pair, classified);
+      return finishMesh(session, classified, payload);
+    }
     if (classified.plane === "local") return finishLocal(session, classified, payload);
     if (classified.suggest_search) return dispatch("ethical_search", { q: url, session_id: session.id }, session.id);
     const safe = sanitizeUrl(url);
@@ -794,9 +885,23 @@ async function dispatchInner(op, payload, sessionId) {
   }
 
   if (name === "home") {
+    const asked = String((payload && (payload.url || payload.name || payload.q)) || "").trim();
+    if (asked && (asked.toLowerCase().includes(".aziel") || asked.toLowerCase().startsWith("aziel:"))) {
+      return dispatch("navigate", { ...payload, url: asked }, session.id);
+    }
     pushTab(session, "azbrowser://newtab", "Home", "newtab");
     const rec = await appendReceipt(session, "home", { url: "azbrowser://newtab" });
-    return { ok: true, action: "home", sigil: SIGIL, tab: current(session), receipt: rec, session_id: session.id, display: displayOf("Home", "Home panel.", [["sigil", SIGIL], ["receipt", rec.hash.slice(0, 16)]]), limitation: LIMITATION };
+    return {
+      ok: true,
+      action: "home",
+      sigil: SIGIL,
+      tab: current(session),
+      receipt: rec,
+      session_id: session.id,
+      ...securityStamp(""),
+      display: displayOf("Home", "Home panel.", [["sigil", SIGIL], ["receipt", rec.hash.slice(0, 16)]]),
+      limitation: LIMITATION,
+    };
   }
 
   if (name === "tab_new") {
@@ -934,8 +1039,12 @@ async function dispatchInner(op, payload, sessionId) {
     if (payload && Array.isArray(payload.ledger)) setMeshLedger(payload.ledger);
     const classified = classifyDestination(query);
     let out;
+    if (classified.plane === "mesh") {
+      const pair = prepair(payload);
+      if (pair.blocked) return finishPair(session, pair, classified);
+    }
     if (classified.plane === "cap7" || classified.plane === "cite") out = answerSidenet(classified);
-    else if (classified.plane === "mesh") out = await openMesh(classified, meshGuard(session, payload));
+    else if (classified.plane === "mesh") out = noteNodePath(session, await openMesh(classified, meshGuard(session, payload)), classified, payload);
     else if (classified.plane === "dns") out = { ok: true, action: "resolve", plane: "dns", url: classified.url, host: classified.host, dns: true, tls: "standard", icann: true, allowlisted: false, note: classified.note || "Normal DNS and standard TLS.", regular_browsers_resolve_aziel: false };
     else if (classified.plane === "local") out = { ok: true, action: "resolve", plane: "local", spec: MESH_SPEC, origin: classified.origin, slug: classified.slug, source: classified.source, url: classified.url };
     else out = { ok: false, action: "resolve", error: classified.error || "not_a_url", suggest_search: classified.suggest_search };

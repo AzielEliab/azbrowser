@@ -144,6 +144,10 @@ iframe.preview{width:100%;min-height:420px;border:1px solid var(--trim);backgrou
         <button id="btnTrust" type="button" title="Local trust for the current handle">Trust</button>
         <button id="slotsBtn" type="button" title="Reserved hub mirrors and your three sites">Slots</button>
       </div>
+      <div id="pairRecover" hidden>
+        <h2>Pair</h2>
+        <p>AZNet pair is broken. Garden verify needs a pair token and the azbrowser flag. The token stays on AZNet and is not shown here. This does not open a tunnel. Ordinary web addresses stay open.</p>
+      </div>
       <h2>Mesh</h2>
       <div class="node">
         <button id="meshEnable" type="button" title="Turn mesh presence on">Turn on</button>
@@ -293,14 +297,21 @@ function refusalHtml(j) {
   const code = (j && j.code) || "FG-GATE-REFUSE";
   return '<section class="refusal"><h1>Blocked</h1><p>' + escText(plain) + '</p><p>' + escText(next) + '</p><p class="cite">' + escText(code) + " · " + escText((j && j.reason) || "") + "</p></section>";
 }
+function paintPair(j) {
+  const box = document.getElementById("pairRecover");
+  if (!box) return;
+  const broken = !!(j && (j.pair_ui === "broken" || j.code === "AZN-PAIR-REQUIRED"));
+  box.hidden = !broken;
+}
 function renderResult(j) {
   const stage = document.getElementById("stage");
   paintOwner(j);
+  paintPair(j);
   if (j && (j.policy_page || j.shell_page) && j.html) {
     stage.innerHTML = j.html;
     return;
   }
-  if (j && (j.code === "FG-GATE-REFUSE" || j.code === "ETHICS_REFUSE")) {
+  if (j && (j.code === "FG-GATE-REFUSE" || j.code === "ETHICS_REFUSE" || j.code === "AZN-PAIR-REQUIRED")) {
     stage.innerHTML = refusalHtml(j);
     return;
   }

@@ -6,7 +6,7 @@
 import assert from "node:assert/strict";
 import { generateKeyPairSync, sign } from "node:crypto";
 import { dispatch, setMeshLedger } from "../workers/download-tracker/src/engine.js";
-import { canonical, classifyDestination, engineDigestFor, sha256Hex, witnessMessage } from "../workers/download-tracker/src/mesh-browser.js";
+import { canonical, classifyDestination, engineDigestFor, pullRelayName, setRelayReadImpl, sha256Hex, witnessMessage } from "../workers/download-tracker/src/mesh-browser.js";
 import { createHash } from "node:crypto";
 
 const PAGE = "<h1>Library</h1><p>Local-first shelf.</p>";
@@ -247,5 +247,110 @@ assert.equal(health.sidenet.aznet_http_resolve, false);
 assert.equal(health.sidenet.cap7_public_icann, false);
 assert.equal(health.mesh_browser.aznet_resolver, null);
 assert.equal(health.ops.includes("pair"), false);
+assert.equal(health.mesh_browser.security_model, "single-node-security-awareness");
+assert.equal(health.mesh_browser.loopback_isolation, false);
+assert.equal(health.mesh_browser.public_hostname_resurrection, false);
+
+setMeshLedger([record]);
+const other = "ab".repeat(32);
+assert.notEqual(other, record.ref.object);
+const crossed = await dispatch("navigate", {
+  url: "library.aziel",
+  relay: {
+    record: {
+      name: "library.aziel",
+      owner: "library",
+      status: "final",
+      final: true,
+      statement_hash: "cd".repeat(32),
+      target: { type: "hash", value: other },
+    },
+  },
+}, "cross-sess");
+assert.equal(crossed.code, "FG-GATE-REFUSE");
+assert.equal(crossed.reason, "hash_mismatch");
+assert.equal(crossed.html, "");
+assert.equal(crossed.dns, false);
+assert.equal(crossed.icann, false);
+assert.equal(crossed.node_path_isolated, true);
+assert.equal(crossed.loopback_isolation, false);
+assert.equal(crossed.forced_loopback, false);
+assert.equal(crossed.browse_plane, "open");
+assert.equal(crossed.phoenix.state, "local-wait");
+assert.equal(crossed.phoenix.public_hostname_resurrection, false);
+assert.equal(String(crossed.url).includes("127.0.0.1"), false);
+const still = await dispatch("navigate", { url: "https://example.com/still-open" }, crossed.session_id);
+assert.equal(still.plane, "dns");
+assert.notEqual(still.code, "FG-GATE-REFUSE");
+assert.ok(still.url.startsWith("https://example.com/"));
+assert.equal(still.url.includes("127.0.0.1"), false);
+setMeshLedger([record]);
+const resealed = await dispatch("navigate", { url: "library.aziel" }, crossed.session_id);
+assert.equal(resealed.hash_ok, true);
+assert.equal(resealed.node_path, "resealed");
+assert.equal(resealed.node_path_isolated, false);
+assert.equal(resealed.phoenix.state, "resealed");
+
+setMeshLedger([]);
+const relayOnly = await dispatch("home", {
+  name: "shelf.aziel",
+  relay: {
+    record: {
+      name: "shelf.aziel",
+      owner: "shelf",
+      status: "final",
+      final: true,
+      statement_hash: "aa".repeat(32),
+      target: { type: "hash", value: "bb".repeat(32) },
+    },
+  },
+}, "relay-sess");
+assert.equal(relayOnly.code, "FG-GATE-REFUSE");
+assert.equal(relayOnly.reason, "object_missing");
+assert.equal(relayOnly.name_resolved, true);
+assert.equal(relayOnly.dns, false);
+assert.equal(relayOnly.ledger_source, "fed-mesh-relay");
+assert.equal(relayOnly.html, "");
+assert.equal(relayOnly.forced_loopback, false);
+
+const token = "pair-token-value";
+const brokenPair = await dispatch("navigate", { url: "library.aziel", aznet_verify: true, pair_token: token }, "pair-sess");
+assert.equal(brokenPair.code, "AZN-PAIR-REQUIRED");
+assert.equal(brokenPair.pair_ui, "broken");
+assert.equal(brokenPair.pair_token_echoed, false);
+assert.equal(brokenPair.tunnel, false);
+assert.equal(JSON.stringify(brokenPair).includes(token), false);
+setMeshLedger([record]);
+const paired = await dispatch("navigate", {
+  url: "library.aziel",
+  aznet_verify: true,
+  pair_token: token,
+  pair_flag: "azbrowser",
+}, brokenPair.session_id);
+assert.notEqual(paired.code, "AZN-PAIR-REQUIRED");
+assert.equal(paired.pair_ui, "hidden");
+assert.equal(JSON.stringify(paired).includes(token), false);
+
+const fetched = await pullRelayName("library.aziel", async () => ({
+  json: async () => ({
+    ok: true,
+    record: {
+      name: "library.aziel",
+      owner: "library",
+      status: "pending",
+      statement_hash: "ee".repeat(32),
+    },
+  }),
+}), "https://aziel-runtime.vibelock.workers.dev");
+assert.equal(fetched.found, true);
+assert.equal(fetched.row.name, "library.aziel");
+assert.equal(String(fetched.endpoint).includes("/v1/mesh/relay/name?name=library.aziel"), true);
+setRelayReadImpl(async () => fetched);
+setMeshLedger([]);
+const viaReader = await dispatch("navigate", { url: "library.aziel" }, "reader-sess");
+assert.equal(viaReader.name_status, "PENDING");
+assert.equal(viaReader.dns, false);
+assert.equal(viaReader.source, "fed-mesh-relay");
+setRelayReadImpl(null);
 
 console.log("worker mesh browser ok");

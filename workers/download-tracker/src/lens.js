@@ -126,7 +126,7 @@ const REASONS = {
   ],
   hash_mismatch: [
     "The page bytes do not match the signed hash.",
-    "Do not trust this copy. Open a record whose hash matches.",
+    "Do not trust this copy. Open a record whose hash matches. This node path waits and re-seals locally. Ordinary web addresses stay open.",
   ],
   unsigned_module: [
     "A module on this page is not signed, so the page is not shown.",

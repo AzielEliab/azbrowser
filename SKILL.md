@@ -84,11 +84,17 @@ separate Software. Pairing is order and token only. L0 public web and
 the FragGate path stay as they are. Softwares catalog entries are not
 added here.
 
-- `<handle>.aziel` resolves on the local mesh ledger, then the local
-  shell asks qnm-node (`POST http://127.0.0.1:8891/local/connect`)
-  for direct, LAN, or relay. `.aziel` is not an ICANN TLD. Ordinary browsers
-  do not resolve it. AZNet's loopback page does not serve
-  `POST /v1/resolve`.
+- `<handle>.aziel` resolves on the local mesh ledger, then the runtime
+  FED-MESH relay name read (`GET /v1/mesh/relay/name?name=`). It is not
+  sent to ICANN DNS. The local shell may then ask qnm-node
+  (`POST http://127.0.0.1:8891/local/connect`) for direct, LAN, or relay.
+  `.aziel` is not an ICANN TLD. Ordinary browsers do not resolve it.
+  AZNet's loopback page does not serve `POST /v1/resolve`.
+- Mesh security is single-node security-awareness isolation plus a
+  phoenix reboot loop (local wait, then re-seal). It is not loopback
+  isolation. A hash mismatch returns `FG-GATE-REFUSE` for that node
+  path and leaves ordinary `https` open. Phoenix does not resurrect a
+  public hostname.
 - Cap-7 mesh DNS pairing is the seven factory names (`azgrid.az`,
   `azcloak.az`, `azvault.az`, `azshift.az`, `azbooth.az`, `azflag.az`,
   `azstandby.az`). They alias `{label}.aziel`. They are not public ICANN
@@ -102,9 +108,14 @@ added here.
 - `.az` is Azerbaijan's country domain. Every other `.az` host stays on
   normal DNS and standard TLS.
 - Mesh pages, scripts, and modules must match the handle key's signed
-  content hash. Mismatch, an unsigned module, or tampered bytes return
-  `FG-GATE-REFUSE` plus the reason. The address bar shows the verified
-  owner handle, or that refusal. There is no identity-lock chrome.
+  content hash. A local hash that disagrees with the relay target hash
+  is the same refusal. Mismatch, an unsigned module, or tampered bytes
+  return `FG-GATE-REFUSE` plus the reason. The address bar shows the
+  verified owner handle, or that refusal. There is no identity-lock chrome.
+- AZNet garden verify on a mesh navigate needs `pair_token` and
+  `pair_flag=azbrowser`. The token is not returned. The pair panel
+  appears only when that pair is broken. Relay name read does not
+  require the pair. Pairing is not a tunnel.
 - Mesh and local apps (qnm-node `127.0.0.1:8891`, local FragGate
   `127.0.0.1:8787`) get no outside network, no cross-origin fetch, no
   storage outside their origin, and no local files unless a capability

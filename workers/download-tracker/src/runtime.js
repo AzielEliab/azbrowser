@@ -22,8 +22,9 @@ import {
   VERSION,
   dispatch,
 } from "./engine.js";
-import { classifyV1Path, doorTargetUrl } from "./door.js";
+import { classifyV1Path, doorTargetUrl, runtimeOrigin } from "./door.js";
 import { meshOpenApiPaths, meshPointer } from "./mesh.js";
+import { pullRelayName, setRelayReadImpl } from "./mesh-browser.js";
 
 function corsHeaders() {
   return {
@@ -306,7 +307,13 @@ export async function handleRuntimeApi(request, url, env) {
     } catch {
       body = {};
     }
-    const out = await dispatch(classified.op, body || {}, body && body.session_id);
+    setRelayReadImpl((name) => pullRelayName(name, (input, init) => fetch(input, init), runtimeOrigin(env)));
+    let out;
+    try {
+      out = await dispatch(classified.op, body || {}, body && body.session_id);
+    } finally {
+      setRelayReadImpl(null);
+    }
     return json(out, out.ok === false && out.code === "FG-HALLUC-TOOL" ? 404 : 200);
   }
   if (path.startsWith("/v1/") || path === "/v1") {

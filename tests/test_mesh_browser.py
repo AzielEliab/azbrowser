@@ -473,3 +473,129 @@ def test_local_trust_has_no_public_ranking():
     health = eng.health({})
     assert health["mesh_browser"]["network_wide_cutoff"] is False
     assert health["mesh_browser"]["scanner"] == "absent"
+    assert health["mesh_browser"]["security_model"] == "single-node-security-awareness"
+    assert health["mesh_browser"]["loopback_isolation"] is False
+    assert health["mesh_browser"]["public_hostname_resurrection"] is False
+    assert "pair" not in OPS
+
+
+def test_relay_name_read_is_not_dns_and_hash_mismatch_isolates_node_path():
+    record = signed_record()
+    eng = engine_with(record)
+    other = "ab" * 32
+    assert other != record["ref"]["object"]
+    mismatch = eng.navigate({
+        "url": "library.aziel",
+        "relay": {
+            "record": {
+                "name": "library.aziel",
+                "owner": "library",
+                "status": "final",
+                "final": True,
+                "statement_hash": "cd" * 32,
+                "target": {"type": "hash", "value": other},
+            }
+        },
+    })
+    assert mismatch["ok"] is False
+    assert mismatch["code"] == "FG-GATE-REFUSE"
+    assert mismatch["reason"] == "hash_mismatch"
+    assert mismatch["html"] == ""
+    assert mismatch["dns"] is False
+    assert mismatch["icann"] is False
+    assert mismatch["node_path_isolated"] is True
+    assert mismatch["node_path"] == "isolated"
+    assert mismatch["loopback_isolation"] is False
+    assert mismatch["forced_loopback"] is False
+    assert mismatch["browse_plane"] == "open"
+    assert mismatch["phoenix"]["state"] == "local-wait"
+    assert mismatch["phoenix"]["mode"] == "local-wait-reseal"
+    assert mismatch["phoenix"]["public_hostname_resurrection"] is False
+    assert mismatch["security_model"] == "single-node-security-awareness"
+    assert "127.0.0.1" not in str(mismatch.get("url"))
+    web = eng.navigate({"url": "https://example.com/still-open"})
+    assert web["plane"] == "dns"
+    assert web.get("code") != "FG-GATE-REFUSE"
+    assert web["url"].startswith("https://example.com/")
+    assert "127.0.0.1" not in web["url"]
+    eng.mesh = MeshDirectory([record], http=False)
+    resealed = eng.navigate({"url": "library.aziel"})
+    assert resealed["hash_ok"] is True
+    assert resealed["node_path"] == "resealed"
+    assert resealed["node_path_isolated"] is False
+    assert resealed["phoenix"]["state"] == "resealed"
+    assert resealed["phoenix"]["public_hostname_resurrection"] is False
+
+
+def test_relay_only_name_resolves_without_inventing_bytes():
+    eng = Engine(Ledger(), mesh=MeshDirectory([], http=False))
+    pending = eng.navigate({
+        "url": "shelf.aziel",
+        "relay": {
+            "record": {
+                "name": "shelf.aziel",
+                "owner": "shelf",
+                "status": "pending",
+                "statement_hash": "aa" * 32,
+            }
+        },
+    })
+    assert pending["ok"] is True
+    assert pending["name_status"] == "PENDING"
+    assert pending["dns"] is False
+    assert pending["icann"] is False
+    assert pending["source"] == "fed-mesh-relay"
+    assert pending["html"] == ""
+    final = eng.home({
+        "name": "shelf.aziel",
+        "relay": {
+            "record": {
+                "name": "shelf.aziel",
+                "owner": "shelf",
+                "status": "final",
+                "final": True,
+                "statement_hash": "aa" * 32,
+                "target": {"type": "hash", "value": "bb" * 32},
+            }
+        },
+    })
+    assert final["code"] == "FG-GATE-REFUSE"
+    assert final["reason"] == "object_missing"
+    assert final["name_resolved"] is True
+    assert final["dns"] is False
+    assert final["ledger_source"] == "fed-mesh-relay"
+    assert final["html"] == ""
+    assert final["forced_loopback"] is False
+    missing = eng.navigate({"url": "missing-name.aziel", "read_relay": False})
+    assert missing["code"] == "FG-GATE-REFUSE"
+    assert missing["reason"] == "name_not_in_ledger"
+    assert missing["dns"] is False
+    assert missing.get("icann") is False
+
+
+def test_aznet_prepair_only_when_garden_verify_is_asked():
+    record = signed_record()
+    eng = engine_with(record)
+    token = "pair-token-value"
+    broken = eng.navigate({"url": "library.aziel", "aznet_verify": True, "pair_token": token})
+    assert broken["code"] == "AZN-PAIR-REQUIRED"
+    assert broken["pair_ui"] == "broken"
+    assert broken["pair_status"] == "UNPAIRED"
+    assert broken["pair_token_echoed"] is False
+    assert broken["tunnel"] is False
+    assert broken["forced_loopback"] is False
+    assert token not in str(broken)
+    paired = eng.navigate({
+        "url": "library.aziel",
+        "aznet_verify": True,
+        "pair_token": token,
+        "pair_flag": "azbrowser",
+    })
+    assert paired.get("code") != "AZN-PAIR-REQUIRED"
+    assert paired["pair_ui"] == "hidden"
+    assert paired["pair_token_echoed"] is False
+    assert token not in str(paired)
+    plain = eng.navigate({"url": "library.aziel"})
+    assert plain["pair_required"] is False
+    assert plain["pair_ui"] == "hidden"
+    assert "pair" not in OPS
