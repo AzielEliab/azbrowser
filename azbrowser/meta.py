@@ -21,6 +21,10 @@ LIMITATION = (
     "No receipt = no action. Advisory only. Author: Aziel Eliab only."
 )
 RUNTIME = "https://aziel-runtime.vibelock.workers.dev"
+# Operator env for an ordered FED-MESH name-read list. Unset means L0
+# RUNTIME only. This shell does not paint public L1 live from that default.
+MESH_RELAYS_ENV = "AZBROWSER_MESH_RELAYS"
+MESH_RELAY_NAME_PATH = "/v1/mesh/relay/name"
 FRAGGATE = "https://github.com/AzielEliab/fraggate"
 FRAGGATE_CALL = "https://aziel-runtime.vibelock.workers.dev/v1/fraggate/call"
 FRAGGATE_MCP = "https://aziel-runtime.vibelock.workers.dev/mcp"
