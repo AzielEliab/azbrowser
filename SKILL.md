@@ -84,12 +84,18 @@ separate Software. Pairing is order and token only. L0 public web and
 the FragGate path stay as they are. Softwares catalog entries are not
 added here.
 
-- `<handle>.aziel` resolves on the local mesh ledger, then the runtime
-  FED-MESH relay name read (`GET /v1/mesh/relay/name?name=`). It is not
-  sent to ICANN DNS. The local shell may then ask qnm-node
-  (`POST http://127.0.0.1:8891/local/connect`) for direct, LAN, or relay.
-  `.aziel` is not an ICANN TLD. Ordinary browsers do not resolve it.
-  AZNet's loopback page does not serve `POST /v1/resolve`.
+- `<handle>.aziel` resolves on the local mesh ledger first, then local
+  qnm-node when HTTP transport is on, then an ordered FED-MESH relay
+  name-read (`GET /v1/mesh/relay/name?name=`). `AZBROWSER_MESH_RELAYS`
+  is that list (comma or whitespace). Unset, the only relay is the
+  public runtime (L0), and this shell does not mark public L1 live.
+  Extra relays are tried in order. Dead relays are skipped. The public
+  runtime stays the last fallback. A miss is `FG-GATE-REFUSE` /
+  `name_not_in_ledger`. The name is not sent to ICANN DNS.
+  `aznet_replaces_internet` stays false. The local shell may then ask
+  qnm-node (`POST http://127.0.0.1:8891/local/connect`) for direct, LAN,
+  or relay. `.aziel` is not an ICANN TLD. Ordinary browsers do not
+  resolve it. AZNet's loopback page does not serve `POST /v1/resolve`.
 - Mesh security is single-node security-awareness isolation plus a
   phoenix reboot loop (local wait, then re-seal). It is not loopback
   isolation. A hash mismatch returns `FG-GATE-REFUSE` for that node

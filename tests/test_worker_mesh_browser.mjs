@@ -6,7 +6,7 @@
 import assert from "node:assert/strict";
 import { generateKeyPairSync, sign } from "node:crypto";
 import { dispatch, setMeshLedger } from "../workers/download-tracker/src/engine.js";
-import { canonical, classifyDestination, engineDigestFor, pullRelayName, setRelayReadImpl, sha256Hex, witnessMessage } from "../workers/download-tracker/src/mesh-browser.js";
+import { canonical, classifyDestination, engineDigestFor, meshRelayBases, pullRelayName, pullRelayNames, setRelayReadImpl, sha256Hex, witnessMessage, DEFAULT_RELAY_ORIGIN } from "../workers/download-tracker/src/mesh-browser.js";
 import { createHash } from "node:crypto";
 
 const PAGE = "<h1>Library</h1><p>Local-first shelf.</p>";
@@ -352,5 +352,43 @@ assert.equal(viaReader.name_status, "PENDING");
 assert.equal(viaReader.dns, false);
 assert.equal(viaReader.source, "fed-mesh-relay");
 setRelayReadImpl(null);
+
+assert.deepEqual(meshRelayBases(""), [DEFAULT_RELAY_ORIGIN]);
+assert.deepEqual(
+  meshRelayBases("http://127.0.0.1:8780/v1/mesh/relay,http://127.0.0.1:8780/v1/mesh/relay http://10.0.0.8:8783"),
+  ["http://127.0.0.1:8780", "http://10.0.0.8:8783", DEFAULT_RELAY_ORIGIN],
+);
+const dropped = meshRelayBases("https://library.aziel/v1/mesh/relay,http://127.0.0.1:8783/v1/mesh/relay");
+assert.equal(dropped[0], "http://127.0.0.1:8783");
+assert.equal(dropped[dropped.length - 1], DEFAULT_RELAY_ORIGIN);
+assert.equal(dropped.some((base) => new URL(base).hostname.endsWith(".aziel")), false);
+
+const failoverCalls = [];
+const failover = await pullRelayNames("shelf.aziel", async (url) => {
+  failoverCalls.push(url);
+  const host = new URL(url).hostname;
+  assert.equal(host.endsWith(".aziel"), false);
+  if (host === "127.0.0.1" && new URL(url).port === "8780") throw new Error("down");
+  if (host.endsWith("vibelock.workers.dev")) throw new Error("cf down");
+  return { json: async () => ({ record: { name: "shelf.aziel", owner: "shelf", status: "pending", statement_hash: "aa".repeat(32) } }) };
+}, { configured: "http://127.0.0.1:8780/v1/mesh/relay,http://127.0.0.1:8783/v1/mesh/relay" });
+assert.equal(failover.found, true);
+assert.equal(failover.dns, false);
+assert.equal(failover.aznet_replaces_internet, false);
+assert.equal(failover.public_l1_live, false);
+assert.equal(failover.l1_configured, true);
+assert.equal(Object.hasOwn(failover, "l1_live"), false);
+assert.equal(String(failover.endpoint).includes("127.0.0.1:8783"), true);
+assert.equal(failoverCalls.some((url) => url.includes("vibelock")), false);
+
+const unread = await pullRelayNames("missing-name.aziel", async () => {
+  throw new Error("down");
+}, { configured: "" });
+assert.equal(unread.found, false);
+assert.equal(unread.unread, true);
+assert.equal(unread.l1_configured, false);
+assert.equal(unread.public_l1_live, false);
+assert.equal(unread.aznet_replaces_internet, false);
+assert.equal(unread.dns, false);
 
 console.log("worker mesh browser ok");

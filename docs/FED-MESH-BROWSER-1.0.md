@@ -93,15 +93,29 @@ Lookup order for `*.aziel`:
 
 1. Records already in the local directory (tests, or
    `AZBROWSER_MESH_LEDGER`, a JSON file of public records).
-2. Runtime FED-MESH relay name read:
-   `GET https://aziel-runtime.vibelock.workers.dev/v1/mesh/relay/name?name=<name>`.
-   A posted `relay` snapshot on the op is the same record. This is not
-   ICANN DNS.
-3. If HTTP transport is on: `POST http://127.0.0.1:8891/local/resolve`
-   with `{"name","handle"}`. AZNet's loopback page does not serve
-   `POST /v1/resolve`. A miss is not a resolution. Cap-7 names do not
-   use this ledger; they use `aznet.names.resolve` when that package
-   is installed, and otherwise the shell says the resolver is absent.
+2. If HTTP transport is on (`AZBROWSER_MESH_HTTP` unset or not `0`):
+   `POST http://127.0.0.1:8891/local/resolve` with `{"name","handle"}`.
+   AZNet's loopback page does not serve `POST /v1/resolve`. A miss is
+   not a resolution. Cap-7 names do not use this ledger; they use
+   `aznet.names.resolve` when that package is installed, and otherwise
+   the shell says the resolver is absent. The hosted Worker does not
+   dial this address.
+3. Ordered FED-MESH relay name read. Each base is
+   `GET <base>/v1/mesh/relay/name?name=<name>`. A posted `relay`
+   snapshot on the op is the same record and skips the list. Dead
+   relays are skipped. A name that is not on any live relay is
+   `FG-GATE-REFUSE` / `name_not_in_ledger`. The `.aziel` name is a
+   query parameter. It is not sent to ICANN DNS.
+
+With `AZBROWSER_MESH_RELAYS` unset, step 3 is one URL: the public
+runtime `https://aziel-runtime.vibelock.workers.dev`. That is L0.
+`l1_configured` is false and this shell sets `public_l1_live` false.
+It does not paint the public Worker L1 live.
+
+With `AZBROWSER_MESH_RELAYS` set, step 3 walks that list in order, then
+appends the public runtime when the operator did not already include
+it. The public runtime remains the L0 fallback. `aznet_replaces_internet`
+stays false. Cap-7 stays off this list.
 
 If the local page hash and the relay target hash disagree, the result
 is `FG-GATE-REFUSE` / `hash_mismatch`. Page bytes are not returned.
@@ -137,6 +151,44 @@ inside the ref must equal the record's `public_key`.
 
 Handle resolution (`resolve` with `{"handle":"library"}`) looks up
 `library.aziel`.
+
+## When the public runtime is unreachable
+
+L0 stays the fallback. Survival for a `.aziel` name is the local ledger,
+local qnm-node, and any relays the operator already configured. This
+repository does not merge AZNet into AZBrowser. Pairing stays order and
+token only. It is not a tunnel. Softwares desk count is unchanged.
+
+```bash
+# Local public records. Tried before any relay.
+export AZBROWSER_MESH_LEDGER=./ledger.json
+
+# Ordered relay bases. Comma or whitespace. Paths ending in
+# /v1/mesh/relay are accepted. A .aziel host in this list is ignored.
+# The public runtime is appended when it is not already here.
+export AZBROWSER_MESH_RELAYS="http://127.0.0.1:8780/v1/mesh/relay,http://192.168.1.20:8783/v1/mesh/relay"
+
+# Local qnm-node resolve / connect / pull. Default on.
+export AZBROWSER_MESH_HTTP=1
+
+azbrowser navigate library.aziel
+```
+
+`azbrowser ui` and `azbrowser navigate` use this list. A relay that
+times out, refuses the connection, or returns HTTP 500 is skipped.
+The next base is tried. The shell does not look the `.aziel` name up
+in DNS when every relay is down. `azbrowser doctor` stays a local
+check and does not dial the list.
+
+Two loopback relays on one machine match the qnm-node recipe
+(`--relays` with more than one URL). Two machines on a LAN use the
+peer URL the operator already has for direct connect. This shell does
+not punch NAT and does not open public egress for Cap-7.
+
+The hosted Worker reads the same env name (`AZBROWSER_MESH_RELAYS`)
+when it is set on that Worker. Unset, it reads the public runtime
+only and does not mark L1 live. It still does not dial
+`127.0.0.1:8891`. Live qnm-node connect stays on the local shell.
 
 ## Connect
 

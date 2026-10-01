@@ -12,6 +12,7 @@ from pathlib import Path
 from .meta import AZNET, HOST, __version__
 from .doctor import doctor
 from .engine import Engine
+from .meshledger import read_public_relay
 from .peer import ABSENT_LINE, SEEN_LINE, aznet_answers
 from .receipts import Ledger
 
@@ -136,7 +137,9 @@ def _welcome() -> str:
 
 def _engine(args: argparse.Namespace) -> Engine:
     path = getattr(args, "ledger", None) or os.environ.get("AZBROWSER_LEDGER") or "./azbrowser_receipts.jsonl"
-    return Engine(Ledger(path))
+    eng = Engine(Ledger(path))
+    eng.mesh.relay_read = read_public_relay
+    return eng
 
 
 def _emit(obj: object, as_json: bool) -> int:

@@ -1,10 +1,16 @@
 """AZNet resolver + qnm-node transport adapter.
 
-Looks up ``.aziel`` names on the local mesh ledger, then asks the local
-qnm-node to connect (direct, LAN, or relay). Cap-7 names are not looked
-up here; ``azbrowser.sidenet`` asks AZNet. Private keys are refused if a
-payload contains them. This module does not embed AZNet and does not
-open a public qnsd proxy.
+Looks up ``.aziel`` names on the local mesh ledger, then local qnm-node,
+then an ordered FED-MESH relay list. Cap-7 names are not looked up here;
+``azbrowser.sidenet`` asks AZNet. Private keys are refused if a payload
+contains them. This module does not embed AZNet and does not open a
+public qnsd proxy.
+
+``AZBROWSER_MESH_RELAYS`` (see ``meta.MESH_RELAYS_ENV``) is a comma- or
+whitespace-separated list of relay bases. Dead relays are skipped. The
+public runtime stays the L0 fallback. An unset list is that one L0 URL.
+``.aziel`` is never resolved through ICANN DNS. ``aznet_replaces_internet``
+stays false. This module does not report public ``l1_live``.
 
 AZNet's loopback UI does not serve ``POST /v1/resolve``. Cap-7 names
 use ``aznet.names.resolve`` when that package is installed
@@ -39,6 +45,7 @@ from .sidenet import answer as sidenet_answer
 
 MESH_SECURITY_MODEL = "single-node-security-awareness"
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
+_UA = "Mozilla/5.0 AZBrowser/0.1.0 (research-shell; +https://github.com/AzielEliab/azbrowser)"
 
 
 def security_stamp(reason: str = "") -> dict[str, Any]:
@@ -130,42 +137,175 @@ def normalize_relay(doc: Any) -> dict[str, Any]:
     return {"found": True, "row": row, "source": "fed-mesh-relay"}
 
 
-def read_public_relay(name: str, timeout: float = 2.5) -> dict[str, Any]:
-    """GET the runtime FED-MESH name. A miss is not a DNS lookup."""
-    from urllib.parse import quote
+def normalize_relay_base(raw: str) -> str:
+    """Relay origin plus any path prefix. ``.aziel`` hosts are dropped.
 
+    A name-read talks to a relay the operator named. The ``.aziel`` name
+    itself is only a query parameter, never the host.
+    """
+    from urllib.parse import urlparse
+
+    text = str(raw or "").strip()
+    if "://" not in text:
+        return ""
+    parsed = urlparse(text)
+    if parsed.scheme not in {"http", "https"}:
+        return ""
+    host = (parsed.hostname or "").lower()
+    if not host or host.endswith(".aziel"):
+        return ""
+    path = parsed.path or ""
+    lower_path = path.lower().rstrip("/")
+    for suffix in ("/v1/mesh/relay/name", "/v1/mesh/relay"):
+        if lower_path.endswith(suffix):
+            path = path[: -len(suffix)]
+            break
+    path = path.rstrip("/")
+    port = f":{parsed.port}" if parsed.port else ""
+    return f"{parsed.scheme}://{host}{port}{path}"
+
+
+def _l0_base() -> str:
     from .meta import RUNTIME
 
-    url = RUNTIME.rstrip("/") + "/v1/mesh/relay/name?name=" + quote(str(name or "").strip().lower())
+    return normalize_relay_base(RUNTIME)
+
+
+def mesh_relay_bases(configured: str | None = None) -> list[str]:
+    """Ordered name-read bases. Unset config is the public runtime only.
+
+    ``AZBROWSER_MESH_RELAYS`` entries come first, in order, without
+    duplicates. The public runtime is appended as the L0 fallback when
+    the operator named other relays and did not already include it.
+    """
+    from .meta import MESH_RELAYS_ENV
+
+    if configured is None:
+        configured = os.environ.get(MESH_RELAYS_ENV, "")
+    ordered: list[str] = []
+    seen: set[str] = set()
+    for chunk in re.split(r"[\s,]+", str(configured or "").strip()):
+        base = normalize_relay_base(chunk)
+        if not base:
+            continue
+        key = base.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        ordered.append(base)
+    l0 = _l0_base()
+    if not ordered:
+        return [l0] if l0 else []
+    if l0 and l0.lower() not in seen:
+        ordered.append(l0)
+    return ordered
+
+
+def _relay_name_url(base: str, name: str) -> str:
+    from urllib.parse import quote
+
+    from .meta import MESH_RELAY_NAME_PATH
+
+    query = quote(str(name or "").strip().lower())
+    return base.rstrip("/") + MESH_RELAY_NAME_PATH + "?name=" + query
+
+
+def _stamp_relay(relay: dict[str, Any], *, base: str, bases: list[str], tried: list[str], skipped: list[str]) -> dict[str, Any]:
+    l0 = _l0_base()
+    others = [item for item in bases if item.lower() != (l0 or "").lower()]
+    stamped = dict(relay)
+    stamped["dns"] = False
+    stamped["icann"] = False
+    stamped["aznet_replaces_internet"] = False
+    stamped["public_l1_live"] = False
+    stamped["l1_configured"] = len(bases) > 1
+    stamped["l0_fallback"] = bool(l0) and base.lower() == l0.lower() and bool(others)
+    stamped["tried"] = list(tried)
+    stamped["skipped"] = list(skipped)
+    return stamped
+
+
+def _fetch_relay_doc(opener: Callable[..., Any], url: str, timeout: float) -> dict[str, Any]:
     req = Request(
         url,
         headers={"User-Agent": _UA, "Accept": "application/json"},
         method="GET",
     )
     try:
-        with urlopen(req, timeout=timeout) as res:  # noqa: S310 — public FED-MESH name read
+        with opener(req, timeout=timeout) as res:  # noqa: S310 — operator FED-MESH relay, not .aziel DNS
+            status = getattr(res, "status", None)
+            if status is None:
+                status = getattr(res, "code", 200)
             raw = res.read(1_000_000)
+        if isinstance(status, int) and status >= 500:
+            return {"_dead": True}
         loaded = json.loads(raw.decode("utf-8"))
     except HTTPError as exc:
+        if getattr(exc, "code", 500) >= 500:
+            return {"_dead": True}
         try:
             loaded = json.loads(exc.read().decode("utf-8"))
-        except (OSError, json.JSONDecodeError, UnicodeError):
-            return {"found": False, "unread": True}
-        relay = normalize_relay(loaded if isinstance(loaded, dict) else {})
-        relay["endpoint"] = url
-        return relay
+        except (OSError, json.JSONDecodeError, UnicodeError, AttributeError):
+            return {"_dead": True}
     except (URLError, TimeoutError, OSError, json.JSONDecodeError, UnicodeError, ValueError):
-        return {"found": False, "unread": True}
-    relay = normalize_relay(loaded if isinstance(loaded, dict) else {})
-    relay["endpoint"] = url
-    return relay
+        return {"_dead": True}
+    if not isinstance(loaded, dict):
+        return {"_dead": True}
+    return {"doc": loaded}
+
+
+def read_public_relay(
+    name: str,
+    timeout: float = 2.5,
+    *,
+    bases: list[str] | None = None,
+    opener: Callable[..., Any] | None = None,
+    configured: str | None = None,
+) -> dict[str, Any]:
+    """GET FED-MESH name reads in order. Skip dead relays.
+
+    Local ledger and local qnm-node are tried by ``open_mesh`` before
+    this function. A miss is not an ICANN DNS lookup. Unset
+    ``AZBROWSER_MESH_RELAYS`` reads the public runtime only and does not
+    mark L1 live. ``aznet_replaces_internet`` stays false.
+    """
+    chosen = mesh_relay_bases(configured) if bases is None else [item for item in (normalize_relay_base(x) for x in bases) if item]
+    fetch = opener or urlopen
+    tried: list[str] = []
+    skipped: list[str] = []
+    last_miss: dict[str, Any] | None = None
+    for base in chosen:
+        url = _relay_name_url(base, name)
+        tried.append(url)
+        fetched = _fetch_relay_doc(fetch, url, timeout)
+        if fetched.get("_dead"):
+            skipped.append(url)
+            continue
+        relay = normalize_relay(fetched.get("doc"))
+        relay["endpoint"] = url
+        relay = _stamp_relay(relay, base=base, bases=chosen, tried=tried, skipped=skipped)
+        if relay.get("found") or relay.get("isolated"):
+            return relay
+        last_miss = relay
+    if last_miss is not None:
+        last_miss["unread"] = False
+        return last_miss
+    blank = _stamp_relay(
+        {"found": False, "unread": True, "endpoint": ""},
+        base=chosen[-1] if chosen else "",
+        bases=chosen,
+        tried=tried,
+        skipped=skipped,
+    )
+    blank["unread"] = True
+    blank["found"] = False
+    return blank
 
 
 PostFn = Callable[[str, dict[str, Any], float], Any]
 
 AZNET_RESOLVER_URL = "http://127.0.0.1:8771/v1/resolve"
 QNM_URL = "http://127.0.0.1:8891"
-_UA = "Mozilla/5.0 AZBrowser/0.1.0 (research-shell; +https://github.com/AzielEliab/azbrowser)"
 
 
 def _default_post(url: str, body: dict[str, Any], timeout: float) -> Any:
@@ -446,6 +586,21 @@ def directory_from_env() -> MeshDirectory:
     return MeshDirectory(records, http=http)
 
 
+def _relay_read_meta(relay_doc: dict[str, Any]) -> dict[str, Any]:
+    """Honesty fields from an ordered name-read. Posted snapshots omit these."""
+    if "tried" not in relay_doc and "skipped" not in relay_doc:
+        return {}
+    return {
+        "relay_endpoint": str(relay_doc.get("endpoint") or ""),
+        "relays_tried": list(relay_doc.get("tried") or []),
+        "relays_skipped": list(relay_doc.get("skipped") or []),
+        "l1_configured": bool(relay_doc.get("l1_configured")),
+        "public_l1_live": False,
+        "aznet_replaces_internet": False,
+        "l0_fallback": bool(relay_doc.get("l0_fallback")),
+    }
+
+
 def _refuse(reason: str, classified: dict[str, Any], **extra: Any) -> dict[str, Any]:
     handle = classified.get("handle") or ""
     out = {
@@ -576,8 +731,9 @@ def open_mesh(
         except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError, ValueError, TypeError):
             relay_doc = {"found": False, "unread": True}
     relay_row = relay_doc.get("row") if relay_doc.get("found") and isinstance(relay_doc.get("row"), dict) else None
+    relay_meta = _relay_read_meta(relay_doc)
     if ledger_hash_conflict(record, relay_row, expect_hash):
-        return _refuse("hash_mismatch", classified)
+        return _refuse("hash_mismatch", classified, **relay_meta)
     if record is None and relay_doc.get("isolated"):
         owner = str(classified.get("handle") or "")
         isolation = {"reason": relay_doc.get("reason") or "unspecified", "evidence_hash": relay_doc.get("evidence_hash") or "", "check": "fed-mesh-relay"}
@@ -590,9 +746,12 @@ def open_mesh(
             ledger_source="fed-mesh-relay",
             dns=False,
             note="This handle is isolated on the relay. The page is this shell's policy refusal. The name was not sent to DNS.",
+            **relay_meta,
         )
     if record is None and relay_row is not None:
-        return _relay_only(classified, relay_row)
+        opened = _relay_only(classified, relay_row)
+        opened.update(relay_meta)
+        return opened
     if record is None:
         return _refuse(
             "name_not_in_ledger",
@@ -600,7 +759,8 @@ def open_mesh(
             allowlisted=bool(classified.get("allowlisted")),
             dns=False,
             relay_unread=bool(relay_doc.get("unread")),
-            note="This .aziel name is not on the local ledger or the FED-MESH relay. It was not sent to DNS.",
+            note="This .aziel name is not on the local ledger, local qnm-node, or a configured FED-MESH relay. It was not sent to DNS.",
+            **relay_meta,
         )
     if record.get("_refuse"):
         return _refuse(str(record["_refuse"]), classified)
@@ -690,6 +850,7 @@ def open_mesh(
         "ledger_source": "local-ledger+fed-mesh-relay" if relay_row else "local-ledger",
         "relay_statement_hash": str(relay_row.get("statement_hash") or "") if relay_row else "",
         **security_stamp(""),
+        **relay_meta,
     }
     if not air["promoted"]:
         reason = str(air["reason"] or "scanner_absent")

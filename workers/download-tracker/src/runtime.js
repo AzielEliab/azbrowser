@@ -24,7 +24,7 @@ import {
 } from "./engine.js";
 import { classifyV1Path, doorTargetUrl, runtimeOrigin } from "./door.js";
 import { meshOpenApiPaths, meshPointer } from "./mesh.js";
-import { pullRelayName, setRelayReadImpl } from "./mesh-browser.js";
+import { MESH_RELAYS_ENV, pullRelayNames, setRelayReadImpl } from "./mesh-browser.js";
 
 function corsHeaders() {
   return {
@@ -307,7 +307,11 @@ export async function handleRuntimeApi(request, url, env) {
     } catch {
       body = {};
     }
-    setRelayReadImpl((name) => pullRelayName(name, (input, init) => fetch(input, init), runtimeOrigin(env)));
+    const configured = env && typeof env[MESH_RELAYS_ENV] === "string" ? env[MESH_RELAYS_ENV] : "";
+    setRelayReadImpl((name) => pullRelayNames(name, (input, init) => fetch(input, init), {
+      configured,
+      l0: runtimeOrigin(env),
+    }));
     let out;
     try {
       out = await dispatch(classified.op, body || {}, body && body.session_id);
