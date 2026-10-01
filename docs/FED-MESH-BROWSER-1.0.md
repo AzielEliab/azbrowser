@@ -89,15 +89,22 @@ variable does not turn every `.az` name into a mesh name.
 AZBrowser does not embed the AZNet protocol. `MeshDirectory` in
 `azbrowser/meshledger.py` is the adapter.
 
-Lookup order:
+Lookup order for `*.aziel`:
 
 1. Records already in the local directory (tests, or
    `AZBROWSER_MESH_LEDGER`, a JSON file of public records).
-2. If HTTP transport is on: `POST http://127.0.0.1:8891/local/resolve`
+2. Runtime FED-MESH relay name read:
+   `GET https://aziel-runtime.vibelock.workers.dev/v1/mesh/relay/name?name=<name>`.
+   A posted `relay` snapshot on the op is the same record. This is not
+   ICANN DNS.
+3. If HTTP transport is on: `POST http://127.0.0.1:8891/local/resolve`
    with `{"name","handle"}`. AZNet's loopback page does not serve
    `POST /v1/resolve`. A miss is not a resolution. Cap-7 names do not
    use this ledger; they use `aznet.names.resolve` when that package
    is installed, and otherwise the shell says the resolver is absent.
+
+If the local page hash and the relay target hash disagree, the result
+is `FG-GATE-REFUSE` / `hash_mismatch`. Page bytes are not returned.
 
 A hit must be a public record:
 
@@ -212,6 +219,22 @@ with `kind: local-app`. The same capability sandbox applies.
 upload the body.
 
 ## Mesh Security
+
+Mesh security is single-node security-awareness isolation, plus a
+phoenix reboot loop. It is not loopback isolation. `127.0.0.1` is the
+local app transport for this shell, qnm-node, and local FragGate. A
+hash mismatch does not move the browse plane onto that address.
+
+| Event | What this node does |
+| --- | --- |
+| Hash mismatch | `FG-GATE-REFUSE` / `hash_mismatch`. This node's path for that name is isolated. The tampered body is not shown. |
+| Other names and `https` | Stay open. Advisory `https` navigate is unchanged. |
+| Phoenix | Local wait, then re-seal when a later record's hash matches. No public hostname resurrection. No controller hunt. No neighbor vote-to-fix. |
+
+AZNet garden verify (`aznet_verify` or `garden`) needs the pair token
+and the flag `azbrowser`. The token is not echoed. The pair panel is
+shown only when that pair is broken. Relay name read does not require
+the pair. Pairing is order and token only. It is not a tunnel.
 
 This section is the browser side of the operator brief dated 2026-09-24.
 aziel-runtime `main` (`bba1d3e`) still has no `docs/designs/FED-MESH-1.0.md`

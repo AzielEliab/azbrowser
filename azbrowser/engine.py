@@ -11,13 +11,14 @@ from .airlock import STAGES, airlock
 from .ethics import classify_query
 from .lens import clarify, ethics_clarity, lens_status
 from .meshguard import NAME_MIN_AGE_SECONDS, NAME_MIN_WITNESSES, local_trust
-from .meshledger import MeshDirectory, directory_from_env, open_mesh, resolve_query
+from .meshledger import MESH_SECURITY_MODEL, MeshDirectory, directory_from_env, open_mesh, resolve_query, security_stamp
 from .policy import design_page, design_remote_page
 from .slots import slots_for
 from .names import SPEC as MESH_SPEC
 from .names import _handle_ok
 from .names import classify_destination
 from .sidenet import answer as sidenet_answer
+from .sidenet import prepair
 from .sidenet import sidenet_status
 from .preview import preview_url, sanitize_url, scrub_html
 from .receipts import Ledger
@@ -112,6 +113,7 @@ class Engine:
         self.island = False
         self.blocked: set[str] = set()
         self.hash_matches: dict[str, int] = {}
+        self.node_paths: dict[str, str] = {}
         self.airlock_history: list[dict[str, Any]] = []
 
     def _receipt(self, action: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -178,6 +180,10 @@ class Engine:
                 "tracker_detection": False,
                 "scanner": "absent",
                 "network_wide_cutoff": False,
+                "security_model": MESH_SECURITY_MODEL,
+                "loopback_isolation": False,
+                "phoenix": "local-wait-reseal",
+                "public_hostname_resurrection": False,
                 "island_mode": self.island,
                 "name_min_age_seconds": NAME_MIN_AGE_SECONDS,
                 "name_min_witnesses": NAME_MIN_WITNESSES,
@@ -214,6 +220,9 @@ class Engine:
         if classified.get("plane") in {"cap7", "cite"}:
             return self._finish_sidenet(classified, payload)
         if classified.get("plane") == "mesh":
+            pair = prepair(payload)
+            if pair.get("blocked"):
+                return self._finish_pair(pair, classified)
             return self._finish_mesh(classified, payload)
         if classified.get("plane") == "local":
             return self._finish_local(classified, payload)
@@ -248,11 +257,88 @@ class Engine:
         )
         return preview
 
+    def _expect_hash(self, payload: dict[str, Any]) -> str:
+        raw = payload.get("expect_hash", payload.get("statement_hash", payload.get("object", "")))
+        text = "" if raw is None else str(raw).strip().lower()
+        return text if len(text) == 64 and all(ch in "0123456789abcdef" for ch in text) else ""
+
     def _guard(self, payload: dict[str, Any]) -> dict[str, Any]:
+        posted = "relay" in payload
+        reader = None if posted or payload.get("read_relay") is False else getattr(self.mesh, "relay_read", None)
         return {
             "island": self.island,
             "blocked": set(self.blocked),
             "operator_override": payload.get("operator_override") is True,
+            "relay": payload.get("relay"),
+            "expect_hash": self._expect_hash(payload),
+            "read_relay": reader,
+        }
+
+    def _note_node_path(self, opened: dict[str, Any], classified: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+        key = str(opened.get("name") or classified.get("name") or "").lower()
+        if opened.get("reason") == "hash_mismatch":
+            self.node_paths[key] = "local-wait"
+        elif opened.get("hash_ok") and self.node_paths.get(key) == "local-wait":
+            self.node_paths.pop(key, None)
+            phoenix = dict(opened.get("phoenix") or security_stamp("").get("phoenix") or {})
+            phoenix["state"] = "resealed"
+            opened["phoenix"] = phoenix
+            opened["node_path"] = "resealed"
+            opened["node_path_isolated"] = False
+        pair = prepair(payload)
+        opened["pair_required"] = pair.get("required")
+        opened["pair_ui"] = pair.get("pair_ui")
+        opened["pair_token_echoed"] = False
+        return opened
+
+    def _finish_pair(self, pair: dict[str, Any], classified: dict[str, Any]) -> dict[str, Any]:
+        rec = self._receipt(
+            "pair_refuse",
+            {
+                "ok": False,
+                "code": "AZN-PAIR-REQUIRED",
+                "pair_status": "UNPAIRED",
+                "pair_token_present": bool(pair.get("pair_token_present")),
+                "pair_flag_ok": bool(pair.get("pair_flag_ok")),
+                "pair_token_echoed": False,
+                "name": classified.get("name") or "",
+            },
+        )
+        return {
+            "ok": False,
+            "code": "AZN-PAIR-REQUIRED",
+            "reason": "pair_required",
+            "pair_ui": "broken",
+            "pair_status": "UNPAIRED",
+            "pair_required": True,
+            "pair_token_present": bool(pair.get("pair_token_present")),
+            "pair_flag_ok": bool(pair.get("pair_flag_ok")),
+            "pair_flag_required": "azbrowser",
+            "pair_token_echoed": False,
+            "products_merged": False,
+            "tunnel": False,
+            "vpn": False,
+            "pairing": "order and token only",
+            "plane": "mesh",
+            "html": "",
+            "dns": False,
+            "icann": False,
+            "scripts_executed": False,
+            **security_stamp(""),
+            "receipt": rec,
+            "limitation": LIMITATION,
+            "clarity": {
+                "code": "AZN-PAIR-REQUIRED",
+                "reason": "pair_required",
+                "plain": "AZNet garden verify needs a pair token and the azbrowser flag. The token was not shown.",
+                "next": "Pair from AZNet, then try this name again. Ordinary web addresses stay open.",
+            },
+            "display": display_of(
+                "Pair broken",
+                "AZNet garden verify needs a pair token and the azbrowser flag. The token was not shown.",
+                [("pair", "broken"), ("tunnel", "no")],
+            ),
+            "note": "Pair UI is for a broken pair. Relay name read does not require the pair. This is not a tunnel.",
         }
 
     def _finish_sidenet(self, classified: dict[str, Any], payload: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -285,7 +371,7 @@ class Engine:
         return opened
 
     def _finish_mesh(self, classified: dict[str, Any], payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        opened = open_mesh(self.mesh, classified, **self._guard(payload or {}))
+        opened = self._note_node_path(open_mesh(self.mesh, classified, **self._guard(payload or {})), classified, payload or {})
         if opened.get("hash_ok") and opened.get("owner_handle"):
             who = str(opened["owner_handle"])
             self.hash_matches[who] = self.hash_matches.get(who, 0) + 1
@@ -426,7 +512,12 @@ class Engine:
         moved["display"] = display_of("Forward", "Tab history forward.", [("ok", moved.get("ok")), ("receipt", rec["hash"][:16])])
         return moved
 
-    def home(self, _payload: dict[str, Any]) -> dict[str, Any]:
+    def home(self, payload: dict[str, Any]) -> dict[str, Any]:
+        asked = str(payload.get("url") or payload.get("name") or payload.get("q") or "").strip()
+        if asked and (".aziel" in asked.lower() or asked.lower().startswith("aziel:")):
+            body = dict(payload)
+            body["url"] = asked
+            return self.navigate(body)
         tab = self.tabs.home()
         rec = self._receipt("home", {"url": "azbrowser://newtab"})
         return {
@@ -435,6 +526,7 @@ class Engine:
             "sigil": SIGIL,
             "tab": tab if isinstance(tab, dict) and "id" in tab else self.tabs.current(),
             "receipt": rec,
+            **security_stamp(""),
             "display": display_of("Home", "Everblooming sigil home.", [("sigil", SIGIL), ("receipt", rec["hash"][:16])]),
             "limitation": LIMITATION,
         }
@@ -582,7 +674,18 @@ class Engine:
         return out
 
     def resolve(self, payload: dict[str, Any]) -> dict[str, Any]:
+        handle = str(payload.get("handle") or "").strip().lower()
+        raw = str(payload.get("name") or payload.get("url") or payload.get("q") or "").strip()
+        if handle and not raw:
+            raw = handle + ".aziel"
+        classified = classify_destination(raw) if raw else {}
+        if classified.get("plane") == "mesh":
+            pair = prepair(payload)
+            if pair.get("blocked"):
+                return self._finish_pair(pair, classified)
         out = resolve_query(self.mesh, payload, **self._guard(payload))
+        if classified.get("plane") == "mesh":
+            out = self._note_node_path(out, classified, payload)
         if out.get("hash_ok") and out.get("owner_handle"):
             who = str(out["owner_handle"])
             self.hash_matches[who] = self.hash_matches.get(who, 0) + 1

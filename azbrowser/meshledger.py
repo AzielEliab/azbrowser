@@ -23,6 +23,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any, Callable
 from urllib.error import HTTPError, URLError
@@ -30,11 +31,135 @@ from urllib.request import Request, urlopen
 
 from .hashgate import contains_secret, gate_bytes, verify_record
 from .meshguard import evaluate_name, promote_objects
-from .names import REFUSE, SPEC, classify_destination
-from .sidenet import answer as sidenet_answer
 from .lens import clarify
+from .names import REFUSE, SPEC, classify_destination
 from .policy import policy_page
 from .preview import scrub_html
+from .sidenet import answer as sidenet_answer
+
+MESH_SECURITY_MODEL = "single-node-security-awareness"
+_HEX64 = re.compile(r"^[0-9a-f]{64}$")
+
+
+def security_stamp(reason: str = "") -> dict[str, Any]:
+    mismatch = reason == "hash_mismatch"
+    return {
+        "security_model": MESH_SECURITY_MODEL,
+        "loopback_isolation": False,
+        "forced_loopback": False,
+        "browse_plane": "open",
+        "node_path": "isolated" if mismatch else "open",
+        "node_path_isolated": mismatch,
+        "phoenix": {
+            "spec": "REHEAL",
+            "mode": "local-wait-reseal",
+            "state": "local-wait" if mismatch else "idle",
+            "public_hostname_resurrection": False,
+            "controller_hunt": False,
+            "neighbor_vote": False,
+        },
+    }
+
+
+def _hex64(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    return text if _HEX64.match(text) else ""
+
+
+def local_object_hash(record: dict[str, Any] | None) -> str:
+    ref = record.get("ref") if isinstance(record, dict) else None
+    if not isinstance(ref, dict):
+        return ""
+    return _hex64(ref.get("object"))
+
+
+def relay_target_hash(row: dict[str, Any] | None) -> str:
+    target = row.get("target") if isinstance(row, dict) else None
+    if not isinstance(target, dict) or str(target.get("type") or "") != "hash":
+        return ""
+    return _hex64(target.get("value"))
+
+
+def relay_statement_hash(row: dict[str, Any] | None) -> str:
+    if not isinstance(row, dict):
+        return ""
+    return _hex64(row.get("statement_hash"))
+
+
+def ledger_hash_conflict(record: dict[str, Any] | None, row: dict[str, Any] | None, expect_hash: str = "") -> str:
+    local = local_object_hash(record)
+    relay = relay_target_hash(row)
+    statement = relay_statement_hash(row)
+    expect = _hex64(expect_hash)
+    if local and relay and local != relay:
+        return "hash_mismatch"
+    if not expect or expect == statement:
+        return ""
+    if local and expect != local:
+        return "hash_mismatch"
+    if not local and relay and expect != relay:
+        return "hash_mismatch"
+    if not local and not relay and row:
+        return "hash_mismatch"
+    return ""
+
+
+def normalize_relay(doc: Any) -> dict[str, Any]:
+    if not isinstance(doc, dict):
+        return {"found": False}
+    if doc.get("found") is True and isinstance(doc.get("row"), dict):
+        return doc
+    if doc.get("found") is False and (doc.get("unread") or doc.get("isolated") or doc.get("code")):
+        return doc
+    code = str(doc.get("code") or "")
+    if code == "FED-MESH-ISOLATED":
+        return {
+            "found": False,
+            "isolated": True,
+            "code": code,
+            "reason": str(doc.get("reason") or "unspecified"),
+            "evidence_hash": str(doc.get("evidence_hash") or ""),
+        }
+    row = doc.get("record") if isinstance(doc.get("record"), dict) else None
+    if row is None and doc.get("name") and (doc.get("statement_hash") or doc.get("status") or doc.get("owner")):
+        row = doc
+    if not isinstance(row, dict) or not row.get("name"):
+        if code == "FED-MESH-NO-NAME" or doc.get("ok") is False:
+            return {"found": False, "code": code or "FED-MESH-NO-NAME"}
+        return {"found": False}
+    return {"found": True, "row": row, "source": "fed-mesh-relay"}
+
+
+def read_public_relay(name: str, timeout: float = 2.5) -> dict[str, Any]:
+    """GET the runtime FED-MESH name. A miss is not a DNS lookup."""
+    from urllib.parse import quote
+
+    from .meta import RUNTIME
+
+    url = RUNTIME.rstrip("/") + "/v1/mesh/relay/name?name=" + quote(str(name or "").strip().lower())
+    req = Request(
+        url,
+        headers={"User-Agent": _UA, "Accept": "application/json"},
+        method="GET",
+    )
+    try:
+        with urlopen(req, timeout=timeout) as res:  # noqa: S310 — public FED-MESH name read
+            raw = res.read(1_000_000)
+        loaded = json.loads(raw.decode("utf-8"))
+    except HTTPError as exc:
+        try:
+            loaded = json.loads(exc.read().decode("utf-8"))
+        except (OSError, json.JSONDecodeError, UnicodeError):
+            return {"found": False, "unread": True}
+        relay = normalize_relay(loaded if isinstance(loaded, dict) else {})
+        relay["endpoint"] = url
+        return relay
+    except (URLError, TimeoutError, OSError, json.JSONDecodeError, UnicodeError, ValueError):
+        return {"found": False, "unread": True}
+    relay = normalize_relay(loaded if isinstance(loaded, dict) else {})
+    relay["endpoint"] = url
+    return relay
+
 
 PostFn = Callable[[str, dict[str, Any], float], Any]
 
@@ -81,6 +206,7 @@ class MeshDirectory:
         self.resolver_url = resolver_url or os.environ.get("AZNET_RESOLVER_URL", AZNET_RESOLVER_URL)
         self.qnm_url = (qnm_url or os.environ.get("QNM_URL", QNM_URL)).rstrip("/")
         self._post = post or _default_post
+        self.relay_read = None
         self.by_name: dict[str, dict[str, Any]] = {}
         self.by_handle: dict[str, dict[str, Any]] = {}
         self.seen_seq: dict[tuple[str, int], str] = {}
@@ -339,9 +465,75 @@ def _refuse(reason: str, classified: dict[str, Any], **extra: Any) -> dict[str, 
         "html": "",
         "scripts_executed": False,
         "clarity": clarify(reason),
+        "dns": False,
+        **security_stamp(reason),
     }
     out.update(extra)
     return out
+
+
+def _relay_only(classified: dict[str, Any], row: dict[str, Any]) -> dict[str, Any]:
+    status = str(row.get("status") or "").lower()
+    released = row.get("released") is True or status == "released"
+    final = (not released) and (row.get("final") is True or status == "final")
+    owner = str(row.get("owner") or classified.get("handle") or "")
+    base = {
+        **security_stamp(""),
+        "plane": "mesh",
+        "spec": SPEC,
+        "name": row.get("name") or classified.get("name"),
+        "url": classified.get("url"),
+        "display_url": classified.get("display_url"),
+        "owner_handle": owner,
+        "source": "fed-mesh-relay",
+        "ledger_source": "fed-mesh-relay",
+        "statement_hash": str(row.get("statement_hash") or ""),
+        "target": row.get("target"),
+        "icann": False,
+        "dns": False,
+        "ca": False,
+        "html": "",
+        "scripts_executed": False,
+        "executed": False,
+        "socket": False,
+        "qnsd_public_proxy": False,
+        "keys_leave_node": False,
+        "regular_browsers_resolve_aziel": False,
+        "name_resolved": True,
+        "navigable": False,
+        "allowlisted": bool(classified.get("allowlisted")),
+    }
+    if released:
+        return _refuse(
+            "name_not_in_ledger",
+            classified,
+            source="fed-mesh-relay",
+            ledger_source="fed-mesh-relay",
+            name_resolved=False,
+            dns=False,
+            note="The relay released this name. It was not sent to DNS.",
+        )
+    if not final:
+        return {
+            **base,
+            "ok": True,
+            "action": "name_pending",
+            "code": "",
+            "reason": "name_pending",
+            "name_status": "PENDING",
+            "verified_owner": False,
+            "note": "Pending name on the FED-MESH relay. Not a verified site. Not sent to DNS.",
+        }
+    return _refuse(
+        "object_missing",
+        classified,
+        **base,
+        ok=False,
+        code=REFUSE,
+        name_status="FINAL",
+        verified_owner=False,
+        note="The relay has this .aziel name. Page bytes are not on this node. The name was not sent to DNS.",
+    )
 
 
 def open_mesh(
@@ -352,6 +544,9 @@ def open_mesh(
     blocked: set[str] | None = None,
     operator_override: bool = False,
     now: Any = None,
+    relay: Any = None,
+    expect_hash: str = "",
+    read_relay: Callable[[str], Any] | None = None,
 ) -> dict[str, Any]:
     if not classified.get("ok"):
         return _refuse(str(classified.get("reason") or "bad_handle"), classified)
@@ -374,8 +569,39 @@ def open_mesh(
             note="This handle is blocked on this node only. Other peers stay reachable.",
         )
     record = directory.lookup(name=name, handle=handle if not name else "")
+    relay_doc = normalize_relay(relay)
+    if not relay_doc.get("found") and not relay_doc.get("isolated") and relay is None and read_relay is not None:
+        try:
+            relay_doc = normalize_relay(read_relay(name))
+        except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError, ValueError, TypeError):
+            relay_doc = {"found": False, "unread": True}
+    relay_row = relay_doc.get("row") if relay_doc.get("found") and isinstance(relay_doc.get("row"), dict) else None
+    if ledger_hash_conflict(record, relay_row, expect_hash):
+        return _refuse("hash_mismatch", classified)
+    if record is None and relay_doc.get("isolated"):
+        owner = str(classified.get("handle") or "")
+        isolation = {"reason": relay_doc.get("reason") or "unspecified", "evidence_hash": relay_doc.get("evidence_hash") or "", "check": "fed-mesh-relay"}
+        return _refuse(
+            "handle_isolated",
+            classified,
+            policy_page=True,
+            html=policy_page(owner, isolation),
+            source="fed-mesh-relay",
+            ledger_source="fed-mesh-relay",
+            dns=False,
+            note="This handle is isolated on the relay. The page is this shell's policy refusal. The name was not sent to DNS.",
+        )
+    if record is None and relay_row is not None:
+        return _relay_only(classified, relay_row)
     if record is None:
-        return _refuse("name_not_in_ledger", classified, allowlisted=bool(classified.get("allowlisted")))
+        return _refuse(
+            "name_not_in_ledger",
+            classified,
+            allowlisted=bool(classified.get("allowlisted")),
+            dns=False,
+            relay_unread=bool(relay_doc.get("unread")),
+            note="This .aziel name is not on the local ledger or the FED-MESH relay. It was not sent to DNS.",
+        )
     if record.get("_refuse"):
         return _refuse(str(record["_refuse"]), classified)
     if contains_secret(record):
@@ -461,6 +687,9 @@ def open_mesh(
         "fetched": False,
         "airlock": air,
         "network_wide": False,
+        "ledger_source": "local-ledger+fed-mesh-relay" if relay_row else "local-ledger",
+        "relay_statement_hash": str(relay_row.get("statement_hash") or "") if relay_row else "",
+        **security_stamp(""),
     }
     if not air["promoted"]:
         reason = str(air["reason"] or "scanner_absent")
